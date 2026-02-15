@@ -6,9 +6,19 @@
   <title>Steam Manifest Downloader — Download Steam Depots Effortlessly</title>
   <meta name="description" content="Download Steam depots effortlessly. Parse, select, download — all in one click. A modern Tauri-based tool built with Rust.">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2358a6ff'/%3E%3Cpath d='M8 22V10l6 6 6-6v12' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 </head>
 <body>
+  <!-- Page-wide Background -->
+  <div class="page-bg" aria-hidden="true">
+    <div class="hero-gradient"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-orb hero-orb-3"></div>
+  </div>
+
   <!-- Navigation -->
   <nav class="nav" id="nav">
     <div class="nav-inner">
@@ -34,13 +44,6 @@
 
   <!-- Hero Section -->
   <section class="hero" id="hero">
-    <div class="hero-bg">
-      <div class="hero-gradient"></div>
-      <div class="hero-grid"></div>
-      <div class="hero-orb hero-orb-1"></div>
-      <div class="hero-orb hero-orb-2"></div>
-      <div class="hero-orb hero-orb-3"></div>
-    </div>
     <div class="hero-content">
       <div class="hero-badge reveal">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
@@ -109,71 +112,91 @@
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
           </div>
-          <h3>Lua File Parsing</h3>
-          <p>Drag &amp; drop .lua manifest files and instantly parse depot information.</p>
+          <div class="feature-text">
+            <h3>Lua File Parsing</h3>
+            <p>Drag &amp; drop .lua manifest files and instantly parse depot information.</p>
+          </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg>
           </div>
-          <h3>Multi-Repo Search</h3>
-          <p>Search across multiple manifest repositories simultaneously.</p>
+          <div class="feature-text">
+            <h3>Multi-Repo Search</h3>
+            <p>Search across multiple manifest repositories simultaneously.</p>
+          </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
           </div>
-          <h3>Auto Manifest Download</h3>
-          <p>Automatically fetch and download manifests with a single click.</p>
+          <div class="feature-text">
+            <h3>Auto Manifest Download</h3>
+            <p>Automatically fetch and download manifests with a single click.</p>
+          </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1"/></svg>
           </div>
-          <h3>Depot Keys Generation</h3>
-          <p>Generate depot decryption keys automatically for seamless access.</p>
+          <div class="feature-text">
+            <h3>Depot Keys Generation</h3>
+            <p>Generate depot decryption keys automatically for seamless access.</p>
+          </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
-          <h3>Integrated Downloader</h3>
-          <p>Built-in download engine — no external tools required.</p>
+          <div class="feature-text">
+            <h3>Integrated Downloader</h3>
+            <p>Built-in download engine — no external tools required.</p>
+          </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
           </div>
-          <h3>Live Progress Tracking</h3>
-          <p>Real-time progress bars, speed metrics, and ETA estimates.</p>
+          <div class="feature-text">
+            <h3>Live Progress Tracking</h3>
+            <p>Real-time progress bars, speed metrics, and ETA estimates.</p>
+          </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/><path d="M12 22L6 9"/><path d="M12 22l6-13"/><path d="M6 3l6 6 6-6"/></svg>
           </div>
-          <h3>Steam Store Integration</h3>
-          <p>Fetch app details, images, and metadata directly from Steam.</p>
+          <div class="feature-text">
+            <h3>Steam Store Integration</h3>
+            <p>Fetch app details, images, and metadata directly from Steam.</p>
+          </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
           </div>
-          <h3>Dark / Light Theme</h3>
-          <p>Comfortable viewing with automatic theme detection and toggle.</p>
+          <div class="feature-text">
+            <h3>Dark / Light Theme</h3>
+            <p>Comfortable viewing with automatic theme detection and toggle.</p>
+          </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
           </div>
-          <h3>Self-Contained Binary</h3>
-          <p>Single executable with no dependencies — just download and run.</p>
+          <div class="feature-text">
+            <h3>Self-Contained Binary</h3>
+            <p>Single executable with no dependencies — just download and run.</p>
+          </div>
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 17l6-6-6-6"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
           </div>
-          <h3>Batch Script Export</h3>
-          <p>Export download configurations as reusable batch scripts.</p>
+          <div class="feature-text">
+            <h3>Batch Script Export</h3>
+            <p>Export download configurations as reusable batch scripts.</p>
+          </div>
         </div>
       </div>
     </div>
@@ -232,23 +255,23 @@
       <div class="tech-scroll reveal">
         <div class="tech-track">
           <div class="tech-badge">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M23.834 8.101a13.912 13.912 0 01-13.643 11.72 10.105 10.105 0 01-1.994-.12 6.111 6.111 0 01-5.082-5.761 5.934 5.934 0 011.752-4.564 7.015 7.015 0 012.347-1.569q.076-.03.153-.058a2.833 2.833 0 012.89.782A2.88 2.88 0 0111.3 10.8a2.861 2.861 0 01-2.048.986h-.065a1.985 1.985 0 00-1.929 2.093c.077 1.382 1.197 2.362 2.58 2.362a3.375 3.375 0 002.58-1.043A7.057 7.057 0 0014.5 11c0-3.866-3.133-7-7-7a7 7 0 00-7 7 7 7 0 007 7c.3 0 .598-.02.892-.056" stroke="#DEA584" stroke-width="1.5"/></svg>
+            <i class="fa-brands fa-rust" style="color:#DEA584;font-size:1.4rem;"></i>
             <span>Rust</span>
           </div>
           <div class="tech-badge">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#24C8DB" opacity="0.3"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#24C8DB" stroke-width="1.5"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="15" cy="9" r="5.5" stroke="#24C8DB" stroke-width="1.5"/><circle cx="9" cy="15" r="5.5" stroke="#24C8DB" stroke-width="1.5"/><circle cx="15" cy="9" r="2" fill="#24C8DB"/><circle cx="9" cy="15" r="2" fill="#24C8DB"/></svg>
             <span>Tauri v2</span>
           </div>
           <div class="tech-badge">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4z" stroke="#E44D26" stroke-width="1.5" rx="2"/><path d="M8 8h8M8 12h6M8 16h4" stroke="#E44D26" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <i class="fa-brands fa-html5" style="color:#E44D26;font-size:1.4rem;"></i>
             <span>HTML / CSS / JS</span>
           </div>
           <div class="tech-badge">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#58a6ff" stroke-width="1.5"/><path d="M12 6v6l4 2" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <i class="fa-solid fa-globe" style="color:#58a6ff;font-size:1.4rem;"></i>
             <span>reqwest</span>
           </div>
           <div class="tech-badge">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="#3fb950" stroke-width="1.5"/><path d="M8 12h8M12 8v8" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <i class="fa-brands fa-steam" style="color:#3fb950;font-size:1.4rem;"></i>
             <span>DepotDownloader</span>
           </div>
         </div>
