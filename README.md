@@ -5,7 +5,7 @@
 **A sleek desktop app for downloading Steam game depots using manifest data.**
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge)
-![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
+![License](https://img.shields.io/badge/license-GPL--2.0-blue?style=for-the-badge)
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows)
 ![Built with](https://img.shields.io/badge/built_with-Rust-dea584?style=for-the-badge&logo=rust)
 ![Tauri](https://img.shields.io/badge/Tauri_v2-FFC131?style=for-the-badge&logo=tauri&logoColor=white)
@@ -165,9 +165,9 @@ DepoDownloaderWebApp/
 
 <div align="center">
 
-![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
+![License](https://img.shields.io/badge/license-GPL--2.0-blue?style=for-the-badge)
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [GPL-2.0 License](LICENSE).
 
 </div>
 

@@ -2,6 +2,7 @@
 name = "steam-manifest-downloader"
 version = "1.0.0"
 edition = "2021"
+license = "GPL-2.0-or-later"
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
