@@ -1,112 +1,189 @@
-# Steam Manifest Downloader
+<div align="center">
 
-A desktop application for downloading Steam game depots using manifest data. Built with [Tauri v2](https://v2.tauri.app/) (Rust backend + HTML/CSS/JS frontend).
+# 🎮 Steam Manifest Downloader
 
-Upload `.lua` files containing Steam depot/manifest information, select the depots you need, and the app handles downloading manifest files and running [DepotDownloaderMod](https://github.com/SteamRE/DepotDownloader) to fetch game content.
+**A sleek desktop app for downloading Steam game depots using manifest data.**
 
-![Screenshot](screenshots/main.png)
+![Version](https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge)
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
+![Platform](https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows)
+![Built with](https://img.shields.io/badge/built_with-Rust-dea584?style=for-the-badge&logo=rust)
+![Tauri](https://img.shields.io/badge/Tauri_v2-FFC131?style=for-the-badge&logo=tauri&logoColor=white)
 
----
+Upload `.lua` files, search across GitHub repos, and let the app handle manifests, depot keys, and downloads — all in one click.
 
-## Features
-
-- **Lua file parsing** — Drag-and-drop or upload `.lua` files with Steam depot/manifest data
-- **Automatic manifest resolution** — Fetches manifest files from GitHub repositories and [ManifestHub](https://manifesthub.filegear-sg.me/) API
-- **Multi-depot downloads** — Download multiple depots in a single session
-- **Depot key support** — Automatically extracts and uses depot decryption keys from lua data
-- **Game info lookup** — Fetches game name and artwork from the Steam Store API
-- **Download progress tracking** — Real-time progress events streamed from DepotDownloaderMod
-- **Configurable download directory** — Choose where game files are saved
-- **Embedded tools** — DepotDownloaderMod is bundled inside the application binary
-- **Custom title bar** — Frameless window with integrated minimize/maximize/close controls
-- **Cross-platform ready** — Windows primary, with Linux support scaffolded
+</div>
 
 ---
 
-## System Requirements
+## ✨ Features
 
-| Requirement | Details |
+| | Feature |
 |---|---|
-| **OS** | Windows 10 or later (64-bit) |
-| **Runtime** | [.NET 8.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (required by DepotDownloaderMod) |
-| **Disk space** | ~50 MB for the app + space for downloaded game files |
+| 📂 | **Drag & drop** `.lua` file upload |
+| 🔍 | **Multi-repo search** across 5+ GitHub repositories |
+| 📦 | **Automatic manifest download** from ManifestHub |
+| 🔑 | **Automatic depot keys** generation |
+| ⚡ | **Integrated DepotDownloader** execution |
+| 📊 | **Real-time download** progress tracking |
+| 🎮 | **Steam Store API** integration — game names + cover art |
+| 🌙 | **Dark / Light theme** support |
+| ⚙️ | **Configurable** download location & GitHub token |
+| 📝 | **Batch script export** (`.bat`) |
+| 🔒 | **Fully self-contained** — DepotDownloaderMod embedded |
 
 ---
 
-## Installation
+## 📸 Screenshots
 
-1. Go to the [Releases](../../releases) page
+<div align="center">
+
+![Main Interface](screenshots/main.png)
+
+*Screenshots coming soon*
+
+</div>
+
+---
+
+## 🚀 Quick Start
+
+> **How it works — in 5 steps:**
+
+1. 📥 **Download** the installer from [Releases](../../releases)
+2. 📂 **Upload** your `.lua` file or search for a game
+3. ✅ **Select** the depots and manifests you want
+4. 🚀 **Click Download** — everything happens automatically
+5. ✨ **Done!** Files are in your configured download folder
+
+---
+
+## 💻 System Requirements
+
+| | Requirement | Details |
+|---|---|---|
+| 💻 | **Operating System** | Windows 10 / 11 (64-bit) |
+| ⚙️ | **Runtime** | [.NET 8.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (for DepotDownloader) |
+| 🌐 | **Network** | Internet connection |
+
+---
+
+## 📥 Installation
+
+1. Head to the [**Releases**](../../releases) page
 2. Download the latest `.exe` installer (NSIS) for Windows
-3. Run the installer — it installs per-user, no admin required
+3. Run the installer — installs per-user, **no admin required**
 4. Launch **Steam Manifest Downloader** from the Start Menu
 
-> **Note:** Make sure you have the [.NET 8.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) installed. The app will warn you if it's missing.
+> [!NOTE]
+> Make sure you have the [.NET 8.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) installed. The app will warn you if it's missing.
 
----
-
-## Usage
-
-1. **Upload a Lua file** — Click the upload area or drag-and-drop a `.lua` file containing depot/manifest data
-2. **Review depots** — The app parses the file and displays a list of depots with their manifest IDs and depot keys
-3. **Select depots** — Check the depots you want to download (all are selected by default)
-4. **Configure options** — Optionally set a GitHub token for higher API rate limits, or change the download directory
-5. **Start download** — Click Download to begin. The app will:
-   - Fetch manifest files from GitHub or ManifestHub
-   - Generate a `steam.keys` file with depot decryption keys
-   - Run DepotDownloaderMod for each depot
-   - Show real-time progress
-6. **Access files** — Downloaded game files are saved to the configured directory (default: `Documents/SteamDownloads/<AppID>`)
-
----
-
-## Building from Source
+<details>
+<summary><b>🔧 Build from Source</b></summary>
 
 ### Prerequisites
 
 - [Rust](https://rustup.rs/) (latest stable)
-- [Node.js](https://nodejs.org/) (for Tauri CLI, if not using cargo-only workflow)
-- [.NET 8.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (only if you need to rebuild DepotDownloaderMod)
-- Platform-specific dependencies as listed in the [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/)
+- [Tauri CLI v2](https://v2.tauri.app/start/prerequisites/)
 
-### Build
+### Build commands
 
 ```bash
-# Install Tauri CLI (if not already installed)
+# Install Tauri CLI
 cargo install tauri-cli --version "^2"
 
-# Development build
+# Development mode
 cargo tauri dev
 
 # Production build (creates installer in src-tauri/target/release/bundle/)
 cargo tauri build
 ```
 
-### Project Structure
-
-```
-├── public/              # Frontend (HTML/CSS/JS)
-├── src-tauri/
-│   ├── src/
-│   │   ├── main.rs              # Tauri app entry point
-│   │   ├── commands/            # Tauri command handlers
-│   │   └── services/            # Business logic (parsing, downloading, etc.)
-│   ├── Cargo.toml               # Rust dependencies
-│   └── tauri.conf.json          # Tauri configuration
-├── DepotDownloaderMod/  # Bundled .NET tool (embedded via include_bytes!)
-└── assets/              # App icons
-```
+</details>
 
 ---
 
-## License
+## 🛠️ Tech Stack
+
+<div align="center">
+
+![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
+![Tauri](https://img.shields.io/badge/Tauri_v2-FFC131?style=for-the-badge&logo=tauri&logoColor=white)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+
+</div>
+
+| Layer | Technology |
+|---|---|
+| **Backend** | Rust, reqwest, tokio, serde |
+| **Frontend** | HTML / CSS / JS (vanilla) |
+| **Framework** | Tauri v2 |
+| **Downloader** | DepotDownloaderMod (.NET 8) |
+
+---
+
+<details>
+<summary><b>📁 Project Structure</b></summary>
+
+```
+DepoDownloaderWebApp/
+├── public/                     # Frontend (HTML/CSS/JS)
+│   ├── index.html              # Main UI
+│   ├── css/style.css           # Styles & themes
+│   └── js/app.js               # Application logic
+├── src-tauri/
+│   ├── src/
+│   │   ├── main.rs             # Tauri entry point
+│   │   ├── commands/           # Tauri command handlers
+│   │   │   ├── download.rs     # Download orchestration
+│   │   │   ├── search.rs       # Game search
+│   │   │   ├── file_ops.rs     # File operations
+│   │   │   ├── settings.rs     # App settings
+│   │   │   ├── system.rs       # System utilities
+│   │   │   └── window.rs       # Window controls
+│   │   └── services/           # Business logic
+│   │       ├── github_api.rs   # GitHub API client
+│   │       ├── manifest_hub_api.rs
+│   │       ├── steam_store_api.rs
+│   │       ├── depot_runner.rs # DepotDownloaderMod runner
+│   │       ├── lua_parser.rs   # .lua file parser
+│   │       └── ...
+│   ├── Cargo.toml              # Rust dependencies
+│   └── tauri.conf.json         # Tauri configuration
+├── DepotDownloaderMod/         # Embedded .NET tool
+├── assets/                     # App icons
+└── README.md
+```
+
+</details>
+
+---
+
+## 📄 License
+
+<div align="center">
+
+![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)
 
 This project is licensed under the [MIT License](LICENSE).
 
+</div>
+
 ---
 
-## Credits
+## 🙏 Credits & Acknowledgments
 
-- **[DepotDownloaderMod](https://github.com/SteamRE/DepotDownloader)** — The underlying tool for downloading Steam depot content
-- **[ManifestHub](https://manifesthub.filegear-sg.me/)** — API for fetching Steam manifest files
-- **[Steam Store API](https://store.steampowered.com/api/)** — Game metadata and artwork
-- **[Tauri](https://v2.tauri.app/)** — Framework for building the desktop application
+- **[DepotDownloaderMod](https://github.com/SteamRE/DepotDownloader)** — Steam depot downloading engine
+- **[ManifestHub](https://manifesthub.filegear-sg.me/)** — Manifest file API
+- **[Steam Store API](https://store.steampowered.com/api/)** — Game metadata & artwork
+- **[Tauri](https://v2.tauri.app/)** — Desktop application framework
+
+---
+
+<div align="center">
+
+Made with ❤️ and 🦀
+
+</div>
