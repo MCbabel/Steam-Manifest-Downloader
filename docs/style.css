@@ -148,30 +148,22 @@ a:hover {
 
 .nav-github:hover { color: var(--text); }
 
-/* --- Hero Section --- */
-.hero {
-  position: relative;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  padding: 120px 24px 80px;
-}
-
-.hero-bg {
-  position: absolute;
+/* --- Page-wide Background --- */
+.page-bg {
+  position: fixed;
   inset: 0;
+  z-index: 0;
   overflow: hidden;
+  pointer-events: none;
 }
 
 .hero-gradient {
   position: absolute;
   inset: 0;
-  background: 
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(88,166,255,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(188,140,255,0.1) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 40% at 20% 80%, rgba(63,185,80,0.06) 0%, transparent 50%);
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(88,166,255,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 30%, rgba(188,140,255,0.1) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 20% 70%, rgba(63,185,80,0.06) 0%, transparent 50%);
   animation: heroGradient 8s ease-in-out infinite alternate;
 }
 
@@ -184,12 +176,24 @@ a:hover {
 .hero-grid {
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     linear-gradient(rgba(88,166,255,0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(88,166,255,0.03) 1px, transparent 1px);
   background-size: 60px 60px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 70%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 70%);
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 30%, black 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 30%, black 30%, transparent 80%);
+}
+
+/* --- Hero Section --- */
+.hero {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 120px 24px 80px;
 }
 
 .hero-orb {
@@ -441,6 +445,8 @@ a:hover {
 
 /* --- Section Shared --- */
 section {
+  position: relative;
+  z-index: 1;
   padding: 100px 0;
 }
 
@@ -484,7 +490,7 @@ section {
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
 }
 
@@ -492,11 +498,14 @@ section {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 28px;
+  padding: 24px 28px;
   backdrop-filter: blur(8px);
   transition: all var(--transition);
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 
 .feature-card::before {
@@ -521,14 +530,15 @@ section {
 .feature-icon {
   width: 44px;
   height: 44px;
+  min-width: 44px;
   border-radius: 10px;
   background: var(--gradient-bg);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
   color: var(--blue);
+  flex-shrink: 0;
 }
 
 .feature-icon svg {
@@ -536,13 +546,13 @@ section {
   height: 22px;
 }
 
-.feature-card h3 {
+.feature-text h3 {
   font-size: 1rem;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-.feature-card p {
+.feature-text p {
   font-size: 0.9rem;
   color: var(--text-muted);
   line-height: 1.6;
@@ -550,7 +560,6 @@ section {
 
 /* --- How It Works --- */
 .how-it-works {
-  background: var(--gradient-bg);
   position: relative;
 }
 
@@ -714,6 +723,8 @@ section {
 
 /* --- Footer --- */
 .footer {
+  position: relative;
+  z-index: 1;
   border-top: 1px solid var(--border);
   padding: 40px 0 32px;
 }
