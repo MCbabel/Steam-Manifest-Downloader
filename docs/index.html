@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Steam Manifest Downloader — Download Steam Depots Effortlessly</title>
+  <meta name="description" content="Download Steam depots effortlessly. Parse, select, download — all in one click. A modern Tauri-based tool built with Rust.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2358a6ff'/%3E%3Cpath d='M8 22V10l6 6 6-6v12' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="#hero" class="nav-logo">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="6" fill="url(#logo-grad)"/>
+          <path d="M8 22V10l6 6 6-6v12" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#58a6ff"/><stop offset="1" stop-color="#bc8cff"/></linearGradient></defs>
+        </svg>
+        <span>SMD</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#tech-stack">Tech Stack</a>
+        <a href="#download">Download</a>
+      </div>
+      <a href="https://github.com/MCbabel/Steam-Manifest-Downloader" class="nav-github" target="_blank" rel="noopener" aria-label="GitHub">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="hero">
+    <div class="hero-bg">
+      <div class="hero-gradient"></div>
+      <div class="hero-grid"></div>
+      <div class="hero-orb hero-orb-1"></div>
+      <div class="hero-orb hero-orb-2"></div>
+      <div class="hero-orb hero-orb-3"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge reveal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Open Source &amp; Free
+      </div>
+      <h1 class="hero-title reveal">
+        Steam Manifest<br><span class="gradient-text">Downloader</span>
+      </h1>
+      <p class="hero-subtitle reveal">
+        Download Steam depots effortlessly.<br>Parse, select, download — all in one click.
+      </p>
+      <div class="hero-buttons reveal">
+        <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases" class="btn btn-primary" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </a>
+        <a href="https://github.com/MCbabel/Steam-Manifest-Downloader" class="btn btn-secondary" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          View on GitHub
+        </a>
+      </div>
+      <div class="hero-mockup reveal">
+        <div class="mockup-window">
+          <div class="mockup-titlebar">
+            <span class="mockup-dot" style="background:#ff5f57"></span>
+            <span class="mockup-dot" style="background:#febc2e"></span>
+            <span class="mockup-dot" style="background:#28c840"></span>
+            <span class="mockup-title">Steam Manifest Downloader</span>
+          </div>
+          <div class="mockup-body">
+            <div class="mockup-row">
+              <div class="mockup-label">App ID</div>
+              <div class="mockup-input">730</div>
+            </div>
+            <div class="mockup-row">
+              <div class="mockup-label">Depot</div>
+              <div class="mockup-input">731</div>
+            </div>
+            <div class="mockup-row">
+              <div class="mockup-label">Manifest</div>
+              <div class="mockup-input">298141579182...</div>
+            </div>
+            <div class="mockup-progress">
+              <div class="mockup-progress-bar"></div>
+            </div>
+            <div class="mockup-status">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Download complete — 2.4 GB
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag">Features</span>
+        <h2>Everything You Need</h2>
+        <p>A comprehensive toolkit for Steam depot downloading, packed into a single lightweight application.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+          </div>
+          <h3>Lua File Parsing</h3>
+          <p>Drag &amp; drop .lua manifest files and instantly parse depot information.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg>
+          </div>
+          <h3>Multi-Repo Search</h3>
+          <p>Search across multiple manifest repositories simultaneously.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </div>
+          <h3>Auto Manifest Download</h3>
+          <p>Automatically fetch and download manifests with a single click.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/><circle cx="12" cy="16" r="1"/></svg>
+          </div>
+          <h3>Depot Keys Generation</h3>
+          <p>Generate depot decryption keys automatically for seamless access.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <h3>Integrated Downloader</h3>
+          <p>Built-in download engine — no external tools required.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+          </div>
+          <h3>Live Progress Tracking</h3>
+          <p>Real-time progress bars, speed metrics, and ETA estimates.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/><path d="M12 22L6 9"/><path d="M12 22l6-13"/><path d="M6 3l6 6 6-6"/></svg>
+          </div>
+          <h3>Steam Store Integration</h3>
+          <p>Fetch app details, images, and metadata directly from Steam.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          </div>
+          <h3>Dark / Light Theme</h3>
+          <p>Comfortable viewing with automatic theme detection and toggle.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+          </div>
+          <h3>Self-Contained Binary</h3>
+          <p>Single executable with no dependencies — just download and run.</p>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 17l6-6-6-6"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </div>
+          <h3>Batch Script Export</h3>
+          <p>Export download configurations as reusable batch scripts.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag">How It Works</span>
+        <h2>Simple as 1-2-3-4</h2>
+        <p>Get from zero to downloaded in four easy steps.</p>
+      </div>
+      <div class="steps">
+        <div class="steps-line"></div>
+        <div class="step reveal">
+          <div class="step-number" data-count="1">1</div>
+          <div class="step-content">
+            <h3>Upload or Search</h3>
+            <p>Drop a .lua manifest file or search for your game by name across multiple repositories.</p>
+          </div>
+        </div>
+        <div class="step reveal">
+          <div class="step-number" data-count="2">2</div>
+          <div class="step-content">
+            <h3>Select Depots &amp; Manifests</h3>
+            <p>Choose which depots and manifest versions you want to download.</p>
+          </div>
+        </div>
+        <div class="step reveal">
+          <div class="step-number" data-count="3">3</div>
+          <div class="step-content">
+            <h3>Click Download</h3>
+            <p>Hit the download button and let the integrated downloader handle the rest.</p>
+          </div>
+        </div>
+        <div class="step reveal">
+          <div class="step-number" data-count="4">4</div>
+          <div class="step-content">
+            <h3>Done — Files Ready</h3>
+            <p>Your depot files are downloaded and ready to use. It's that simple.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack Section -->
+  <section class="tech-stack" id="tech-stack">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="section-tag">Tech Stack</span>
+        <h2>Built with Modern Tools</h2>
+        <p>Powered by cutting-edge technologies for performance and reliability.</p>
+      </div>
+      <div class="tech-scroll reveal">
+        <div class="tech-track">
+          <div class="tech-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M23.834 8.101a13.912 13.912 0 01-13.643 11.72 10.105 10.105 0 01-1.994-.12 6.111 6.111 0 01-5.082-5.761 5.934 5.934 0 011.752-4.564 7.015 7.015 0 012.347-1.569q.076-.03.153-.058a2.833 2.833 0 012.89.782A2.88 2.88 0 0111.3 10.8a2.861 2.861 0 01-2.048.986h-.065a1.985 1.985 0 00-1.929 2.093c.077 1.382 1.197 2.362 2.58 2.362a3.375 3.375 0 002.58-1.043A7.057 7.057 0 0014.5 11c0-3.866-3.133-7-7-7a7 7 0 00-7 7 7 7 0 007 7c.3 0 .598-.02.892-.056" stroke="#DEA584" stroke-width="1.5"/></svg>
+            <span>Rust</span>
+          </div>
+          <div class="tech-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5z" fill="#24C8DB" opacity="0.3"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#24C8DB" stroke-width="1.5"/></svg>
+            <span>Tauri v2</span>
+          </div>
+          <div class="tech-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4z" stroke="#E44D26" stroke-width="1.5" rx="2"/><path d="M8 8h8M8 12h6M8 16h4" stroke="#E44D26" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>HTML / CSS / JS</span>
+          </div>
+          <div class="tech-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#58a6ff" stroke-width="1.5"/><path d="M12 6v6l4 2" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>reqwest</span>
+          </div>
+          <div class="tech-badge">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="#3fb950" stroke-width="1.5"/><path d="M8 12h8M12 8v8" stroke="#3fb950" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>DepotDownloader</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download Section -->
+  <section class="download" id="download">
+    <div class="container">
+      <div class="download-card reveal">
+        <div class="download-glow"></div>
+        <div class="download-content">
+          <h2>Ready to Get Started?</h2>
+          <p>Download Steam Manifest Downloader and start managing your depots today.</p>
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases" class="btn btn-primary btn-large" target="_blank" rel="noopener">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Latest Release
+          </a>
+          <div class="download-meta">
+            <div class="download-info">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <span>Windows 10+ / Linux</span>
+            </div>
+            <div class="download-info">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+              <span>~5 MB installer</span>
+            </div>
+            <div class="download-info">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>No dependencies</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-left">
+          <a href="#hero" class="footer-logo">
+            <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="6" fill="url(#flogo)"/>
+              <path d="M8 22V10l6 6 6-6v12" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <defs><linearGradient id="flogo" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#58a6ff"/><stop offset="1" stop-color="#bc8cff"/></linearGradient></defs>
+            </svg>
+            Steam Manifest Downloader
+          </a>
+          <p>Download Steam depots effortlessly.</p>
+        </div>
+        <div class="footer-right">
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases" target="_blank" rel="noopener">Releases</a>
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>Made with ❤️ and 🦀</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
