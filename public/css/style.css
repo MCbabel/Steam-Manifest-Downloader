@@ -1,0 +1,1502 @@
+/* ============================================
+   Steam Manifest Downloader - Modern Dark Theme
+   ============================================ */
+
+:root {
+  --bg-primary: #0f1117;
+  --bg-secondary: #1a1d27;
+  --bg-card: #1e2130;
+  --bg-hover: #252839;
+  --bg-input: #151722;
+  --border: #2a2d3e;
+  --border-active: #4f6ef7;
+  --text-primary: #e4e6f0;
+  --text-secondary: #8b8fa3;
+  --text-muted: #5d6177;
+  --accent: #4f6ef7;
+  --accent-hover: #6380ff;
+  --accent-glow: rgba(79, 110, 247, 0.15);
+  --success: #34d399;
+  --success-bg: rgba(52, 211, 153, 0.1);
+  --error: #f87171;
+  --error-bg: rgba(248, 113, 113, 0.1);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.1);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --transition: 0.2s ease;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+[data-theme="light"] {
+  --bg-primary: #f0f2f5;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-hover: #e8eaf0;
+  --bg-input: #f5f6f8;
+  --border: #d8dbe5;
+  --border-active: #4f6ef7;
+  --text-primary: #1a1d2e;
+  --text-secondary: #5a5f75;
+  --text-muted: #8b90a5;
+  --accent: #4f6ef7;
+  --accent-hover: #3d5ce0;
+  --accent-glow: rgba(79, 110, 247, 0.1);
+  --success: #22b07d;
+  --success-bg: rgba(34, 176, 125, 0.1);
+  --error: #e54d4d;
+  --error-bg: rgba(229, 77, 77, 0.08);
+  --warning: #e5a00d;
+  --warning-bg: rgba(229, 160, 13, 0.08);
+}
+
+[data-theme="light"] .card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .terminal {
+  border-color: var(--border);
+  background: #1a1d27;
+}
+
+[data-theme="light"] .terminal__body {
+  color: #a0a4b8;
+}
+
+[data-theme="light"] .terminal__header {
+  background: #1a1d27;
+  border-bottom-color: #2a2d3e;
+}
+
+[data-theme="light"] .terminal__line--stdout {
+  color: #e4e6f0;
+}
+
+[data-theme="light"] .terminal__title {
+  color: #5d6177;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ============ Electron Frameless Window ============ */
+html {
+  background: var(--bg-primary);
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  height: 100vh;
+  line-height: 1.6;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============ Custom Title Bar (Electron) ============ */
+.title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 32px;
+  background: var(--bg-secondary);
+  -webkit-app-region: drag;
+  user-select: none;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.title-bar__drag-region {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.title-bar__icon {
+  display: flex;
+  align-items: center;
+}
+
+.title-bar__text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.title-bar__controls {
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar__btn {
+  width: 36px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.title-bar__btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.title-bar__btn--close:hover {
+  background: #e81123;
+  color: white;
+}
+
+/* ============ Scroll Wrapper ============ */
+.scroll-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.scroll-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scroll-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ============ App Container ============ */
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  width: 100%;
+}
+
+/* ============ Header ============ */
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.header__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.header__icon {
+  width: 32px;
+  height: 32px;
+  color: var(--accent);
+}
+
+.header__subtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+/* ============ Step Indicator ============ */
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 2rem;
+}
+
+.steps__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  opacity: 0.4;
+  transition: opacity var(--transition);
+}
+
+.steps__item.active {
+  opacity: 1;
+}
+
+.steps__item.completed {
+  opacity: 0.7;
+}
+
+.steps__number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: all var(--transition);
+}
+
+.steps__item.active .steps__number {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.steps__item.completed .steps__number {
+  background: var(--success);
+  border-color: var(--success);
+  color: white;
+}
+
+.steps__label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.steps__item.active .steps__label {
+  color: var(--text-primary);
+}
+
+.steps__connector {
+  width: 40px;
+  height: 2px;
+  background: var(--border);
+}
+
+/* ============ Card ============ */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ============ Sections / Steps ============ */
+.step {
+  display: none;
+}
+
+.step.active {
+  display: block;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ============ Drop Zone ============ */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition);
+  background: var(--bg-input);
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.drop-zone__icon {
+  width: 48px;
+  height: 48px;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  transition: color var(--transition);
+}
+
+.drop-zone:hover .drop-zone__icon,
+.drop-zone.drag-over .drop-zone__icon {
+  color: var(--accent);
+}
+
+.drop-zone__text {
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.drop-zone__hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* ============ File Info ============ */
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--accent-glow);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-sm);
+  margin-top: 1rem;
+}
+
+.file-info__icon {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.file-info__name {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--accent);
+}
+
+.file-info__remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+  transition: color var(--transition);
+}
+
+.file-info__remove:hover {
+  color: var(--error);
+}
+
+/* ============ Loading ============ */
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  color: var(--text-secondary);
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ============ Error Message ============ */
+.error-message {
+  background: var(--error-bg);
+  border: 1px solid var(--error);
+  color: var(--error);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+/* ============ Settings Sections ============ */
+.settings-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.settings-section__label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.optional-badge {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+}
+
+.link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* ============ Custom Manifest Input ============ */
+.depot-item__custom-manifest {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.depot-item__custom-manifest input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.depot-item__custom-manifest input:focus {
+  border-color: var(--accent);
+}
+
+.depot-item__custom-manifest input::placeholder {
+  color: var(--text-muted);
+}
+
+.depot-item__custom-manifest label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ============ DepotDownloader Path ============ */
+.depot-downloader-path {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.dd-path__label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.dd-path__input-wrap {
+  position: relative;
+}
+
+.dd-path__input {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.dd-path__input:focus {
+  border-color: var(--accent);
+}
+
+.dd-path__input::placeholder {
+  color: var(--text-muted);
+}
+
+.dd-path__hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+}
+
+/* ============ Game Info Banner ============ */
+.game-info-banner {
+  display: flex;
+  gap: 1.25rem;
+  padding: 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+  animation: fadeIn 0.3s ease;
+}
+
+.game-info-banner__image {
+  width: 240px;
+  height: auto;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.game-info-banner__details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.game-info-banner__title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.game-info-banner__description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  .game-info-banner {
+    flex-direction: column;
+  }
+
+  .game-info-banner__image {
+    width: 100%;
+    max-height: 160px;
+  }
+}
+
+/* ============ Select Header ============ */
+.select-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.select-header__info h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.select-header__info p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.select-header__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.accent {
+  color: var(--accent);
+}
+
+/* ============ Depot List ============ */
+.depot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.depot-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.depot-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.depot-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.depot-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  user-select: none;
+}
+
+.depot-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-active);
+}
+
+.depot-item.selected {
+  background: var(--accent-glow);
+  border-color: var(--border-active);
+}
+
+.depot-item__checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+.depot-item.selected .depot-item__checkbox {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.depot-item.selected .depot-item__checkbox::after {
+  content: '✓';
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.depot-item__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.depot-item__depot-id {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.depot-item__manifest-id {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============ Buttons ============ */
+.btn {
+  padding: 0.6rem 1.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn:hover {
+  background: var(--bg-secondary);
+  border-color: var(--text-muted);
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.btn--primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn--primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn--small {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.btn--outline {
+  background: transparent;
+  border-color: var(--border);
+}
+
+.btn--outline:hover {
+  background: var(--bg-hover);
+}
+
+.btn__icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ============ Progress ============ */
+.progress-header h2 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-input);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-status {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+/* ============ Depot Progress List ============ */
+.depot-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.depot-progress-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-input);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.depot-progress-item__icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.depot-progress-item__icon--pending {
+  color: var(--text-muted);
+}
+
+.depot-progress-item__icon--active {
+  color: var(--accent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.depot-progress-item__icon--done {
+  color: var(--success);
+}
+
+.depot-progress-item__icon--error {
+  color: var(--error);
+}
+
+.depot-progress-item__label {
+  flex: 1;
+}
+
+.depot-progress-item__status {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+/* ============ Terminal ============ */
+.terminal {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+}
+
+.terminal__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.terminal__dot--red { background: #ff5f56; }
+.terminal__dot--yellow { background: #ffbd2e; }
+.terminal__dot--green { background: #27c93f; }
+
+.terminal__title {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-left: 0.5rem;
+}
+
+.terminal__body {
+  padding: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-height: 250px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.terminal__body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal__body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.terminal__line--stdout {
+  color: var(--text-primary);
+}
+
+.terminal__line--stderr {
+  color: var(--warning);
+}
+
+.terminal__line--error {
+  color: var(--error);
+}
+
+.terminal__line--info {
+  color: var(--accent);
+}
+
+.terminal__line--success {
+  color: var(--success);
+}
+
+/* ============ Completion ============ */
+.completion-message {
+  padding: 1.25rem;
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.completion-message--success {
+  background: var(--success-bg);
+  border: 1px solid var(--success);
+  color: var(--success);
+}
+
+.completion-message--error {
+  background: var(--error-bg);
+  border: 1px solid var(--error);
+  color: var(--error);
+}
+
+/* ============ Animations ============ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ============ Danger Button ============ */
+.btn--danger {
+  background: var(--error);
+  border-color: var(--error);
+  color: white;
+}
+
+.btn--danger:hover {
+  opacity: 0.85;
+}
+
+/* ============ Modal ============ */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.modal__content {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal__icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.modal__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+}
+
+.modal__text {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.modal__text strong {
+  color: var(--error);
+}
+
+.modal__actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.modal__actions .btn {
+  min-width: 140px;
+  justify-content: center;
+}
+
+/* ============ Depot Search/Filter ============ */
+.depot-filters {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.depot-filters .search-box {
+  flex: 1;
+}
+
+.depot-filters .search-box input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.depot-filters .search-box input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.depot-filters .filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.depot-filters .filter-toggle input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
+/* ============ Disk Space Info ============ */
+.disk-space-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent-glow);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  animation: fadeIn 0.3s ease;
+}
+
+.disk-space-info--warning {
+  background: var(--warning-bg);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.disk-space-info--danger {
+  background: var(--error-bg);
+  border-color: var(--error);
+  color: var(--error);
+  font-weight: 600;
+}
+
+/* ============ Per-Depot Manifest Upload ============ */
+.depot-item__manifest-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.depot-manifest-btn {
+  font-size: 0.75rem !important;
+  padding: 0.3rem 0.6rem !important;
+  white-space: nowrap;
+}
+
+.depot-manifest-status {
+  font-size: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manifest-uploaded {
+  color: var(--success);
+  font-family: var(--font-mono);
+}
+
+.manifest-uploading {
+  color: var(--accent);
+  font-style: italic;
+}
+
+/* ============ Depot Download Progress Bar ============ */
+.depot-download-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.depot-progress-bar {
+  flex: 1;
+  height: 10px;
+  background: var(--bg-input);
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.depot-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  border-radius: 5px;
+  transition: width 0.4s ease;
+  min-width: 0;
+}
+
+.depot-progress-text {
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  min-width: 3.5rem;
+  text-align: right;
+}
+
+/* ============ Card Footer Right ============ */
+.card__footer-right {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* ============ Header Actions ============ */
+.header__actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.header__theme-btn {
+  font-size: 1.1rem;
+  padding: 0.4rem 0.75rem;
+  line-height: 1;
+}
+
+/* ============ Card Footer Left ============ */
+.card__footer-left {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* ============ Tab Bar ============ */
+.tab-bar {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  margin-bottom: 1.5rem;
+  gap: 0;
+}
+
+.tab-bar__tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.tab-bar__tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.tab-bar__tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ============ Tab Content ============ */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+/* ============ Search Input ============ */
+.search-input-row {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.7rem 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color var(--transition);
+  -moz-appearance: textfield;
+}
+
+.search-input::-webkit-outer-spin-button,
+.search-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ============ Search Results ============ */
+.search-results {
+  margin-top: 1rem;
+}
+
+.search-rate-limit {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: right;
+  margin-bottom: 0.75rem;
+}
+
+.repo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.repo-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.repo-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* ============ Repo Card ============ */
+.repo-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  user-select: none;
+}
+
+.repo-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-active);
+}
+
+.repo-card.selected {
+  background: var(--accent-glow);
+  border-color: var(--border-active);
+}
+
+.repo-card__radio {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.repo-card.selected .repo-card__radio {
+  border-color: var(--accent);
+}
+
+.repo-card.selected .repo-card__radio::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.repo-card__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.repo-card__name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repo-card__date {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+}
+
+.repo-card__badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.repo-card__badge--github {
+  background: rgba(79, 110, 247, 0.15);
+  color: #6b8aff;
+  border: 1px solid rgba(79, 110, 247, 0.3);
+}
+
+.repo-card__badge--printedwaste {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.repo-card__badge--kernelos {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.repo-card--auto {
+  border-style: dashed;
+}
+
+.repo-card--auto .repo-card__name {
+  color: var(--accent);
+}
+
+/* ============ Search Next Row ============ */
+.search-next-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* ============ Settings Modal ============ */
+.settings-modal-content {
+  text-align: left;
+}
+
+.settings-field {
+  margin-bottom: 1.5rem;
+}
+
+.settings-field__label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.settings-field__input-wrap {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.settings-field__input-wrap .dd-path__input {
+  flex: 1;
+}
+
+.settings-field__toggle {
+  padding: 0.55rem 0.6rem !important;
+  font-size: 0.9rem !important;
+  line-height: 1;
+}
+
+.header__settings-btn {
+  font-size: 1.1rem;
+  padding: 0.4rem 0.75rem;
+  line-height: 1;
+}
+
+/* ============ Responsive ============ */
+@media (max-width: 600px) {
+  .app {
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  .select-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .steps__label {
+    display: none;
+  }
+
+  .header__title {
+    font-size: 1.35rem;
+  }
+
+  .card__footer-right {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

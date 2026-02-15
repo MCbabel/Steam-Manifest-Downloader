@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Steam Manifest Downloader</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Custom Title Bar -->
+  <div class="title-bar" id="title-bar">
+    <div class="title-bar__drag-region">
+      <div class="title-bar__icon">
+        <img src="/assets/icon-small.svg" alt="" width="16" height="16">
+      </div>
+      <span class="title-bar__text">Steam Manifest Downloader</span>
+    </div>
+    <div class="title-bar__controls">
+      <button class="title-bar__btn title-bar__btn--minimize" id="btn-minimize" title="Minimize">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="2" fill="currentColor"/></svg>
+      </button>
+      <button class="title-bar__btn title-bar__btn--maximize" id="btn-maximize" title="Maximize">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      </button>
+      <button class="title-bar__btn title-bar__btn--close" id="btn-close" title="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="scroll-wrapper">
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <h1 class="header__title">
+        <svg class="header__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Steam Manifest Downloader
+      </h1>
+      <p class="header__subtitle">Upload a .lua/.st file, select manifests, and download automatically</p>
+      <div class="header__actions">
+        <button id="btn-settings" class="btn btn--outline header__settings-btn" title="Settings">
+          ⚙️
+        </button>
+        <button id="btn-theme-toggle" class="btn btn--outline header__theme-btn" title="Toggle Theme">
+          🌙
+        </button>
+
+      </div>
+    </header>
+
+    <!-- Step Indicator -->
+    <div class="steps">
+      <div class="steps__item active" data-step="1">
+        <div class="steps__number">1</div>
+        <div class="steps__label">Upload</div>
+      </div>
+      <div class="steps__connector"></div>
+      <div class="steps__item" data-step="2">
+        <div class="steps__number">2</div>
+        <div class="steps__label">Select</div>
+      </div>
+      <div class="steps__connector"></div>
+      <div class="steps__item" data-step="3">
+        <div class="steps__number">3</div>
+        <div class="steps__label">Download</div>
+      </div>
+    </div>
+
+    <!-- Step 1: File Upload / App ID Search -->
+    <section id="step-upload" class="step active">
+      <div class="card">
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+          <button class="tab-bar__tab active" data-tab="upload" id="tab-upload">📁 Upload File</button>
+          <button class="tab-bar__tab" data-tab="search" id="tab-search">🔍 Search by App ID</button>
+        </div>
+
+        <!-- Upload Tab Content -->
+        <div id="tab-content-upload" class="tab-content active">
+          <div id="drop-zone" class="drop-zone">
+            <svg class="drop-zone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p class="drop-zone__text">Drop your <strong>.lua</strong> or <strong>.st</strong> file here</p>
+            <p class="drop-zone__hint">or click to browse</p>
+          </div>
+          <div id="file-info" class="file-info hidden">
+            <svg class="file-info__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <span id="file-name" class="file-info__name"></span>
+            <button id="file-remove" class="file-info__remove" title="Remove file">&times;</button>
+          </div>
+          <div id="upload-error" class="error-message hidden"></div>
+          <div id="upload-loading" class="loading hidden">
+            <div class="spinner"></div>
+            <span>Parsing file...</span>
+          </div>
+        </div>
+
+        <!-- Search Tab Content -->
+        <div id="tab-content-search" class="tab-content">
+          <!-- Game Info Banner (shown after search) -->
+          <div id="search-game-banner" class="game-info-banner hidden">
+            <img id="search-game-image" class="game-info-banner__image" src="" alt="Game Cover">
+            <div class="game-info-banner__details">
+              <h2 id="search-game-name" class="game-info-banner__title"></h2>
+              <p id="search-game-description" class="game-info-banner__description"></p>
+            </div>
+          </div>
+
+          <div class="search-input-row">
+            <input type="number" id="search-appid-input" class="search-input" placeholder="Enter Steam App ID..." min="1">
+            <button id="btn-search" class="btn btn--primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              Search
+            </button>
+          </div>
+
+          <div id="search-error" class="error-message hidden"></div>
+          <div id="search-loading" class="loading hidden">
+            <div class="spinner"></div>
+            <span>Searching repositories...</span>
+          </div>
+
+          <!-- Search Results -->
+          <div id="search-results" class="search-results hidden">
+            <div id="search-rate-limit" class="search-rate-limit"></div>
+            <div id="repo-list" class="repo-list"></div>
+          </div>
+
+          <!-- Next button after selecting a repo -->
+          <div id="search-next-row" class="search-next-row hidden">
+            <button id="btn-search-next" class="btn btn--primary">
+              Next →
+            </button>
+          </div>
+
+          <!-- Loading state for manifest fetching -->
+          <div id="manifest-loading" class="loading hidden">
+            <div class="spinner"></div>
+            <span>Fetching manifests...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2: Depot/Manifest Selection -->
+    <section id="step-select" class="step hidden">
+      <div class="card">
+        <!-- Game Info Banner -->
+        <div id="game-info-banner" class="game-info-banner hidden">
+          <img id="game-header-image" class="game-info-banner__image" src="" alt="Game Cover">
+          <div class="game-info-banner__details">
+            <h2 id="game-name" class="game-info-banner__title"></h2>
+            <p id="game-description" class="game-info-banner__description"></p>
+          </div>
+        </div>
+        <div id="game-info-loading" class="loading hidden">
+          <div class="spinner"></div>
+          <span>Fetching game info...</span>
+        </div>
+
+        <div class="select-header">
+          <div class="select-header__info">
+            <h2>App ID: <span id="app-id-display" class="accent"></span></h2>
+            <p id="depot-count"></p>
+          </div>
+          <div class="select-header__actions">
+            <button id="btn-select-all" class="btn btn--small">Select All</button>
+            <button id="btn-deselect-all" class="btn btn--small btn--outline">Deselect All</button>
+          </div>
+        </div>
+
+        <div class="depot-filters">
+          <div class="search-box">
+            <input type="text" id="depotSearch" placeholder="Search by Depot ID..." />
+          </div>
+          <label class="filter-toggle">
+            <input type="checkbox" id="showSelectedOnly" />
+            <span>Show selected only</span>
+          </label>
+        </div>
+
+        <div id="depot-list" class="depot-list"></div>
+
+        <div class="settings-section">
+          <label for="download-dir" class="settings-section__label">📁 Download Location</label>
+          <div class="dd-path__input-wrap">
+            <input type="text" id="download-dir" class="dd-path__input"
+              placeholder="Loading default path..."
+              value="">
+          </div>
+          <p class="dd-path__hint">Default: Documents/SteamDownloads — Game files will be saved in a subfolder here</p>
+        </div>
+
+        <div class="settings-section">
+          <label for="mh-apikey" class="settings-section__label">ManifestHub API Key <span class="optional-badge">Optional</span></label>
+          <div class="dd-path__input-wrap">
+            <input type="text" id="mh-apikey" class="dd-path__input"
+              placeholder="Enter your ManifestHub API key..."
+              value="">
+          </div>
+          <p class="dd-path__hint">Required for custom manifest IDs. Get your key at <a href="https://manifesthub1.filegear-sg.me/" target="_blank" class="link">manifesthub1.filegear-sg.me</a></p>
+        </div>
+
+        <div class="card__footer">
+          <button id="btn-back" class="btn btn--outline">
+            &larr; Back
+          </button>
+          <div class="card__footer-right">
+            <button id="btn-export-bat" class="btn btn--outline" disabled>
+              📄 Export .bat
+            </button>
+            <button id="btn-download" class="btn btn--primary" disabled>
+              Download Selected
+              <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 3: Download Progress -->
+    <section id="step-progress" class="step hidden">
+      <div class="card">
+        <div id="disk-space-info" class="disk-space-info hidden">
+          💾 <span id="disk-space-text">Checking disk space...</span>
+        </div>
+        <div id="progress-header" class="progress-header">
+          <h2>Downloading...</h2>
+          <div class="progress-bar">
+            <div id="progress-bar-fill" class="progress-bar__fill" style="width: 0%"></div>
+          </div>
+          <p id="progress-status" class="progress-status"></p>
+        </div>
+
+        <div id="depot-progress-list" class="depot-progress-list"></div>
+
+        <div class="depot-download-progress">
+          <div class="depot-progress-bar">
+            <div id="depot-progress-fill" class="depot-progress-fill" style="width: 0%"></div>
+          </div>
+          <span id="depot-progress-text" class="depot-progress-text">0%</span>
+        </div>
+
+        <div id="terminal" class="terminal">
+          <div class="terminal__header">
+            <span class="terminal__dot terminal__dot--red"></span>
+            <span class="terminal__dot terminal__dot--yellow"></span>
+            <span class="terminal__dot terminal__dot--green"></span>
+            <span class="terminal__title">Output</span>
+          </div>
+          <div id="terminal-output" class="terminal__body"></div>
+        </div>
+
+        <div id="completion-message" class="completion-message hidden"></div>
+
+        <div class="card__footer">
+          <div class="card__footer-left">
+            <button id="btn-cancel" class="btn btn--danger">
+              ✕ Cancel Download
+            </button>
+            <button id="btn-start-over" class="btn btn--outline hidden">
+              ↩ Start Over
+            </button>
+          </div>
+          <button id="btn-new" class="btn btn--primary hidden">
+            Start New Download
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+  </div>
+
+  <!-- Cancel Confirmation Modal -->
+  <div id="cancel-modal" class="modal hidden">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__icon">⚠️</div>
+      <h3 class="modal__title">Cancel Download?</h3>
+      <p class="modal__text">
+        Are you sure you want to cancel? All downloaded files for this App ID will be <strong>permanently deleted</strong>.
+      </p>
+      <div class="modal__actions">
+        <button id="btn-cancel-no" class="btn btn--outline">No, Continue</button>
+        <button id="btn-cancel-yes" class="btn btn--danger">Yes, Cancel &amp; Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Close Confirmation Modal -->
+  <div id="close-modal" class="modal hidden">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__icon">⚠️</div>
+      <h3 class="modal__title">Close Application?</h3>
+      <p class="modal__text">
+        A download is in progress! Closing will cancel it and you may <strong>lose progress</strong>. Close anyway?
+      </p>
+      <div class="modal__actions">
+        <button id="btn-close-no" class="btn btn--outline">No, Keep Running</button>
+        <button id="btn-close-yes" class="btn btn--danger">Yes, Close</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content settings-modal-content">
+      <h3 class="modal__title">⚙️ Settings</h3>
+      <div class="settings-field">
+        <label for="github-token-input" class="settings-field__label">GitHub Personal Access Token</label>
+        <div class="settings-field__input-wrap">
+          <input type="password" id="github-token-input" class="dd-path__input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+          <button id="btn-toggle-token-vis" class="btn btn--small btn--outline settings-field__toggle" type="button" title="Show/Hide">👁</button>
+        </div>
+        <p class="dd-path__hint">Optional. Increases GitHub API rate limit from 60 to 5,000 requests/hour.</p>
+      </div>
+      <div class="modal__actions">
+        <button id="btn-settings-cancel" class="btn btn--outline">Cancel</button>
+        <button id="btn-settings-save" class="btn btn--primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

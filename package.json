@@ -1,0 +1,64 @@
+{
+  "name": "steam-manifest-downloader",
+  "productName": "Steam Manifest Downloader",
+  "version": "1.0.0",
+  "description": "Desktop app for downloading Steam manifest files and running DepotDownloaderMod",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "electron": "run-electron.bat",
+    "build": "electron-builder --win"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^9.0.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "sharp": "^0.34.5"
+  },
+  "build": {
+    "appId": "com.steammanifest.downloader",
+    "productName": "Steam Manifest Downloader",
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon.png",
+      "signAndEditExecutable": false,
+      "signingHashAlgorithms": []
+    },
+    "portable": {
+      "artifactName": "SteamManifestDownloader.exe"
+    },
+    "files": [
+      "electron-main.js",
+      "preload.js",
+      "server.js",
+      "config.js",
+      "package.json",
+      "src/**/*",
+      "public/**/*",
+      "assets/icon.png",
+      "assets/icon-small.png",
+      "assets/tray-icon.png",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,readme.md,LICENSE,license,LICENCE}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/.cache",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "DepotDownloaderMod",
+        "to": "DepotDownloaderMod",
+        "filter": [
+          "**/*",
+          "!*.pdb"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+# =============================================================================
+# Steam Manifest Downloader - .gitignore
+# =============================================================================
+
+# ---- Rust / Cargo ----
+src-tauri/target/
+target/
+
+# ---- Build output (Electron / Tauri bundles) ----
+dist/
+
+# ---- Node.js ----
+node_modules/
+
+# ---- App output directories ----
+downloads/
+uploads/
+data/
+
+# ---- Old Node.js source (superseded by Tauri/Rust) ----
+/src/
+
+# ---- Development plans (internal) ----
+plans/
+
+# ---- Screenshots ----
+screenshots/
+
+# ---- OS generated files ----
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- IDE / Editor ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- Temp / log files ----
+*.log
+*.tmp
+
+# ---- Environment ----
+.env
+.env.*
