@@ -16,6 +16,18 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 
 ---
 
+> [!WARNING]
+> ## ⚠️ Legal Disclaimer
+>
+> This project does **NOT** support or encourage piracy in any way.
+>
+> - **DepotDownloaderMod** must **ONLY** be used with your own legally obtained Steam keys.
+> - This tool is intended for **legitimate use cases only** (e.g., downloading your own purchased content, archiving, backup, etc.).
+> - The developer takes **no responsibility** for any misuse of this tool.
+> - By using this software, you agree to comply with all applicable laws and Steam's Terms of Service.
+
+---
+
 ## ✨ Features
 
 | | Feature |
@@ -175,8 +187,8 @@ This project is licensed under the [GPL-2.0 License](LICENSE).
 
 ## 🙏 Credits & Acknowledgments
 
-- **[DepotDownloaderMod](https://github.com/SteamRE/DepotDownloader)** — Steam depot downloading engine
-- **[ManifestHub](https://manifesthub.filegear-sg.me/)** — Manifest file API
+- **[DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod)** — Steam depot downloading engine
+- **[ManifestHub](https://manifesthub1.filegear-sg.me/)** — Manifest file API
 - **[Steam Store API](https://store.steampowered.com/api/)** — Game metadata & artwork
 - **[Tauri](https://v2.tauri.app/)** — Desktop application framework
 
