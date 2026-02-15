@@ -42,6 +42,9 @@ desktop.ini
 *.log
 *.tmp
 
+# ---- Debug symbols ----
+*.pdb
+
 # ---- Environment ----
 .env
 .env.*
