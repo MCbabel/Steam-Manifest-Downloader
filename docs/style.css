@@ -124,6 +124,13 @@ a:hover {
 
 .nav-logo:hover { color: var(--blue); }
 
+.nav-logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
 .nav-links {
   display: flex;
   align-items: center;
