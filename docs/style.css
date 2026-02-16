@@ -757,6 +757,12 @@ section {
 
 .footer-logo:hover { color: var(--blue); }
 
+.footer-logo-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+}
+
 .footer-left p {
   color: var(--text-muted);
   font-size: 0.9rem;
