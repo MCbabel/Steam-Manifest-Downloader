@@ -124,4 +124,5 @@
   }
 
   window.addEventListener('scroll', highlightNavLink, { passive: true });
+  highlightNavLink();
 })();

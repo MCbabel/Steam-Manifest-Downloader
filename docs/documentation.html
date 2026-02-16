@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation — Steam Manifest Downloader</title>
+  <meta name="description" content="Comprehensive documentation for Steam Manifest Downloader. Learn how to install, configure, and use the app to download Steam depots effortlessly.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="docs.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+</head>
+<body>
+  <!-- Page-wide Background -->
+  <div class="page-bg" aria-hidden="true">
+    <div class="hero-gradient"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-orb hero-orb-3"></div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">
+        <img src="icon.svg" alt="Steam Manifest Downloader" class="nav-logo-icon" width="36" height="36" />
+        <span>SMD</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="index.html#features">Features</a>
+        <a href="index.html#how-it-works">How It Works</a>
+        <a href="index.html#tech-stack">Tech Stack</a>
+        <a href="documentation.html" class="nav-link-active">Docs</a>
+        <a href="index.html#download">Download</a>
+      </div>
+      <a href="https://github.com/MCbabel/Steam-Manifest-Downloader" class="nav-github" target="_blank" rel="noopener" aria-label="GitHub">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Sidebar Toggle (Mobile) -->
+  <button class="docs-sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation">
+    <i class="fa-solid fa-bars" id="sidebarToggleIcon"></i>
+  </button>
+  <div class="docs-sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- Docs Layout -->
+  <div class="docs-layout">
+    <!-- Sidebar -->
+    <aside class="docs-sidebar" id="docsSidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">Getting Started</div>
+        <ul class="sidebar-links">
+          <li><a href="#getting-started">Overview</a></li>
+          <li class="sub"><a href="#system-requirements">System Requirements</a></li>
+          <li class="sub"><a href="#installation">Installation</a></li>
+          <li class="sub"><a href="#first-launch">First Launch</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Usage Guide</div>
+        <ul class="sidebar-links">
+          <li><a href="#usage-guide">Overview</a></li>
+          <li class="sub"><a href="#step-upload">Upload a File</a></li>
+          <li class="sub"><a href="#step-select">Select Manifests</a></li>
+          <li class="sub"><a href="#step-download">Download</a></li>
+          <li class="sub"><a href="#step-cancel">Cancel a Download</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">File Formats</div>
+        <ul class="sidebar-links">
+          <li><a href="#file-formats">Supported Formats</a></li>
+          <li class="sub"><a href="#format-lua">.lua Files</a></li>
+          <li class="sub"><a href="#format-vdf">.vdf / Key.vdf Files</a></li>
+          <li class="sub"><a href="#format-st">.st Files</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Configuration</div>
+        <ul class="sidebar-links">
+          <li><a href="#settings">Settings</a></li>
+          <li><a href="#manifest-sources">Manifest Sources</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Help</div>
+        <ul class="sidebar-links">
+          <li><a href="#troubleshooting">Troubleshooting / FAQ</a></li>
+          <li><a href="#legal-notice">Legal Notice</a></li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="docs-content">
+
+      <!-- Getting Started -->
+      <section class="doc-section reveal" id="getting-started">
+        <span class="doc-tag">Getting Started</span>
+        <h2>Getting Started</h2>
+        <p>Steam Manifest Downloader (SMD) is a modern Tauri v2 desktop application built with Rust and WebView. It parses manifest files, searches multiple sources for Steam depot manifests, and downloads them automatically using an integrated DepotDownloaderMod engine.</p>
+
+        <h3 id="system-requirements">System Requirements</h3>
+        <ul>
+          <li><strong>.NET 8+ Runtime</strong> — Required by the embedded DepotDownloaderMod engine. <a href="https://dotnet.microsoft.com/en-us/download/dotnet/8.0" target="_blank" rel="noopener">Download .NET 8</a></li>
+          <li><strong>Windows 10+</strong> — Windows 10 version 1803 or later (with WebView2)</li>
+          <li><strong>Linux</strong> — Most modern distributions with GTK3 and WebKit2GTK (for AppImage: FUSE support or <code>APPIMAGE_EXTRACT_AND_RUN=1</code>)</li>
+          <li><strong>Internet connection</strong> — Required for searching and downloading manifests</li>
+          <li><strong>Disk space</strong> — ~20 MB for the app itself; additional space for downloaded depots</li>
+        </ul>
+
+        <hr class="doc-divider">
+
+        <h3 id="installation">Installation</h3>
+
+        <h4>Windows (NSIS Installer)</h4>
+        <ol>
+          <li>Download the latest <code>.exe</code> installer from the <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases" target="_blank" rel="noopener">Releases page</a></li>
+          <li>Run the installer and follow the setup wizard</li>
+          <li>Launch <strong>Steam Manifest Downloader</strong> from your Start Menu or Desktop</li>
+        </ol>
+
+        <h4>Linux (AppImage)</h4>
+        <ol>
+          <li>Download the latest <code>.AppImage</code> file from the <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases" target="_blank" rel="noopener">Releases page</a></li>
+          <li>Make it executable:</li>
+        </ol>
+        <div class="code-block reveal">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-fn">chmod</span> +x SteamManifestDownloader_*.AppImage
+./<span class="code-fn">SteamManifestDownloader_*.AppImage</span></code></pre>
+        </div>
+
+        <div class="doc-callout info reveal">
+          <span class="doc-callout-icon"><i class="fa-solid fa-circle-info"></i></span>
+          <p>If FUSE is not available on your system, you can run the AppImage with the environment variable <code>APPIMAGE_EXTRACT_AND_RUN=1</code> set.</p>
+        </div>
+
+        <hr class="doc-divider">
+
+        <h3 id="first-launch">First Launch</h3>
+        <p>On first launch, the application opens with the main interface ready to accept files. No initial configuration is required — the default settings work for most users. However, you may want to:</p>
+        <ul>
+          <li>Set a custom <strong>download location</strong> in Settings</li>
+          <li>Add a <strong>GitHub token</strong> to increase API rate limits (optional)</li>
+          <li>Configure a <strong>ManifestHub API key</strong> for additional manifest sources (optional)</li>
+        </ul>
+      </section>
+
+      <!-- Usage Guide -->
+      <section class="doc-section reveal" id="usage-guide">
+        <span class="doc-tag">Usage Guide</span>
+        <h2>Usage Guide</h2>
+        <p>Using Steam Manifest Downloader is a straightforward 3-step process: upload a file, select the manifests you need, and hit download.</p>
+
+        <hr class="doc-divider">
+
+        <h3 id="step-upload">Step 1: Upload a File</h3>
+        <p>Start by providing a manifest data file. You can either:</p>
+        <ul>
+          <li><strong>Drag &amp; drop</strong> a <code>.lua</code>, <code>.vdf</code>, or <code>.st</code> file onto the upload area</li>
+          <li><strong>Click</strong> the upload area to open a file picker</li>
+        </ul>
+        <p>The application will parse the file and extract all depot IDs, manifest IDs, app IDs, and depot keys contained within.</p>
+
+        <div class="doc-callout tip reveal">
+          <span class="doc-callout-icon"><i class="fa-solid fa-lightbulb"></i></span>
+          <p>You can upload multiple files — each new upload merges its data with any previously loaded depots.</p>
+        </div>
+
+        <hr class="doc-divider">
+
+        <h3 id="step-select">Step 2: Select Manifests</h3>
+        <p>After parsing, the app displays a list of all discovered depots and their manifest IDs. From here you can:</p>
+        <ul>
+          <li><strong>Select / deselect</strong> individual depots using the checkboxes</li>
+          <li>Use <strong>Select All</strong> or <strong>Deselect All</strong> for bulk actions</li>
+          <li><strong>Search / filter</strong> depots by ID or name using the search bar</li>
+          <li>View <strong>app details</strong> fetched from the Steam Store API (game name, icon, etc.)</li>
+        </ul>
+        <p>Each depot entry shows the depot ID, the associated manifest ID, and whether a depot key was found in the parsed file.</p>
+
+        <hr class="doc-divider">
+
+        <h3 id="step-download">Step 3: Download</h3>
+        <p>Click the <strong>Download</strong> button to begin. Behind the scenes, the application performs several operations:</p>
+        <ol>
+          <li><strong>Manifest search</strong> — Queries ManifestHub API and multiple GitHub repositories to locate <code>.manifest</code> files for each selected depot</li>
+          <li><strong>Manifest download</strong> — Downloads all found <code>.manifest</code> files to a local directory</li>
+          <li><strong>Depot keys generation</strong> — Creates a <code>steam.keys</code> file containing all known depot decryption keys</li>
+          <li><strong>DepotDownloaderMod execution</strong> — Launches the embedded DepotDownloaderMod binary with the correct arguments to download the actual depot files</li>
+        </ol>
+        <p>You'll see real-time progress tracking with:</p>
+        <ul>
+          <li>A progress bar showing overall completion</li>
+          <li>Download speed (MB/s)</li>
+          <li>ETA estimates</li>
+          <li>Per-depot status updates</li>
+        </ul>
+
+        <div class="doc-callout info reveal">
+          <span class="doc-callout-icon"><i class="fa-solid fa-circle-info"></i></span>
+          <p>The downloaded files are saved to your configured download location (default: system Downloads folder). Each download creates a subdirectory named after the app ID.</p>
+        </div>
+
+        <hr class="doc-divider">
+
+        <h3 id="step-cancel">Cancel a Download</h3>
+        <p>You can cancel an in-progress download at any time by clicking the <strong>Cancel</strong> button. When a download is canceled:</p>
+        <ul>
+          <li>The DepotDownloaderMod process is terminated immediately</li>
+          <li><strong>Partially downloaded files are deleted</strong> to avoid incomplete or corrupted data</li>
+          <li>The UI returns to the selection screen so you can start a new download</li>
+        </ul>
+
+        <div class="doc-callout warning reveal">
+          <span class="doc-callout-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <p>Canceling a download will delete all partially downloaded files for that session. Make sure you really want to cancel before confirming.</p>
+        </div>
+      </section>
+
+      <!-- Supported File Formats -->
+      <section class="doc-section reveal" id="file-formats">
+        <span class="doc-tag">File Formats</span>
+        <h2>Supported File Formats</h2>
+        <p>SMD can parse three different file formats to extract depot and manifest information.</p>
+
+        <hr class="doc-divider">
+
+        <h3 id="format-lua">.lua Files</h3>
+        <p>Lua script files are the most common format. They contain function calls that define app IDs, depot keys, and manifest IDs. The parser recognizes the following patterns:</p>
+
+        <div class="code-block reveal">
+          <div class="code-block-header">
+            <span class="code-block-lang">lua</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-cm">-- Register an app ID (no depot key)</span>
+<span class="code-fn">addappid</span>(<span class="code-num">1995890</span>)
+
+<span class="code-cm">-- Register a depot with a hex decryption key</span>
+<span class="code-fn">addappid</span>(<span class="code-num">1995891</span>, <span class="code-num">0</span>, <span class="code-str">"a1b2c3d4e5f6..."</span>)
+
+<span class="code-cm">-- Set the manifest ID for a depot</span>
+<span class="code-fn">setManifestid</span>(<span class="code-num">1995891</span>, <span class="code-str">"3438272076824159257"</span>)</code></pre>
+        </div>
+
+        <ul>
+          <li><code>addappid(depotId)</code> — Registers a depot ID</li>
+          <li><code>addappid(depotId, 0, "hexKey")</code> — Registers a depot with a decryption key</li>
+          <li><code>setManifestid(depotId, "manifestId")</code> — Associates a manifest ID with a depot</li>
+        </ul>
+
+        <hr class="doc-divider">
+
+        <h3 id="format-vdf">.vdf / Key.vdf Files</h3>
+        <p>Valve Data Format (VDF) files use a nested key-value structure. The <code>Key.vdf</code> file typically contains depot keys in the following format:</p>
+
+        <div class="code-block reveal">
+          <div class="code-block-header">
+            <span class="code-block-lang">vdf</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-str">"depots"</span>
+{
+    <span class="code-str">"1995891"</span>
+    {
+        <span class="code-key">"DecryptionKey"</span>    <span class="code-str">"a1b2c3d4e5f6..."</span>
+    }
+    <span class="code-str">"1995892"</span>
+    {
+        <span class="code-key">"DecryptionKey"</span>    <span class="code-str">"f6e5d4c3b2a1..."</span>
+    }
+}</code></pre>
+        </div>
+
+        <p>The parser extracts each depot ID and its associated decryption key from the VDF structure.</p>
+
+        <hr class="doc-divider">
+
+        <h3 id="format-st">.st Files</h3>
+        <p>The <code>.st</code> format is a binary file format used by certain sources. SMD includes a dedicated binary parser that can read and extract depot IDs, manifest IDs, and depot keys from these files.</p>
+
+        <div class="doc-callout info reveal">
+          <span class="doc-callout-icon"><i class="fa-solid fa-circle-info"></i></span>
+          <p><code>.st</code> files are automatically detected by their binary signature. Simply drag and drop them like any other supported file.</p>
+        </div>
+      </section>
+
+      <!-- Settings -->
+      <section class="doc-section reveal" id="settings">
+        <span class="doc-tag">Configuration</span>
+        <h2>Settings</h2>
+        <p>Access settings through the gear icon in the application. All settings are persisted between sessions.</p>
+
+        <h3>Download Location</h3>
+        <p>Configure where downloaded depot files are saved. By default, files are saved to your system's <strong>Downloads folder</strong>.</p>
+        <ul>
+          <li>Click <strong>Browse</strong> to select a custom directory</li>
+          <li>Each download creates a subdirectory named after the app ID</li>
+          <li>Ensure the chosen path has sufficient disk space</li>
+        </ul>
+
+        <hr class="doc-divider">
+
+        <h3>Extra DepotDownloader Arguments</h3>
+        <p>Pass additional command-line arguments to the DepotDownloaderMod engine. The default value is:</p>
+        <div class="code-block reveal">
+          <div class="code-block-header">
+            <span class="code-block-lang">args</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-kw">-max-downloads</span> <span class="code-num">8</span></code></pre>
+        </div>
+        <p>This limits concurrent download connections to 8. You can adjust this value or add other DepotDownloaderMod-compatible arguments as needed.</p>
+
+        <div class="doc-callout tip reveal">
+          <span class="doc-callout-icon"><i class="fa-solid fa-lightbulb"></i></span>
+          <p>If you experience timeouts or slow downloads, try lowering <code>-max-downloads</code> to <code>4</code> or <code>2</code>.</p>
+        </div>
+
+        <hr class="doc-divider">
+
+        <h3>GitHub Token <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h3>
+        <p>Adding a personal GitHub token increases the GitHub API rate limit from <strong>60 requests/hour</strong> (unauthenticated) to <strong>5,000 requests/hour</strong> (authenticated).</p>
+        <p>To generate a token:</p>
+        <ol>
+          <li>Go to <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">GitHub → Settings → Developer settings → Personal access tokens</a></li>
+          <li>Click <strong>Generate new token (classic)</strong></li>
+          <li>No special scopes are required — a token with no permissions is sufficient</li>
+          <li>Copy the token and paste it into the settings field</li>
+        </ol>
+
+        <div class="doc-callout warning reveal">
+          <span class="doc-callout-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <p>Your token is stored locally on your machine only. It is never sent anywhere except to the GitHub API for authentication.</p>
+        </div>
+
+        <hr class="doc-divider">
+
+        <h3>ManifestHub API Key <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h3>
+        <p>If you have a ManifestHub API key, enter it here to enable searching the ManifestHub manifest database. This provides access to a large collection of Steam manifests as an additional source.</p>
+      </section>
+
+      <!-- Manifest Sources -->
+      <section class="doc-section reveal" id="manifest-sources">
+        <span class="doc-tag">Configuration</span>
+        <h2>Manifest Sources</h2>
+        <p>SMD searches multiple sources to locate manifest files for your selected depots. Here's where it looks:</p>
+
+        <h3>ManifestHub API</h3>
+        <p>The primary manifest source. SMD queries the ManifestHub API at:</p>
+        <div class="code-block reveal">
+          <div class="code-block-header">
+            <span class="code-block-lang">url</span>
+          </div>
+          <pre><code><span class="code-str">manifesthub1.filegear-sg.me</span></code></pre>
+        </div>
+        <p>This API provides fast, indexed access to a large database of Steam manifests. Requires an API key configured in Settings.</p>
+
+        <hr class="doc-divider">
+
+        <h3>GitHub Repositories</h3>
+        <p>SMD searches multiple GitHub repositories for manifest files using the GitHub Contents API. The primary repositories include:</p>
+        <ul>
+          <li><strong>SteamAutoCracks/ManifestHub</strong> — The main manifest repository</li>
+        </ul>
+        <p>The app searches for manifest files matching the depot ID and manifest ID pattern within these repositories.</p>
+
+        <div class="doc-callout info reveal">
+          <span class="doc-callout-icon"><i class="fa-solid fa-circle-info"></i></span>
+          <p>GitHub API has rate limits. Without a token, you're limited to 60 requests/hour. Add a GitHub token in Settings to increase this to 5,000 requests/hour.</p>
+        </div>
+
+        <hr class="doc-divider">
+
+        <h3>Alternative Sources</h3>
+        <p>When a manifest is not found on the primary sources, SMD also checks alternative sources:</p>
+        <ul>
+          <li><strong>KernelOS</strong> — Alternative manifest repository</li>
+          <li><strong>PrintedWaste</strong> — Additional fallback source</li>
+        </ul>
+        <p>These sources are checked automatically as fallbacks — no additional configuration is needed.</p>
+      </section>
+
+      <!-- Troubleshooting -->
+      <section class="doc-section reveal" id="troubleshooting">
+        <span class="doc-tag">Help</span>
+        <h2>Troubleshooting / FAQ</h2>
+        <p>Common issues and how to resolve them.</p>
+
+        <div class="faq-item reveal">
+          <div class="faq-q">".NET not found" error on launch</div>
+          <div class="faq-a">
+            The embedded DepotDownloaderMod requires <strong>.NET 8 Runtime</strong>. Download and install it from
+            <a href="https://dotnet.microsoft.com/en-us/download/dotnet/8.0" target="_blank" rel="noopener">dotnet.microsoft.com</a>.
+            Make sure to install the <strong>.NET Runtime</strong> (not just the ASP.NET or Desktop runtime).
+          </div>
+        </div>
+
+        <div class="faq-item reveal">
+          <div class="faq-q">"Connection timeout" during download</div>
+          <div class="faq-a">
+            This usually happens when too many concurrent connections overwhelm your network. Go to <strong>Settings</strong> and reduce the <code>-max-downloads</code> value from <code>8</code> to <code>4</code> or <code>2</code>. You can also check if a VPN or proxy is interfering with the connection.
+          </div>
+        </div>
+
+        <div class="faq-item reveal">
+          <div class="faq-q">"GitHub rate limit exceeded" when searching</div>
+          <div class="faq-a">
+            Without authentication, GitHub limits API requests to 60 per hour. Go to <strong>Settings</strong> and add a GitHub personal access token. This increases the limit to 5,000 requests/hour. See the <a href="#settings">Settings</a> section for instructions on generating a token.
+          </div>
+        </div>
+
+        <div class="faq-item reveal">
+          <div class="faq-q">Download stuck at 0%</div>
+          <div class="faq-a">
+            First, check your internet connection. If your connection is fine, ensure your firewall or antivirus is not blocking <code>DepotDownloaderMod.exe</code>. You may need to add an exception for the application. Also verify that .NET 8 Runtime is properly installed.
+          </div>
+        </div>
+
+        <div class="faq-item reveal">
+          <div class="faq-q">Linux: AppImage won't launch</div>
+          <div class="faq-a">
+            AppImages require FUSE to run. If FUSE is not available on your system, set the environment variable before launching:
+            <br><br>
+            <code>APPIMAGE_EXTRACT_AND_RUN=1 ./SteamManifestDownloader_*.AppImage</code>
+            <br><br>
+            Also ensure the file is executable: <code>chmod +x SteamManifestDownloader_*.AppImage</code>
+          </div>
+        </div>
+
+        <div class="faq-item reveal">
+          <div class="faq-q">No manifests found for my game</div>
+          <div class="faq-a">
+            Not all games have manifests available in the searched repositories. Ensure your <code>.lua</code> / <code>.vdf</code> / <code>.st</code> file contains the correct depot and manifest IDs. You can also try adding a ManifestHub API key in Settings for access to additional sources.
+          </div>
+        </div>
+
+        <div class="faq-item reveal">
+          <div class="faq-q">App crashes or shows a white screen</div>
+          <div class="faq-a">
+            On Windows, ensure <strong>Microsoft Edge WebView2 Runtime</strong> is installed (it's included with Windows 10 1803+ and Windows 11). On Linux, ensure <strong>WebKit2GTK</strong> is installed (<code>sudo apt install libwebkit2gtk-4.1-0</code> on Debian/Ubuntu).
+          </div>
+        </div>
+      </section>
+
+      <!-- Legal Notice -->
+      <section class="doc-section reveal" id="legal-notice">
+        <span class="doc-tag">Legal</span>
+        <h2>Legal Notice</h2>
+
+        <div class="doc-callout danger reveal">
+          <span class="doc-callout-icon"><i class="fa-solid fa-scale-balanced"></i></span>
+          <p><strong>This tool does NOT support piracy.</strong> Steam Manifest Downloader is intended to be used only with legally obtained Steam depot keys and manifests that you have the right to access.</p>
+        </div>
+
+        <h3>Intended Use</h3>
+        <p>This application is designed as a convenience tool for managing Steam depot downloads. It is the user's responsibility to ensure they comply with all applicable laws and terms of service.</p>
+
+        <h3>Terms of Service</h3>
+        <ul>
+          <li><strong>Only use with your own legally obtained Steam keys</strong> — Do not use this tool to download content you do not own or have a license to access.</li>
+          <li><strong>Comply with Steam's Terms of Service</strong> — Your use of this tool must not violate Valve's <a href="https://store.steampowered.com/subscriber_agreement/" target="_blank" rel="noopener">Steam Subscriber Agreement</a>.</li>
+          <li><strong>Comply with all applicable laws</strong> — Downloading copyrighted content without authorization is illegal in most jurisdictions.</li>
+        </ul>
+
+        <h3>Disclaimer</h3>
+        <p>The developers of Steam Manifest Downloader are not responsible for any misuse of this tool. By using this application, you agree that you are solely responsible for ensuring your use complies with all applicable laws, regulations, and terms of service.</p>
+
+        <p>This project is licensed under the <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/blob/main/LICENSE" target="_blank" rel="noopener">GPL-2.0 License</a>.</p>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-left">
+          <a href="index.html" class="footer-logo">
+            <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="6" fill="url(#flogo)"/>
+              <path d="M8 22V10l6 6 6-6v12" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <defs><linearGradient id="flogo" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#58a6ff"/><stop offset="1" stop-color="#bc8cff"/></linearGradient></defs>
+            </svg>
+            Steam Manifest Downloader
+          </a>
+          <p>Download Steam depots effortlessly.</p>
+        </div>
+        <div class="footer-right">
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases" target="_blank" rel="noopener">Releases</a>
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/blob/main/LICENSE" target="_blank" rel="noopener">GPL-2.0 License</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>Made with ❤️ and 🦀</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    /* Documentation-specific scripts */
+    (function () {
+      'use strict';
+
+      // --- Sidebar toggle (mobile) ---
+      const sidebar = document.getElementById('docsSidebar');
+      const toggle = document.getElementById('sidebarToggle');
+      const overlay = document.getElementById('sidebarOverlay');
+      const toggleIcon = document.getElementById('sidebarToggleIcon');
+
+      function openSidebar() {
+        sidebar.classList.add('open');
+        overlay.classList.add('show');
+        toggleIcon.className = 'fa-solid fa-xmark';
+      }
+
+      function closeSidebar() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('show');
+        toggleIcon.className = 'fa-solid fa-bars';
+      }
+
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          if (sidebar.classList.contains('open')) {
+            closeSidebar();
+          } else {
+            openSidebar();
+          }
+        });
+      }
+
+      if (overlay) {
+        overlay.addEventListener('click', closeSidebar);
+      }
+
+      // Close sidebar on link click (mobile)
+      document.querySelectorAll('.sidebar-links a').forEach(function (link) {
+        link.addEventListener('click', function () {
+          if (window.innerWidth <= 900) {
+            closeSidebar();
+          }
+        });
+      });
+
+      // --- Active sidebar link on scroll ---
+      var sidebarLinks = document.querySelectorAll('.sidebar-links a');
+
+      // Build ordered list of targets from sidebar links
+      var targets = [];
+      sidebarLinks.forEach(function (link) {
+        var href = link.getAttribute('href');
+        if (href && href.charAt(0) === '#') {
+          var el = document.querySelector(href);
+          if (el) {
+            targets.push({ id: href.substring(1), el: el, link: link });
+          }
+        }
+      });
+
+      function getAbsoluteTop(el) {
+        var rect = el.getBoundingClientRect();
+        return rect.top + window.pageYOffset;
+      }
+
+      function highlightSidebarLink() {
+        var scrollPos = window.pageYOffset + 140;
+        var current = null;
+
+        // Find the last target whose top is above the scroll position
+        for (var i = 0; i < targets.length; i++) {
+          var top = getAbsoluteTop(targets[i].el);
+          if (scrollPos >= top) {
+            current = targets[i];
+          }
+        }
+
+        sidebarLinks.forEach(function (link) {
+          link.classList.remove('active');
+        });
+
+        if (current) {
+          current.link.classList.add('active');
+        }
+      }
+
+      window.addEventListener('scroll', highlightSidebarLink, { passive: true });
+      highlightSidebarLink();
+    })();
+
+    /* Copy code block */
+    function copyCode(btn) {
+      var code = btn.closest('.code-block').querySelector('code');
+      var text = code.textContent || code.innerText;
+      navigator.clipboard.writeText(text).then(function () {
+        btn.textContent = 'Copied!';
+        setTimeout(function () {
+          btn.textContent = 'Copy';
+        }, 2000);
+      });
+    }
+  </script>
+</body>
+</html>

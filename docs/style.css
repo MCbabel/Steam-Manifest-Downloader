@@ -145,6 +145,7 @@ a:hover {
 }
 
 .nav-links a:hover { color: var(--text); }
+.nav-links a.nav-link-active { color: var(--text); }
 
 .nav-github {
   color: var(--text-muted);
