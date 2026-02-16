@@ -9,6 +9,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows)
 ![Built with](https://img.shields.io/badge/built_with-Rust-dea584?style=for-the-badge&logo=rust)
 ![Tauri](https://img.shields.io/badge/Tauri_v2-FFC131?style=for-the-badge&logo=tauri&logoColor=white)
+![Downloads](https://img.shields.io/github/downloads/MCbabel/Steam-Manifest-Downloader/total?style=for-the-badge&color=brightgreen)
 
 Upload `.lua` files, search across GitHub repos, and let the app handle manifests, depot keys, and downloads — all in one click.
 

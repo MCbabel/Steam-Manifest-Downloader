@@ -48,3 +48,9 @@ desktop.ini
 # ---- Environment ----
 .env
 .env.*
+
+# Build scripts
+assets/generate-*.js
+
+# Temp files
+RELEASE_NOTES.md
