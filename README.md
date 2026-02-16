@@ -46,18 +46,6 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 
 ---
 
-## 📸 Screenshots
-
-<div align="center">
-
-![Main Interface](screenshots/main.png)
-
-*Screenshots coming soon*
-
-</div>
-
----
-
 ## 🚀 Quick Start
 
 > **How it works — in 5 steps:**
