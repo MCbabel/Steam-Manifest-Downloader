@@ -1496,7 +1496,14 @@ function initEvents() {
 
 // ============ Tauri Integration (replaces Electron) ============
 function initTauri() {
-  // Window control buttons
+  // On Linux, native window decorations are used — hide the custom title bar
+  const isLinux = navigator.platform.toLowerCase().includes('linux');
+  if (isLinux) {
+    const titleBar = document.getElementById('title-bar');
+    if (titleBar) titleBar.style.display = 'none';
+  }
+
+  // Window control buttons (still needed on Windows with custom title bar)
   document.getElementById('btn-minimize').addEventListener('click', () => invoke('minimize_window'));
   document.getElementById('btn-maximize').addEventListener('click', () => invoke('maximize_window'));
   document.getElementById('btn-close').addEventListener('click', () => invoke('close_window'));
