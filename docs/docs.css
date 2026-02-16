@@ -426,10 +426,10 @@
   position: fixed;
   inset: 0;
   z-index: 150;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(0,0,0,0.4);
   opacity: 0;
   transition: opacity var(--transition);
+  pointer-events: none;
 }
 
 .docs-sidebar-overlay.show {
@@ -440,6 +440,7 @@
 @media (max-width: 900px) {
   .docs-layout {
     padding-top: 80px;
+    z-index: auto;
   }
 
   .docs-sidebar {
@@ -450,9 +451,7 @@
     width: 280px;
     min-width: 280px;
     max-height: 100vh;
-    background: rgba(13, 17, 23, 0.97);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: #0d1117;
     border-right: 1px solid var(--border);
     z-index: 160;
     padding: 80px 0 24px;
@@ -471,6 +470,7 @@
 
   .docs-sidebar-overlay.show {
     display: block;
+    pointer-events: auto;
   }
 
   .doc-section {
