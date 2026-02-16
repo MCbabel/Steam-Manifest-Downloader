@@ -18,7 +18,17 @@ fn main() {
             // Initialize services state
             let state = services::AppState::new(app.handle().clone());
             app.manage(state);
-            
+
+            // On Windows, remove native decorations so the custom title bar is used.
+            // On Linux, keep native decorations (set in tauri.conf.json) for proper
+            // window drag / resize / close behavior.
+            #[cfg(target_os = "windows")]
+            {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.set_decorations(false);
+                }
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
