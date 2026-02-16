@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog — Steam Manifest Downloader</title>
+  <meta name="description" content="Track all changes and updates to Steam Manifest Downloader. View the full version history, new features, bug fixes, and improvements.">
+  <meta property="og:title" content="Changelog — Steam Manifest Downloader" />
+  <meta property="og:description" content="Track all changes and updates to Steam Manifest Downloader." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://smd.mcbabel.de/changelog/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Changelog — Steam Manifest Downloader" />
+  <meta name="twitter:description" content="Track all changes and updates to Steam Manifest Downloader." />
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="icon" type="image/svg+xml" href="../icon.svg">
+  <style>
+    .changelog-section {
+      padding: 140px 24px 80px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+    .changelog-header {
+      text-align: center;
+      margin-bottom: 56px;
+      animation: fadeInUp 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+    .changelog-header .section-tag {
+      display: inline-block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--blue);
+      background: rgba(88, 166, 255, 0.1);
+      border: 1px solid rgba(88, 166, 255, 0.2);
+      padding: 6px 16px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+    }
+    .changelog-header h1 {
+      font-size: clamp(2rem, 5vw, 2.75rem);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .changelog-header p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+    }
+    .changelog-entry {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 32px;
+      margin-bottom: 32px;
+      animation: fadeInUp 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+      animation-delay: 0.15s;
+    }
+    .changelog-entry-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .changelog-version {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .changelog-date {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      background: rgba(139, 148, 158, 0.1);
+      border: 1px solid rgba(139, 148, 158, 0.15);
+      padding: 4px 12px;
+      border-radius: 999px;
+    }
+    .changelog-changes {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .changelog-changes li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 3px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+    .badge-added {
+      color: #3fb950;
+      background: rgba(63, 185, 80, 0.12);
+      border: 1px solid rgba(63, 185, 80, 0.25);
+    }
+    .badge-changed {
+      color: #58a6ff;
+      background: rgba(88, 166, 255, 0.12);
+      border: 1px solid rgba(88, 166, 255, 0.25);
+    }
+    .badge-fixed {
+      color: #d29922;
+      background: rgba(210, 153, 34, 0.12);
+      border: 1px solid rgba(210, 153, 34, 0.25);
+    }
+    .badge-removed {
+      color: #f85149;
+      background: rgba(248, 81, 73, 0.12);
+      border: 1px solid rgba(248, 81, 73, 0.25);
+    }
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Page-wide Background -->
+  <div class="page-bg" aria-hidden="true">
+    <div class="hero-gradient"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-orb hero-orb-3"></div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="nav" id="nav">
+    <div class="nav-inner">
+      <a href="../" class="nav-logo">
+        <img src="../icon.svg" alt="Steam Manifest Downloader" class="nav-logo-icon" width="36" height="36" />
+        <span>SMD</span>
+      </a>
+      <div class="nav-links">
+        <a href="../">Home</a>
+        <a href="../#features">Features</a>
+        <a href="../#how-it-works">How It Works</a>
+        <a href="../#tech-stack">Tech Stack</a>
+        <a href="../documentation/">Docs</a>
+        <a href="./" class="nav-link-active">Changelog</a>
+        <a href="../#download">Download</a>
+      </div>
+      <a href="https://github.com/MCbabel/Steam-Manifest-Downloader" class="nav-github" target="_blank" rel="noopener" aria-label="GitHub">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Changelog Content -->
+  <section class="changelog-section">
+    <div class="changelog-header">
+      <span class="section-tag">Version History</span>
+      <h1>Changelog</h1>
+      <p>Track all changes and updates</p>
+    </div>
+
+    <!-- v1.0.0 -->
+    <div class="changelog-entry">
+      <div class="changelog-entry-header">
+        <span class="changelog-version">v1.0.0</span>
+        <span class="changelog-date">February 16, 2026</span>
+      </div>
+      <ul class="changelog-changes">
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Drag &amp; drop .lua file upload with automatic parsing</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Multi-repo search across 5+ GitHub repositories</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Automatic manifest download from ManifestHub API</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Automatic depot keys generation (steam.keys)</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Integrated DepotDownloaderMod — embedded in the app</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Real-time download progress tracking with cancel support</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Steam Store API integration — game names &amp; cover art</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Dark / Light theme toggle</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Configurable settings — download location, GitHub token, extra args</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Batch script export (.bat) for manual execution</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Safe cancel — automatically cleans up partial downloads</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-left">
+          <a href="../" class="footer-logo">
+            <img src="../icon.svg" alt="Steam Manifest Downloader" class="footer-logo-icon" width="32" height="32" />
+            Steam Manifest Downloader
+          </a>
+          <p>Download Steam depots effortlessly.</p>
+        </div>
+        <div class="footer-right">
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases" target="_blank" rel="noopener">Releases</a>
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/blob/main/LICENSE" target="_blank" rel="noopener">GPL-2.0 License</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>Made with ❤️ and 🦀</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../script.js"></script>
+</body>
+</html>
