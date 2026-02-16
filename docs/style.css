@@ -886,3 +886,280 @@ section {
     font-size: 1.5rem;
   }
 }
+
+/* ========================================
+   Mobile Hamburger Menu & Overlay
+   ======================================== */
+
+/* --- Hamburger Button (hidden on desktop) --- */
+.nav-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: color var(--transition);
+}
+
+.nav-hamburger:hover {
+  color: var(--blue);
+}
+
+/* --- Mobile Menu Overlay (hidden by default) --- */
+.mobile-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #0d1117;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--transition), visibility var(--transition);
+}
+
+.mobile-menu.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.mobile-menu a {
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  font-weight: 500;
+  padding: 14px 32px;
+  border-radius: var(--radius);
+  transition: all var(--transition);
+  width: 240px;
+  text-align: center;
+}
+
+.mobile-menu a:hover,
+.mobile-menu a:focus {
+  color: var(--text);
+  background: rgba(88,166,255,0.08);
+}
+
+.mobile-menu .mobile-github {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  width: 240px;
+}
+
+.mobile-menu-close {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: color var(--transition);
+}
+
+.mobile-menu-close:hover {
+  color: var(--text);
+}
+
+/* --- Ensure mobile menu is ALWAYS hidden on desktop --- */
+@media (min-width: 769px) {
+  .mobile-menu {
+    display: none !important;
+  }
+
+  .nav-hamburger {
+    display: none !important;
+  }
+}
+
+/* ========================================
+   Additional Mobile Responsive Enhancements
+   ======================================== */
+
+@media (max-width: 768px) {
+  /* Show hamburger button */
+  .nav-hamburger {
+    display: block;
+  }
+
+  /* Hide GitHub icon in nav bar (shown in mobile menu instead) */
+  .nav .nav-github {
+    display: none;
+  }
+
+  /* Hide floating orbs for performance */
+  .hero-orb {
+    display: none;
+  }
+
+  /* Reduce hero badge size */
+  .hero-badge {
+    font-size: 0.78rem;
+    padding: 5px 12px;
+  }
+
+  /* Smaller hero subtitle */
+  .hero-subtitle {
+    font-size: 0.95rem;
+    margin-bottom: 28px;
+  }
+
+  /* Tighter feature cards */
+  .feature-card {
+    padding: 18px 20px;
+  }
+
+  .feature-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+
+  /* Tighter section headers */
+  .section-header {
+    margin-bottom: 40px;
+  }
+
+  .section-header p {
+    font-size: 0.95rem;
+  }
+
+  /* Smaller container padding */
+  .container {
+    padding: 0 16px;
+  }
+
+  /* Smaller download heading */
+  .download-content h2 {
+    font-size: 1.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Further reduce hero padding */
+  .hero {
+    padding: 90px 16px 40px;
+  }
+
+  .hero-subtitle {
+    font-size: 0.88rem;
+  }
+
+  /* Smaller buttons on very small screens */
+  .hero-buttons .btn {
+    padding: 10px 20px;
+    font-size: 0.88rem;
+  }
+
+  /* Tighter feature cards */
+  .feature-card {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .feature-text h3 {
+    font-size: 0.9rem;
+  }
+
+  .feature-text p {
+    font-size: 0.82rem;
+  }
+
+  /* Smaller step content */
+  .step-content h3 {
+    font-size: 1rem;
+  }
+
+  .step-content p {
+    font-size: 0.88rem;
+  }
+
+  /* Smaller tech badges */
+  .tech-badge {
+    padding: 8px 12px;
+    font-size: 0.78rem;
+  }
+
+  /* Smaller download section */
+  .download-content {
+    padding: 32px 16px;
+  }
+
+  .download-info {
+    font-size: 0.78rem;
+  }
+
+  /* Smaller footer */
+  .footer {
+    padding: 32px 0 24px;
+  }
+
+  .footer-logo {
+    font-size: 0.9rem;
+  }
+
+  .footer-left p {
+    font-size: 0.82rem;
+  }
+
+  .footer-right a {
+    font-size: 0.82rem;
+  }
+
+  .footer-bottom p {
+    font-size: 0.78rem;
+  }
+
+  /* Smaller nav logo text */
+  .nav-logo span {
+    font-size: 0.95rem;
+  }
+
+  /* Further reduce section padding */
+  section {
+    padding: 40px 0;
+  }
+
+  /* Smaller mockup elements */
+  .mockup-label {
+    width: 50px;
+    font-size: 0.7rem;
+  }
+
+  .mockup-input {
+    font-size: 0.7rem;
+    padding: 6px 10px;
+  }
+
+  .mockup-body {
+    padding: 14px;
+  }
+
+  /* Tighter nav padding */
+  .nav-inner {
+    padding: 0 16px;
+  }
+
+  /* Smaller mobile menu links */
+  .mobile-menu a {
+    font-size: 1.05rem;
+    padding: 12px 24px;
+    width: 200px;
+  }
+}

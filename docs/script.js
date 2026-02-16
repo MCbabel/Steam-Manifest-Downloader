@@ -138,4 +138,51 @@
 
   window.addEventListener('scroll', highlightNavLink, { passive: true });
   highlightNavLink();
+
+  // --- Mobile Hamburger Menu Toggle ---
+  const hamburger = document.getElementById('navHamburger');
+  const mobileMenu = document.getElementById('mobileMenu');
+  const mobileMenuClose = document.getElementById('mobileMenuClose');
+
+  function openMobileMenu() {
+    if (mobileMenu) {
+      mobileMenu.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function closeMobileMenu() {
+    if (mobileMenu) {
+      mobileMenu.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  }
+
+  if (hamburger) {
+    hamburger.addEventListener('click', function () {
+      if (mobileMenu && mobileMenu.classList.contains('open')) {
+        closeMobileMenu();
+      } else {
+        openMobileMenu();
+      }
+    });
+  }
+
+  if (mobileMenuClose) {
+    mobileMenuClose.addEventListener('click', closeMobileMenu);
+  }
+
+  // Close mobile menu when a link is clicked
+  if (mobileMenu) {
+    mobileMenu.querySelectorAll('a').forEach(function (link) {
+      link.addEventListener('click', closeMobileMenu);
+    });
+  }
+
+  // Close mobile menu on window resize to desktop
+  window.addEventListener('resize', function () {
+    if (window.innerWidth > 768) {
+      closeMobileMenu();
+    }
+  });
 })();
