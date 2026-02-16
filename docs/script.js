@@ -107,6 +107,19 @@
   function highlightNavLink() {
     const scrollY = window.scrollY + 120;
 
+    // If at the bottom of the page, force-highlight the last section's nav link
+    const atBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 2;
+    if (atBottom && sections.length > 0) {
+      const lastId = sections[sections.length - 1].getAttribute('id');
+      navLinks.forEach((link) => {
+        link.style.color = '';
+        if (link.getAttribute('href') === '#' + lastId) {
+          link.style.color = '#e6edf3';
+        }
+      });
+      return;
+    }
+
     sections.forEach((section) => {
       const top = section.offsetTop;
       const height = section.offsetHeight;
