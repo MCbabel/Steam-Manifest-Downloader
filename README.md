@@ -80,25 +80,99 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 > Make sure you have the [.NET 8.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) installed. The app will warn you if it's missing.
 
 <details>
-<summary><b>🔧 Build from Source</b></summary>
+<summary><b>🔧 Building from Source</b></summary>
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) (latest stable)
-- [Tauri CLI v2](https://v2.tauri.app/start/prerequisites/)
+- **Rust** (latest stable) + **Cargo** — [Install via rustup](https://rustup.rs/)
+- **Tauri CLI** — `cargo install tauri-cli`
+- **.NET SDK 9.0** — Only needed if building DepotDownloaderMod from source ([Download](https://dotnet.microsoft.com/en-us/download/dotnet/9.0))
+- **Linux additional:** `libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`, `patchelf` (for AppImage)
 
-### Build commands
+---
+
+### Step 1: Building DepotDownloaderMod (optional)
+
+The project embeds DepotDownloaderMod binaries at compile time. **Pre-built versions are already included** in the repo:
+
+- `DepotDownloaderMod-Windows/` — Windows build (framework-dependent, requires .NET runtime)
+- `DepotDownloaderMod-linux-full/` — Linux build (self-contained, no runtime needed)
+
+If you want to build DepotDownloaderMod yourself:
+
+**Source:** [github.com/SteamAutoCracks/DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod)
+
+#### Windows (framework-dependent)
 
 ```bash
-# Install Tauri CLI
-cargo install tauri-cli --version "^2"
+git clone https://github.com/SteamAutoCracks/DepotDownloaderMod.git
+cd DepotDownloaderMod
+dotnet publish -c Release -o ./publish-windows
+```
 
-# Development mode
-cargo tauri dev
+Copy **all** files from `publish-windows/` to `DepotDownloaderMod-Windows/` in this project:
 
-# Production build (creates installer in src-tauri/target/release/bundle/)
+- `DepotDownloaderMod.exe`
+- `DepotDownloaderMod.dll`
+- `DepotDownloaderMod.deps.json`
+- `DepotDownloaderMod.runtimeconfig.json`
+- `SteamKit2.dll`
+- `protobuf-net.Core.dll`
+- `protobuf-net.dll`
+- `QRCoder.dll`
+- `System.IO.Hashing.dll`
+- `ZstdSharp.dll`
+
+#### Linux (self-contained, NO trimming)
+
+```bash
+git clone https://github.com/SteamAutoCracks/DepotDownloaderMod.git
+cd DepotDownloaderMod
+dotnet publish -c Release -r linux-x64 --self-contained true \
+    -p:PublishSingleFile=true -o ./publish-linux
+```
+
+> [!CAUTION]
+> **Do NOT use `-p:PublishTrimmed=true`** — .NET trimming removes reflection metadata needed by SteamKit2/protobuf-net, causing "A task was canceled" errors at runtime.
+
+Copy `publish-linux/DepotDownloaderMod` to `DepotDownloaderMod-linux-full/DepotDownloaderMod` in this project.
+
+---
+
+### Step 2: Building the Tauri App
+
+#### Windows
+
+```bash
 cargo tauri build
 ```
+
+Output:
+- **NSIS installer:** `src-tauri/target/release/bundle/nsis/`
+- **Portable executable:** `src-tauri/target/release/steam-manifest-downloader.exe`
+
+#### Linux (Arch/CachyOS/etc.)
+
+```bash
+NO_STRIP=true APPIMAGE_EXTRACT_AND_RUN=1 cargo tauri build
+```
+
+Output: `src-tauri/target/release/bundle/appimage/Steam Manifest Downloader_1.0.0_amd64.AppImage`
+
+> [!NOTE]
+> `NO_STRIP=true` prevents stripping symbols from the embedded .NET binary. `APPIMAGE_EXTRACT_AND_RUN=1` is needed on some distros for the AppImage bundler.
+
+---
+
+### Project Structure (for reference)
+
+The `include_bytes!` macro in `src-tauri/src/services/embedded_tools.rs` embeds the DDM binaries at compile time:
+
+- **Windows build** reads from `DepotDownloaderMod-Windows/`
+- **Linux build** reads from `DepotDownloaderMod-linux-full/`
+
+> [!IMPORTANT]
+> The DDM binary files **must be in place before** running `cargo tauri build`. The Rust compiler reads them via `include_bytes!` at compile time — if the files are missing, the build will fail.
 
 </details>
 
