@@ -112,6 +112,16 @@
         </ul>
       </div>
       <div class="sidebar-section">
+        <div class="sidebar-title">Development</div>
+        <ul class="sidebar-links">
+          <li><a href="#building-from-source">Building from Source</a></li>
+          <li class="sub"><a href="#build-prerequisites">Prerequisites</a></li>
+          <li class="sub"><a href="#build-ddm">Building DepotDownloaderMod</a></li>
+          <li class="sub"><a href="#build-tauri">Building the Tauri App</a></li>
+          <li class="sub"><a href="#build-project-structure">Project Structure</a></li>
+        </ul>
+      </div>
+      <div class="sidebar-section">
         <div class="sidebar-title">Help</div>
         <ul class="sidebar-links">
           <li><a href="#troubleshooting">Troubleshooting / FAQ</a></li>
@@ -413,6 +423,146 @@
           <li><strong>PrintedWaste</strong> — Additional fallback source</li>
         </ul>
         <p>These sources are checked automatically as fallbacks — no additional configuration is needed.</p>
+      </section>
+
+      <!-- Building from Source -->
+      <section class="doc-section" id="building-from-source">
+        <span class="doc-tag">Development</span>
+        <h2>Building from Source</h2>
+        <p>This guide covers how to compile Steam Manifest Downloader from source. The project uses <strong>Tauri v2</strong> with a <strong>Rust</strong> backend and an embedded <strong>.NET</strong> tool (DepotDownloaderMod).</p>
+
+        <hr class="doc-divider">
+
+        <h3 id="build-prerequisites">Prerequisites</h3>
+        <ul>
+          <li><strong>Rust</strong> (latest stable) + <strong>Cargo</strong> — <a href="https://rustup.rs/" target="_blank" rel="noopener">Install via rustup</a></li>
+          <li><strong>Tauri CLI</strong> — Install via Cargo:</li>
+        </ul>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-fn">cargo</span> install tauri-cli</code></pre>
+        </div>
+        <ul>
+          <li><strong>.NET SDK 9.0</strong> — Only needed if building DepotDownloaderMod from source. <a href="https://dotnet.microsoft.com/en-us/download/dotnet/9.0" target="_blank" rel="noopener">Download .NET SDK 9.0</a></li>
+        </ul>
+
+        <h4>Linux Additional Dependencies</h4>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-cm"># Debian/Ubuntu</span>
+<span class="code-fn">sudo</span> apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+<span class="code-cm"># Arch/CachyOS</span>
+<span class="code-fn">sudo</span> pacman -S webkit2gtk-4.1 libappindicator-gtk3 librsvg patchelf</code></pre>
+        </div>
+
+        <hr class="doc-divider">
+
+        <h3 id="build-ddm">Step 1: Building DepotDownloaderMod <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h3>
+        <p>The project embeds DepotDownloaderMod binaries at compile time. <strong>Pre-built versions are already included</strong> in the repository, so this step is only needed if you want to build them yourself.</p>
+
+        <div class="doc-callout info">
+          <span class="doc-callout-icon"><i class="fa-solid fa-circle-info"></i></span>
+          <p>Pre-built binaries are located in <code>DepotDownloaderMod-Windows/</code> (framework-dependent, requires .NET runtime) and <code>DepotDownloaderMod-linux-full/</code> (self-contained, no runtime needed). You can skip this step if you don't need to modify them.</p>
+        </div>
+
+        <p><strong>Source:</strong> <a href="https://github.com/SteamAutoCracks/DepotDownloaderMod" target="_blank" rel="noopener">github.com/SteamAutoCracks/DepotDownloaderMod</a></p>
+
+        <h4>Windows (framework-dependent)</h4>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-fn">git</span> clone https://github.com/SteamAutoCracks/DepotDownloaderMod.git
+<span class="code-fn">cd</span> DepotDownloaderMod
+<span class="code-fn">dotnet</span> publish -c Release -o ./publish-windows</code></pre>
+        </div>
+        <p>Then copy <strong>all</strong> files from <code>publish-windows/</code> to <code>DepotDownloaderMod-Windows/</code> in the project:</p>
+        <ul>
+          <li><code>DepotDownloaderMod.exe</code></li>
+          <li><code>DepotDownloaderMod.dll</code></li>
+          <li><code>DepotDownloaderMod.deps.json</code></li>
+          <li><code>DepotDownloaderMod.runtimeconfig.json</code></li>
+          <li><code>SteamKit2.dll</code></li>
+          <li><code>protobuf-net.Core.dll</code></li>
+          <li><code>protobuf-net.dll</code></li>
+          <li><code>QRCoder.dll</code></li>
+          <li><code>System.IO.Hashing.dll</code></li>
+          <li><code>ZstdSharp.dll</code></li>
+        </ul>
+
+        <h4>Linux (self-contained, NO trimming)</h4>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-fn">git</span> clone https://github.com/SteamAutoCracks/DepotDownloaderMod.git
+<span class="code-fn">cd</span> DepotDownloaderMod
+<span class="code-fn">dotnet</span> publish -c Release -r linux-x64 --self-contained true \
+    -p:PublishSingleFile=true -o ./publish-linux</code></pre>
+        </div>
+
+        <div class="doc-callout danger">
+          <span class="doc-callout-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <p><strong>Do NOT use <code>-p:PublishTrimmed=true</code></strong> — .NET trimming removes reflection metadata needed by SteamKit2/protobuf-net, causing "A task was canceled" errors at runtime.</p>
+        </div>
+
+        <p>Then copy <code>publish-linux/DepotDownloaderMod</code> to <code>DepotDownloaderMod-linux-full/DepotDownloaderMod</code> in the project.</p>
+
+        <hr class="doc-divider">
+
+        <h3 id="build-tauri">Step 2: Building the Tauri App</h3>
+
+        <h4>Windows</h4>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-fn">cargo</span> tauri build</code></pre>
+        </div>
+        <p>Output locations:</p>
+        <ul>
+          <li><strong>NSIS installer:</strong> <code>src-tauri/target/release/bundle/nsis/</code></li>
+          <li><strong>Portable executable:</strong> <code>src-tauri/target/release/steam-manifest-downloader.exe</code></li>
+        </ul>
+
+        <h4>Linux (Arch/CachyOS/etc.)</h4>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">bash</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-kw">NO_STRIP</span>=true <span class="code-kw">APPIMAGE_EXTRACT_AND_RUN</span>=1 <span class="code-fn">cargo</span> tauri build</code></pre>
+        </div>
+        <p>Output: <code>src-tauri/target/release/bundle/appimage/Steam Manifest Downloader_1.0.0_amd64.AppImage</code></p>
+
+        <div class="doc-callout tip">
+          <span class="doc-callout-icon"><i class="fa-solid fa-lightbulb"></i></span>
+          <p><code>NO_STRIP=true</code> prevents stripping symbols from the embedded .NET binary. <code>APPIMAGE_EXTRACT_AND_RUN=1</code> is needed on some distros for the AppImage bundler to work correctly.</p>
+        </div>
+
+        <hr class="doc-divider">
+
+        <h3 id="build-project-structure">Step 3: Project Structure (for reference)</h3>
+        <p>The <code>include_bytes!</code> macro in <code>src-tauri/src/services/embedded_tools.rs</code> embeds the DDM binaries at compile time:</p>
+        <ul>
+          <li><strong>Windows build</strong> reads from <code>DepotDownloaderMod-Windows/</code></li>
+          <li><strong>Linux build</strong> reads from <code>DepotDownloaderMod-linux-full/</code></li>
+        </ul>
+
+        <div class="doc-callout warning">
+          <span class="doc-callout-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          <p>The DDM binary files <strong>must be in place before</strong> running <code>cargo tauri build</code>. The Rust compiler reads them via <code>include_bytes!</code> at compile time — if the files are missing, the build will fail.</p>
+        </div>
       </section>
 
       <!-- Troubleshooting -->
