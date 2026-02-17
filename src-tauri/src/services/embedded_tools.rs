@@ -8,16 +8,16 @@ use tokio::fs;
 #[cfg(target_os = "windows")]
 mod platform {
     pub const DDM_FILES: &[(&str, &[u8])] = &[
-        ("DepotDownloaderMod.exe", include_bytes!("../../../DepotDownloaderMod/DepotDownloaderMod.exe")),
-        ("DepotDownloaderMod.dll", include_bytes!("../../../DepotDownloaderMod/DepotDownloaderMod.dll")),
-        ("DepotDownloaderMod.deps.json", include_bytes!("../../../DepotDownloaderMod/DepotDownloaderMod.deps.json")),
-        ("DepotDownloaderMod.runtimeconfig.json", include_bytes!("../../../DepotDownloaderMod/DepotDownloaderMod.runtimeconfig.json")),
-        ("SteamKit2.dll", include_bytes!("../../../DepotDownloaderMod/SteamKit2.dll")),
-        ("protobuf-net.Core.dll", include_bytes!("../../../DepotDownloaderMod/protobuf-net.Core.dll")),
-        ("protobuf-net.dll", include_bytes!("../../../DepotDownloaderMod/protobuf-net.dll")),
-        ("QRCoder.dll", include_bytes!("../../../DepotDownloaderMod/QRCoder.dll")),
-        ("System.IO.Hashing.dll", include_bytes!("../../../DepotDownloaderMod/System.IO.Hashing.dll")),
-        ("ZstdSharp.dll", include_bytes!("../../../DepotDownloaderMod/ZstdSharp.dll")),
+        ("DepotDownloaderMod.exe", include_bytes!("../../../DepotDownloaderMod-Windows/DepotDownloaderMod.exe")),
+        ("DepotDownloaderMod.dll", include_bytes!("../../../DepotDownloaderMod-Windows/DepotDownloaderMod.dll")),
+        ("DepotDownloaderMod.deps.json", include_bytes!("../../../DepotDownloaderMod-Windows/DepotDownloaderMod.deps.json")),
+        ("DepotDownloaderMod.runtimeconfig.json", include_bytes!("../../../DepotDownloaderMod-Windows/DepotDownloaderMod.runtimeconfig.json")),
+        ("SteamKit2.dll", include_bytes!("../../../DepotDownloaderMod-Windows/SteamKit2.dll")),
+        ("protobuf-net.Core.dll", include_bytes!("../../../DepotDownloaderMod-Windows/protobuf-net.Core.dll")),
+        ("protobuf-net.dll", include_bytes!("../../../DepotDownloaderMod-Windows/protobuf-net.dll")),
+        ("QRCoder.dll", include_bytes!("../../../DepotDownloaderMod-Windows/QRCoder.dll")),
+        ("System.IO.Hashing.dll", include_bytes!("../../../DepotDownloaderMod-Windows/System.IO.Hashing.dll")),
+        ("ZstdSharp.dll", include_bytes!("../../../DepotDownloaderMod-Windows/ZstdSharp.dll")),
     ];
     pub const EXE_NAME: &str = "DepotDownloaderMod.exe";
 }
@@ -25,7 +25,7 @@ mod platform {
 #[cfg(target_os = "linux")]
 mod platform {
     pub const DDM_FILES: &[(&str, &[u8])] = &[
-        ("DepotDownloaderMod", include_bytes!("../../../linux-x64-trimmed/DepotDownloaderMod")),
+        ("DepotDownloaderMod", include_bytes!("../../../DepotDownloaderMod-linux-full/DepotDownloaderMod")),
     ];
     pub const EXE_NAME: &str = "DepotDownloaderMod";
 }
