@@ -107,10 +107,9 @@ a:hover {
   max-width: var(--max-width);
   margin: 0 auto;
   padding: 0 24px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
 }
 
 .nav-logo {
@@ -151,6 +150,7 @@ a:hover {
   color: var(--text-muted);
   display: flex;
   align-items: center;
+  justify-self: end;
   transition: color var(--transition);
 }
 
@@ -795,6 +795,12 @@ section {
 
 /* --- Responsive --- */
 @media (max-width: 768px) {
+  .nav-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
   .nav-links {
     display: none;
   }
