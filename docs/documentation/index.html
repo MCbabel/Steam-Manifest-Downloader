@@ -183,8 +183,8 @@
         <h3 id="first-launch">First Launch</h3>
         <p>On first launch, the application opens with the main interface ready to accept files. No initial configuration is required — the default settings work for most users. However, you may want to:</p>
         <ul>
-          <li>Set a custom <strong>download location</strong> in Settings</li>
-          <li>Add a <strong>GitHub token</strong> to increase API rate limits (optional)</li>
+          <li>Set a custom <strong>download location</strong> on the download page before starting a download</li>
+          <li>Add a <strong>GitHub token</strong> via the ⚙️ gear icon to increase API rate limits (optional)</li>
           <li>Configure a <strong>ManifestHub API key</strong> for additional manifest sources (optional)</li>
         </ul>
       </section>
@@ -242,7 +242,7 @@
 
         <div class="doc-callout info">
           <span class="doc-callout-icon"><i class="fa-solid fa-circle-info"></i></span>
-          <p>The downloaded files are saved to your configured download location (default: system Downloads folder). Each download creates a subdirectory named after the app ID.</p>
+          <p>The downloaded files are saved to your configured download location (default: <code>Documents/SteamDownloads</code>). Each download creates a subdirectory named after the app ID.</p>
         </div>
 
         <hr class="doc-divider">
@@ -332,45 +332,20 @@
       <!-- Settings -->
       <section class="doc-section" id="settings">
         <span class="doc-tag">Configuration</span>
-        <h2>Settings</h2>
-        <p>Access settings through the gear icon in the application. All settings are persisted between sessions.</p>
+        <h2>Settings &amp; Configuration</h2>
+        <p>Configuration options are split between the <strong>Settings modal</strong> (⚙️ gear icon in the header) and the <strong>download page</strong> (Step 3 of the workflow). All values are persisted between sessions.</p>
 
-        <h3>Download Location</h3>
-        <p>Configure where downloaded depot files are saved. By default, files are saved to your system's <strong>Downloads folder</strong>.</p>
-        <ul>
-          <li>Click <strong>Browse</strong> to select a custom directory</li>
-          <li>Each download creates a subdirectory named after the app ID</li>
-          <li>Ensure the chosen path has sufficient disk space</li>
-        </ul>
+        <h3>Settings Modal (⚙️)</h3>
+        <p>Click the gear icon in the top-right corner to open the Settings modal. Currently it contains:</p>
 
-        <hr class="doc-divider">
-
-        <h3>Extra DepotDownloader Arguments</h3>
-        <p>Pass additional command-line arguments to the DepotDownloaderMod engine. The default value is:</p>
-        <div class="code-block">
-          <div class="code-block-header">
-            <span class="code-block-lang">args</span>
-            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
-          </div>
-          <pre><code><span class="code-kw">-max-downloads</span> <span class="code-num">8</span></code></pre>
-        </div>
-        <p>This limits concurrent download connections to 8. You can adjust this value or add other DepotDownloaderMod-compatible arguments as needed.</p>
-
-        <div class="doc-callout tip">
-          <span class="doc-callout-icon"><i class="fa-solid fa-lightbulb"></i></span>
-          <p>If you experience timeouts or slow downloads, try lowering <code>-max-downloads</code> to <code>4</code> or <code>2</code>.</p>
-        </div>
-
-        <hr class="doc-divider">
-
-        <h3>GitHub Token <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h3>
+        <h4>GitHub Token <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h4>
         <p>Adding a personal GitHub token increases the GitHub API rate limit from <strong>60 requests/hour</strong> (unauthenticated) to <strong>5,000 requests/hour</strong> (authenticated).</p>
         <p>To generate a token:</p>
         <ol>
           <li>Go to <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">GitHub → Settings → Developer settings → Personal access tokens</a></li>
           <li>Click <strong>Generate new token (classic)</strong></li>
           <li>No special scopes are required — a token with no permissions is sufficient</li>
-          <li>Copy the token and paste it into the settings field</li>
+          <li>Copy the token and paste it into the token field, then click <strong>Save</strong></li>
         </ol>
 
         <div class="doc-callout warning">
@@ -380,8 +355,32 @@
 
         <hr class="doc-divider">
 
-        <h3>ManifestHub API Key <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h3>
-        <p>If you have a ManifestHub API key, enter it here to enable searching the ManifestHub manifest database. This provides access to a large collection of Steam manifests as an additional source.</p>
+        <h3>Download Page Options</h3>
+        <p>These options appear on the download page (Step 3) after selecting your depots, just above the download button.</p>
+
+        <h4>Download Location</h4>
+        <p>Configure where downloaded depot files are saved. Type or paste a path directly into the text field. The default location is <strong><code>Documents/SteamDownloads</code></strong> inside your home folder.</p>
+        <ul>
+          <li>Each download creates a subdirectory named after the app ID</li>
+          <li>Ensure the chosen path has sufficient disk space</li>
+        </ul>
+
+        <hr class="doc-divider">
+
+        <h4>ManifestHub API Key <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h4>
+        <p>If you have a ManifestHub API key, enter it on the download page to enable searching the ManifestHub manifest database. This provides access to a large collection of Steam manifests as an additional source.</p>
+
+        <hr class="doc-divider">
+
+        <h3>Internal Defaults</h3>
+        <p>The app passes default arguments to the DepotDownloaderMod engine automatically. These include:</p>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">args</span>
+          </div>
+          <pre><code><span class="code-kw">-max-downloads</span> <span class="code-num">8</span> <span class="code-kw">-verify-all</span></code></pre>
+        </div>
+        <p>This limits concurrent download connections to 8 and verifies all downloaded files. These defaults are not configurable through the UI.</p>
       </section>
 
       <!-- Manifest Sources -->
@@ -398,7 +397,7 @@
           </div>
           <pre><code><span class="code-str">manifesthub1.filegear-sg.me</span></code></pre>
         </div>
-        <p>This API provides fast, indexed access to a large database of Steam manifests. Requires an API key configured in Settings.</p>
+        <p>This API provides fast, indexed access to a large database of Steam manifests. Requires an API key entered on the download page.</p>
 
         <hr class="doc-divider">
 
@@ -583,7 +582,7 @@
         <div class="faq-item">
           <div class="faq-q">"Connection timeout" during download</div>
           <div class="faq-a">
-            This usually happens when too many concurrent connections overwhelm your network. Go to <strong>Settings</strong> and reduce the <code>-max-downloads</code> value from <code>8</code> to <code>4</code> or <code>2</code>. You can also check if a VPN or proxy is interfering with the connection.
+            This usually happens when too many concurrent connections overwhelm your network or when Steam servers are under heavy load. Check if a VPN or proxy is interfering with the connection. The app uses <code>-max-downloads 8</code> by default, which works well for most connections.
           </div>
         </div>
 
@@ -615,7 +614,7 @@
         <div class="faq-item">
           <div class="faq-q">No manifests found for my game</div>
           <div class="faq-a">
-            Not all games have manifests available in the searched repositories. Ensure your <code>.lua</code> / <code>.vdf</code> / <code>.st</code> file contains the correct depot and manifest IDs. You can also try adding a ManifestHub API key in Settings for access to additional sources.
+            Not all games have manifests available in the searched repositories. Ensure your <code>.lua</code> / <code>.vdf</code> / <code>.st</code> file contains the correct depot and manifest IDs. You can also try adding a ManifestHub API key on the download page for access to additional sources.
           </div>
         </div>
 
