@@ -69,14 +69,19 @@ jobs:
         run: cargo tauri build
 
       # Upload build artifacts for the release job
-      - name: Upload Windows artifacts
+      - name: Upload Windows portable
         if: matrix.label == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: windows-builds
-          path: |
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/steam-manifest-downloader.exe
+          name: windows-portable
+          path: src-tauri/target/release/steam-manifest-downloader.exe
+
+      - name: Upload Windows NSIS installer
+        if: matrix.label == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-nsis
+          path: src-tauri/target/release/bundle/nsis/*.exe
 
       - name: Upload Linux artifacts
         if: matrix.label == 'linux'
@@ -119,5 +124,6 @@ jobs:
           draft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
           generate_release_notes: true
           files: |
-            artifacts/windows-builds/*
+            artifacts/windows-portable/*
+            artifacts/windows-nsis/*
             artifacts/linux-builds/*
