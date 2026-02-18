@@ -76,6 +76,7 @@ jobs:
           name: windows-builds
           path: |
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/steam-manifest-downloader.exe
 
       - name: Upload Linux artifacts
         if: matrix.label == 'linux'
