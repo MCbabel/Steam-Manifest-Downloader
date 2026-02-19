@@ -57,41 +57,113 @@ jobs:
           path: src-tauri/target/release/bundle/nsis/*.exe
 
   # ──────────────────────────────────────────────
-  # Linux build — uses Arch Linux container for WebKitGTK compatibility
+  # Linux build — two-stage: compile on Arch, bundle AppImage on Ubuntu
   # ──────────────────────────────────────────────
   build-linux:
-    runs-on: ubuntu-latest
-    container:
-      image: archlinux:latest
-
+    runs-on: ubuntu-22.04
     steps:
-      - name: Install system dependencies
-        run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm base-devel webkit2gtk-4.1 gtk3 libappindicator-gtk3 librsvg patchelf curl wget file openssl pkgconf
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      # Stage 1: Compile binary inside Arch Linux container
+      - name: Build binary in Arch Linux container
         run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            archlinux:latest \
+            bash -c '
+              set -e
+              echo "==> Installing system dependencies..."
+              pacman -Syu --noconfirm
+              pacman -S --noconfirm \
+                base-devel webkit2gtk-4.1 gtk3 libappindicator-gtk3 \
+                librsvg patchelf curl wget file openssl pkgconf
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli --version "^2.0" --locked
+              echo "==> Installing Rust..."
+              curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+              source /root/.cargo/env
 
-      - name: Build Tauri app
+              echo "==> Installing Tauri CLI..."
+              cargo install tauri-cli --version "^2.0" --locked
+
+              echo "==> Building Tauri binary (no bundle)..."
+              NO_STRIP=true cargo tauri build --no-bundle
+
+              echo "==> Build complete!"
+              ls -la src-tauri/target/release/steam-manifest-downloader
+            '
+
+      # Stage 2: Create AppImage on Ubuntu host (has FUSE)
+      - name: Create AppImage
         env:
           NO_STRIP: "true"
-          APPIMAGE_EXTRACT_AND_RUN: "1"
-        run: cargo tauri build
+        run: |
+          set -e
+          BINARY="src-tauri/target/release/steam-manifest-downloader"
+          APP_NAME="Steam Manifest Downloader"
+          VERSION="1.0.0"
+
+          # Verify binary exists
+          if [ ! -f "$BINARY" ]; then
+            echo "ERROR: Binary not found at $BINARY"
+            exit 1
+          fi
+
+          echo "==> Creating AppDir structure..."
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+
+          # Copy binary
+          cp "$BINARY" AppDir/usr/bin/steam-manifest-downloader
+          chmod +x AppDir/usr/bin/steam-manifest-downloader
+
+          # Create .desktop file
+          cat > AppDir/usr/share/applications/steam-manifest-downloader.desktop << 'DESKTOP'
+          [Desktop Entry]
+          Categories=Utility;
+          Exec=steam-manifest-downloader
+          Icon=steam-manifest-downloader
+          Name=Steam Manifest Downloader
+          Type=Application
+          Terminal=false
+          DESKTOP
+          # Remove leading whitespace from heredoc
+          sed -i 's/^          //' AppDir/usr/share/applications/steam-manifest-downloader.desktop
+
+          # Copy icon
+          cp assets/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/steam-manifest-downloader.png
+
+          # Create AppRun
+          cat > AppDir/AppRun << 'APPRUN'
+          #!/bin/bash
+          SELF_DIR="$(dirname "$(readlink -f "$0")")"
+          export PATH="${SELF_DIR}/usr/bin:${PATH}"
+          exec "${SELF_DIR}/usr/bin/steam-manifest-downloader" "$@"
+          APPRUN
+          sed -i 's/^          //' AppDir/AppRun
+          chmod +x AppDir/AppRun
+
+          # Create symlinks at AppDir root (required by AppImage spec)
+          ln -sf usr/share/applications/steam-manifest-downloader.desktop AppDir/steam-manifest-downloader.desktop
+          ln -sf usr/share/icons/hicolor/256x256/apps/steam-manifest-downloader.png AppDir/steam-manifest-downloader.png
+
+          echo "==> Downloading appimagetool..."
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O appimagetool
+          chmod +x appimagetool
+
+          echo "==> Creating AppImage..."
+          ARCH=x86_64 ./appimagetool AppDir "${APP_NAME}_${VERSION}_amd64.AppImage"
+
+          echo "==> AppImage created!"
+          ls -la "${APP_NAME}_${VERSION}_amd64.AppImage"
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-builds
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          path: "Steam Manifest Downloader_1.0.0_amd64.AppImage"
 
   # ──────────────────────────────────────────────
   # Create / update the GitHub Release
