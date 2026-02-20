@@ -4,9 +4,9 @@
 
 **A sleek desktop app for downloading Steam game depots using manifest data.**
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.1.0-blue?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-GPL--2.0-blue?style=for-the-badge)
-![Platform](https://img.shields.io/badge/platform-Windows-0078D6?style=for-the-badge&logo=windows)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-0078D6?style=for-the-badge&logo=windows)
 ![Built with](https://img.shields.io/badge/built_with-Rust-dea584?style=for-the-badge&logo=rust)
 ![Tauri](https://img.shields.io/badge/Tauri_v2-FFC131?style=for-the-badge&logo=tauri&logoColor=white)
 ![Downloads](https://img.shields.io/github/downloads/MCbabel/Steam-Manifest-Downloader/total?style=for-the-badge&color=brightgreen)
