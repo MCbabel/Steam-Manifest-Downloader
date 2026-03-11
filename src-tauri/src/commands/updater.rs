@@ -104,7 +104,9 @@ pub async fn install_update(app: AppHandle, installer_url: String) -> Result<(),
     #[cfg(target_os = "linux")]
     {
         // On Linux, open the release page in the browser instead
-        let _ = open::that(installer_url);
+        let _ = std::process::Command::new("xdg-open")
+            .arg(&installer_url)
+            .spawn();
     }
 
     // Exit the app so the installer can replace files
