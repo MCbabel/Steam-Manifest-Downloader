@@ -44,6 +44,39 @@ jobs:
       - name: Build Tauri app
         run: cargo tauri build
 
+      - name: Sign executables with SignTool
+        if: env.SIGNING_CERTIFICATE != ''
+        env:
+          SIGNING_CERTIFICATE: ${{ secrets.SIGNING_CERTIFICATE }}
+          SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          # Decode certificate from base64 secret
+          $certBytes = [Convert]::FromBase64String($env:SIGNING_CERTIFICATE)
+          $certPath = Join-Path $env:RUNNER_TEMP "signing-cert.pfx"
+          [IO.File]::WriteAllBytes($certPath, $certBytes)
+
+          # Find signtool.exe
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" -Recurse | Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { Write-Error "SignTool not found!"; exit 1 }
+          Write-Host "Using: $($signtool.FullName)"
+
+          # Sign portable EXE
+          $portable = "src-tauri\target\release\steam-manifest-downloader.exe"
+          if (Test-Path $portable) {
+            & $signtool.FullName sign /f $certPath /p $env:SIGNING_CERTIFICATE_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $portable
+            Write-Host "Signed: $portable"
+          }
+
+          # Sign NSIS installer
+          Get-ChildItem "src-tauri\target\release\bundle\nsis\*.exe" | ForEach-Object {
+            & $signtool.FullName sign /f $certPath /p $env:SIGNING_CERTIFICATE_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $_.FullName
+            Write-Host "Signed: $($_.Name)"
+          }
+
+          # Cleanup
+          Remove-Item $certPath -Force
+
       - name: Upload Windows portable
         uses: actions/upload-artifact@v4
         with:
