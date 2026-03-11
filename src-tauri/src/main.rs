@@ -19,7 +19,7 @@ fn main() {
             let state = services::AppState::new(app.handle().clone());
             app.manage(state);
 
-            // Remove native decorations so the custom title bar is used
+            // Remove native decorations for custom title bar on all platforms
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_decorations(false);
             }
