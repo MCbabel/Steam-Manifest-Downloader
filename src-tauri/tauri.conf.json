@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicoburniske/tauri-v2-schema/main/schema.json",
   "productName": "Steam Manifest Downloader",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "identifier": "com.steammanifestdownloader.desktop",
   "build": {
     "frontendDist": "../public"
@@ -21,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' https://shared.akamai.steamstatic.com https://cdn.akamai.steamstatic.com https://store.akamai.steamstatic.com data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://store.steampowered.com https://api.manifesthub1.filegear-sg.me https://gcore.api.printedwaste.com https://kernelosgithub.onrender.com ipc: tauri:"
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' https://shared.akamai.steamstatic.com https://cdn.akamai.steamstatic.com https://store.akamai.steamstatic.com data:; connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://store.steampowered.com https://api.manifesthub1.filegear-sg.me https://gcore.api.printedwaste.com https://kernelosgithub.onrender.com https://github.com ipc: tauri:"
     }
   },
   "bundle": {
@@ -38,3 +38,6 @@
     }
   }
 }
+
+
+

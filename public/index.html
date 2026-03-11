@@ -334,9 +334,51 @@
         </div>
         <p class="dd-path__hint">Optional. Increases GitHub API rate limit from 60 to 5,000 requests/hour.</p>
       </div>
+      <div class="settings-field">
+        <label class="settings-field__label">Auto-Update</label>
+        <div class="settings-field__toggle-wrap">
+          <label class="toggle-switch">
+            <input type="checkbox" id="auto-update-toggle" checked>
+            <span class="toggle-switch__slider"></span>
+          </label>
+          <span class="settings-field__toggle-text">Automatically check for updates on startup</span>
+        </div>
+        <p class="dd-path__hint">When enabled, the app checks for new versions on GitHub and offers to install them.</p>
+      </div>
       <div class="modal__actions">
         <button id="btn-settings-cancel" class="btn btn--outline">Cancel</button>
         <button id="btn-settings-save" class="btn btn--primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Available Modal -->
+  <div id="update-modal" class="modal hidden">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content update-modal-content">
+      <div class="modal__icon">🔄</div>
+      <h3 class="modal__title">Update Available</h3>
+      <div class="update-modal__info">
+        <div class="update-modal__version">
+          <span class="update-modal__label">New version:</span>
+          <span id="update-version" class="update-modal__value"></span>
+        </div>
+        <div class="update-modal__date" id="update-date-row">
+          <span class="update-modal__label">Released:</span>
+          <span id="update-date" class="update-modal__value"></span>
+        </div>
+      </div>
+      <div id="update-notes" class="update-modal__notes"></div>
+      <div id="update-progress-wrap" class="update-modal__progress hidden">
+        <div class="progress-bar">
+          <div id="update-progress-fill" class="progress-bar__fill" style="width: 0%"></div>
+        </div>
+        <p id="update-progress-text" class="update-modal__progress-text">Downloading update...</p>
+      </div>
+      <div id="update-actions" class="modal__actions">
+        <button id="btn-update-skip" class="btn btn--outline btn--small">Skip This Version</button>
+        <button id="btn-update-later" class="btn btn--outline">Later</button>
+        <button id="btn-update-now" class="btn btn--primary">Update Now</button>
       </div>
     </div>
   </div>

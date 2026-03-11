@@ -116,7 +116,21 @@ const els = {
   githubTokenInput: $('#github-token-input'),
   btnToggleTokenVis: $('#btn-toggle-token-vis'),
   btnSettingsSave: $('#btn-settings-save'),
-  btnSettingsCancel: $('#btn-settings-cancel')
+  btnSettingsCancel: $('#btn-settings-cancel'),
+  autoUpdateToggle: $('#auto-update-toggle'),
+  // Update modal
+  updateModal: $('#update-modal'),
+  updateVersion: $('#update-version'),
+  updateDate: $('#update-date'),
+  updateDateRow: $('#update-date-row'),
+  updateNotes: $('#update-notes'),
+  updateProgressWrap: $('#update-progress-wrap'),
+  updateProgressFill: $('#update-progress-fill'),
+  updateProgressText: $('#update-progress-text'),
+  updateActions: $('#update-actions'),
+  btnUpdateNow: $('#btn-update-now'),
+  btnUpdateLater: $('#btn-update-later'),
+  btnUpdateSkip: $('#btn-update-skip')
 };
 
 // ============ Helper: Get GitHub Token ============
@@ -1269,8 +1283,10 @@ async function openSettings() {
   try {
     const settings = await invoke('get_settings');
     els.githubTokenInput.value = settings.github_token || '';
+    els.autoUpdateToggle.checked = settings.auto_update !== false;
   } catch (e) {
     els.githubTokenInput.value = state.githubToken || '';
+    els.autoUpdateToggle.checked = true;
   }
   els.githubTokenInput.type = 'password';
   els.settingsModal.classList.remove('hidden');
@@ -1282,9 +1298,11 @@ function closeSettings() {
 
 async function saveSettings() {
   const token = els.githubTokenInput.value.trim();
+  const autoUpdate = els.autoUpdateToggle.checked;
   try {
     const currentSettings = await invoke('get_settings');
     currentSettings.github_token = token;
+    currentSettings.auto_update = autoUpdate;
     await invoke('save_settings', { settings: currentSettings });
     state.githubToken = token;
   } catch (e) {
@@ -1303,6 +1321,132 @@ function toggleTokenVisibility() {
     els.btnToggleTokenVis.textContent = '👁';
   }
 }
+
+// ============ Auto-Update ============
+const SKIPPED_VERSION_KEY = 'skippedUpdateVersion';
+
+async function checkForUpdates() {
+  try {
+    const enabled = await invoke('get_auto_update_enabled');
+    if (!enabled) return;
+
+    const result = await invoke('check_for_updates');
+
+    if (result.error) {
+      console.error('[AutoUpdate] Error:', result.error);
+    }
+    if (!result.available) return;
+
+    // Check if user has skipped this version
+    const skipped = localStorage.getItem(SKIPPED_VERSION_KEY);
+    if (skipped === result.version) return;
+
+    showUpdateModal(result);
+  } catch (e) {
+    console.error('[AutoUpdate] Check failed:', e);
+  }
+}
+
+/** Simple Markdown → HTML renderer for release notes */
+function renderMarkdown(md) {
+  // Escape HTML
+  let html = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Headings
+  html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+  // Bold + Italic
+  html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Unordered list items
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+  // Line breaks (remaining)
+  html = html.replace(/\n/g, '<br>');
+  // Clean up double <br> after block elements
+  html = html.replace(/<\/(h[234]|ul|li)><br>/g, '</$1>');
+  return html;
+}
+
+function showUpdateModal(info) {
+  pendingUpdateInfo = info;
+  els.updateVersion.textContent = `v${info.version}`;
+  if (info.date) {
+    try {
+      const d = new Date(info.date);
+      els.updateDate.textContent = isNaN(d.getTime()) ? info.date : d.toLocaleDateString();
+    } catch { els.updateDate.textContent = info.date; }
+    els.updateDateRow.style.display = '';
+  } else {
+    els.updateDateRow.style.display = 'none';
+  }
+  els.updateNotes.innerHTML = info.body
+    ? renderMarkdown(info.body)
+    : '<em>No release notes available.</em>';
+  els.updateProgressWrap.classList.add('hidden');
+  els.updateActions.style.display = '';
+  els.btnUpdateNow.disabled = false;
+  els.updateModal.classList.remove('hidden');
+}
+
+function hideUpdateModal() {
+  els.updateModal.classList.add('hidden');
+}
+
+let pendingUpdateInfo = null;
+
+async function performUpdate() {
+  if (!pendingUpdateInfo || !pendingUpdateInfo.installerUrl) {
+    // No direct installer — open release page in browser
+    if (pendingUpdateInfo && pendingUpdateInfo.releaseUrl) {
+      window.__TAURI__.shell.open(pendingUpdateInfo.releaseUrl);
+    }
+    hideUpdateModal();
+    return;
+  }
+
+  els.btnUpdateNow.disabled = true;
+  els.btnUpdateLater.style.display = 'none';
+  els.btnUpdateSkip.style.display = 'none';
+  els.btnUpdateNow.textContent = 'Downloading...';
+  els.updateProgressWrap.classList.remove('hidden');
+  els.updateProgressText.textContent = 'Downloading update installer...';
+  els.updateProgressFill.style.width = '100%';
+  els.updateProgressFill.classList.add('progress-bar__fill--indeterminate');
+
+  try {
+    await invoke('install_update', { installerUrl: pendingUpdateInfo.installerUrl });
+    // App will exit — this line may not be reached
+  } catch (e) {
+    console.error('[AutoUpdate] Install failed:', e);
+    els.updateProgressText.textContent = `Update failed: ${e}`;
+    els.updateProgressFill.classList.remove('progress-bar__fill--indeterminate');
+    els.updateProgressFill.style.width = '0%';
+    els.btnUpdateNow.textContent = 'Retry';
+    els.btnUpdateNow.disabled = false;
+    els.btnUpdateLater.style.display = '';
+  }
+}
+
+function skipUpdateVersion() {
+  const version = els.updateVersion.textContent.replace(/^v/, '');
+  localStorage.setItem(SKIPPED_VERSION_KEY, version);
+  hideUpdateModal();
+}
+
+// DEV: Test function — call window.testUpdateModal() in browser console
+window.testUpdateModal = function() {
+  showUpdateModal({
+    available: true,
+    version: '2.0.0',
+    currentVersion: '1.1.0',
+    date: new Date().toISOString(),
+    body: '### What\'s New\n- ✨ Auto-Update feature\n- 🔧 Bug fixes\n- 🚀 Performance improvements\n\nThis is a **test** update dialog.'
+  });
+};
 
 // ============ Depot Search/Filter ============
 function applyDepotFilters() {
@@ -1482,6 +1626,12 @@ function initEvents() {
   els.btnToggleTokenVis.addEventListener('click', toggleTokenVisibility);
   els.settingsModal.querySelector('.modal__backdrop').addEventListener('click', closeSettings);
 
+  // Update modal
+  els.btnUpdateNow.addEventListener('click', performUpdate);
+  els.btnUpdateLater.addEventListener('click', hideUpdateModal);
+  els.btnUpdateSkip.addEventListener('click', skipUpdateVersion);
+  els.updateModal.querySelector('.modal__backdrop').addEventListener('click', hideUpdateModal);
+
   // Theme
   els.btnThemeToggle.addEventListener('click', toggleTheme);
 
@@ -1496,14 +1646,7 @@ function initEvents() {
 
 // ============ Tauri Integration (replaces Electron) ============
 function initTauri() {
-  // On Linux, native window decorations are used — hide the custom title bar
-  const isLinux = navigator.platform.toLowerCase().includes('linux');
-  if (isLinux) {
-    const titleBar = document.getElementById('title-bar');
-    if (titleBar) titleBar.style.display = 'none';
-  }
-
-  // Window control buttons (still needed on Windows with custom title bar)
+  // Window control buttons (custom title bar on all platforms)
   document.getElementById('btn-minimize').addEventListener('click', () => invoke('minimize_window'));
   document.getElementById('btn-maximize').addEventListener('click', () => invoke('maximize_window'));
   document.getElementById('btn-close').addEventListener('click', () => invoke('close_window'));
@@ -1533,6 +1676,9 @@ function initTauri() {
 
   // Check .NET at startup
   checkDotNet();
+
+  // Check for updates after a short delay (non-blocking)
+  setTimeout(checkForUpdates, 1500);
 }
 
 // ============ Init ============

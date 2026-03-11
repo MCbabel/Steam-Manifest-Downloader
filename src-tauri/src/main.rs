@@ -19,14 +19,9 @@ fn main() {
             let state = services::AppState::new(app.handle().clone());
             app.manage(state);
 
-            // On Windows, remove native decorations so the custom title bar is used.
-            // On Linux, keep native decorations (set in tauri.conf.json) for proper
-            // window drag / resize / close behavior.
-            #[cfg(target_os = "windows")]
-            {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.set_decorations(false);
-                }
+            // Remove native decorations so the custom title bar is used
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_decorations(false);
             }
 
             Ok(())
@@ -55,6 +50,10 @@ fn main() {
             commands::minimize_window,
             commands::maximize_window,
             commands::close_window,
+            // Updater
+            commands::check_for_updates,
+            commands::install_update,
+            commands::get_auto_update_enabled,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

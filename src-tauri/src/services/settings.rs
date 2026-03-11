@@ -10,6 +10,8 @@ pub struct Settings {
     pub github_token: String,
     #[serde(default = "default_dd_extra_args")]
     pub dd_extra_args: Vec<String>,
+    #[serde(default = "default_auto_update")]
+    pub auto_update: bool,
 }
 
 fn default_download_location() -> String {
@@ -40,12 +42,17 @@ fn default_dd_extra_args() -> Vec<String> {
     ]
 }
 
+fn default_auto_update() -> bool {
+    true
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
             download_location: default_download_location(),
             github_token: String::new(),
             dd_extra_args: default_dd_extra_args(),
+            auto_update: default_auto_update(),
         }
     }
 }

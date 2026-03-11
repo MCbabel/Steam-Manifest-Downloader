@@ -33,6 +33,7 @@ desktop.ini
 
 # ---- IDE / Editor ----
 .vscode/
+.vs/
 .idea/
 *.swp
 *.swo
@@ -55,3 +56,7 @@ assets/generate-*.js
 
 # Temp files
 RELEASE_NOTES.md
+
+# ---- Tauri signing keys ----
+src-tauri/tauri-signing-key.key
+src-tauri/tauri-signing-key.key.pub
