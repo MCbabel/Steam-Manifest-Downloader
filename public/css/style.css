@@ -133,7 +133,7 @@
 }
 
 html {
-  background: var(--bg-primary);
+  background: transparent;
 }
 
 body {
@@ -147,6 +147,7 @@ body {
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  border-radius: 8px;
 }
 
 /* ============ Custom Title Bar ============ */
@@ -161,6 +162,7 @@ body {
   padding: 0 8px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  border-radius: 8px 8px 0 0;
 }
 
 .title-bar__drag-region {
@@ -168,6 +170,11 @@ body {
   align-items: center;
   gap: 8px;
   flex: 1;
+}
+
+.title-bar__icon,
+.title-bar__text {
+  pointer-events: none;
 }
 
 .title-bar__icon {
