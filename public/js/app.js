@@ -1651,6 +1651,33 @@ function initTauri() {
   document.getElementById('btn-maximize').addEventListener('click', () => invoke('maximize_window'));
   document.getElementById('btn-close').addEventListener('click', () => invoke('close_window'));
 
+  // ===== Manual Window Drag for Linux (WebKitGTK) =====
+  // data-tauri-drag-region and -webkit-app-region:drag do NOT work
+  // reliably on Linux/WebKitGTK. This manual mousedown handler ensures
+  // window dragging works on all platforms by directly calling startDragging().
+  const titleBar = document.getElementById('title-bar');
+  if (titleBar) {
+    titleBar.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest('.title-bar__controls')) return;
+
+      // Don't start dragging if mouse is in the resize zone (top edge of window)
+      // This allows the window resize handle to work properly
+      const resizeThreshold = 5; // pixels from window edge
+      if (e.clientY <= resizeThreshold) return;
+
+      // Fire-and-forget: startDragging() muss synchron im selben Event-Tick initiiert werden
+      // await würde auf Linux/Wayland zu spät sein (Window-Manager lehnt verspätete Drag-Anfragen ab)
+      window.__TAURI__.window.getCurrentWindow().startDragging();
+    });
+
+    // Double-click on title bar to maximize/restore
+    titleBar.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.title-bar__controls')) return;
+      invoke('maximize_window');
+    });
+  }
+
   // Close confirmation modal (during downloads)
   const closeModal = document.getElementById('close-modal');
   const btnCloseYes = document.getElementById('btn-close-yes');

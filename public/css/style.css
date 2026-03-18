@@ -138,16 +138,24 @@ html {
 
 body {
   font-family: var(--font);
-  background: var(--bg-primary);
+  background: transparent;
   color: var(--text-primary);
   height: 100vh;
   line-height: 1.6;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* App shell – renders the visible rounded window on all platforms */
+.app-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg-primary);
   border-radius: 8px;
+  overflow: hidden;
 }
 
 /* ============ Custom Title Bar ============ */
@@ -157,8 +165,10 @@ body {
   align-items: center;
   height: 32px;
   background: rgba(13, 17, 23, 0.95);
-  -webkit-app-region: drag;
+  -webkit-app-region: drag;    /* Chromium/Windows — on Linux/WebKitGTK this is ignored */
+  app-region: drag;            /* Standard property (future-proofing) */
   user-select: none;
+  -webkit-user-select: none;   /* Explicit for WebKitGTK on Linux */
   padding: 0 8px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -1136,7 +1146,7 @@ body {
 
 /* ============ Modal (Glass) ============ */
 .modal {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 1000;
   display: flex;
