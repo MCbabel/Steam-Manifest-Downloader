@@ -7,13 +7,26 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag (e.g. v1.1.0)"
+        description: "Release tag (e.g. v1.2.0)"
         required: true
+        type: string
+      name:
+        description: "Release name (e.g. Steam Manifest Downloader v1.2.0)"
+        required: false
+        type: string
+      body:
+        description: "Release description (supports Markdown)"
+        required: false
         type: string
       draft:
         description: "Create as draft release"
         required: false
         default: true
+        type: boolean
+      prerelease:
+        description: "Mark as pre-release"
+        required: false
+        default: false
         type: boolean
 
 permissions:
@@ -195,9 +208,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          name: "Steam Manifest Downloader ${{ steps.tag.outputs.tag }}"
+          name: ${{ inputs.name || format('Steam Manifest Downloader {0}', steps.tag.outputs.tag) }}
+          body: ${{ inputs.body || '' }}
+          generate_release_notes: ${{ inputs.body == '' || inputs.body == null }}
           draft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
-          generate_release_notes: true
+          prerelease: ${{ github.event_name == 'workflow_dispatch' && inputs.prerelease || false }}
           files: |
             artifacts/windows-portable/*
             artifacts/windows-nsis/*
