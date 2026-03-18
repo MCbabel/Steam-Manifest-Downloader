@@ -263,6 +263,64 @@
       <p>Track all changes and updates</p>
     </div>
 
+    <!-- v1.2.0 -->
+    <div class="changelog-entry">
+      <div class="changelog-entry-header">
+        <span class="changelog-version">v1.2.0</span>
+        <span class="changelog-date">March 18, 2026</span>
+      </div>
+      <ul class="changelog-changes">
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Built-in auto-update system — checks for new releases on GitHub at startup with configurable toggle</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>One-click update on Windows — downloads and installs the latest version automatically</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Custom title bar with minimize, maximize, close controls on all platforms</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Settings panel with update toggle and version display</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Windows code signing with SignTool in the CI/CD pipeline</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Enhanced release workflow with customizable release name, description, and pre-release option</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Separate test workflows for Linux (Arch) and Windows builds</span>
+        </li>
+        <li>
+          <span class="badge badge-platform">Linux</span>
+          <span>Custom title bar with full window dragging support on Linux</span>
+        </li>
+        <li>
+          <span class="badge badge-platform">Linux</span>
+          <span>Rounded window corners matching the Windows appearance</span>
+        </li>
+        <li>
+          <span class="badge badge-platform">Linux</span>
+          <span>Double-click title bar to maximize/restore window</span>
+        </li>
+        <li>
+          <span class="badge badge-changed">Changed</span>
+          <span>GitHub Pages deployment now only triggers when documentation changes</span>
+        </li>
+        <li>
+          <span class="badge badge-changed">Changed</span>
+          <span>Faster CI builds with cargo-binstall for Tauri CLI installation</span>
+        </li>
+      </ul>
+    </div>
+
     <!-- v1.1.0 -->
     <div class="changelog-entry">
       <div class="changelog-entry-header">
@@ -350,7 +408,7 @@
         </li>
         <li>
           <span class="badge badge-platform">Linux</span>
-          <span>Uses native window decorations on Linux (no custom title bar)</span>
+          <span>Uses native window decorations on Linux (custom title bar added in v1.2.0)</span>
         </li>
         <li>
           <span class="badge badge-platform">Linux</span>
