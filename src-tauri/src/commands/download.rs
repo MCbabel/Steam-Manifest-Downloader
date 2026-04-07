@@ -9,10 +9,9 @@ use uuid::Uuid;
 
 use crate::services::{AppState, JobInfo};
 use crate::services::depot_runner::{self, DepotRunConfig, ProgressEvent, emit_progress};
-use crate::services::manifest_downloader;
+use crate::services::internet_archive;
 use crate::services::manifest_hub_api;
 use crate::services::steam_store_api;
-use crate::services::vdf_parser;
 use crate::services::lua_parser::DepotInfo;
 use crate::services::depot_keys_generator;
 
@@ -26,10 +25,6 @@ pub struct DownloadConfig {
     pub depots: Vec<DepotConfig>,
     #[allow(dead_code)] // Deserialized from frontend JSON but not read directly by backend
     pub mode: Option<String>,
-    pub repo: Option<String>,
-    pub sha: Option<String>,
-    #[serde(rename = "githubToken", alias = "github_token")]
-    pub github_token: Option<String>,
     #[serde(rename = "keyVdfKeys", alias = "key_vdf_keys")]
     pub key_vdf_keys: Option<HashMap<String, String>>,
     #[serde(rename = "downloadDir", alias = "download_location")]
@@ -229,8 +224,8 @@ async fn run_download_pipeline(
     let custom_depots: Vec<&DepotConfig> = config.depots.iter().filter(|d| d.uploaded_manifest_path.is_none() && d.custom_manifest_id.is_some()).collect();
     let standard_depots: Vec<&DepotConfig> = config.depots.iter().filter(|d| d.uploaded_manifest_path.is_none() && d.custom_manifest_id.is_none()).collect();
 
-    // Step 1: Branch check (only for standard depots when no repo provided)
-    if !standard_depots.is_empty() && config.repo.is_none() {
+    // Step 1: Verify app exists in Internet Archive (only for standard depots)
+    if !standard_depots.is_empty() {
         let mut event = ProgressEvent::new("status", job_id);
         event.step = Some("checking_branch".to_string());
         event.app_id = Some(config.app_id.clone());
@@ -240,32 +235,27 @@ async fn run_download_pipeline(
             return Ok(());
         }
 
-        let branch_result = crate::services::github_api::check_branch(
-            &state.http_client,
-            &config.app_id,
-            config.github_token.as_deref(),
-        )
-        .await?;
-
-        if !branch_result.exists {
-            let error_msg = branch_result.error.unwrap_or_else(|| format!("Branch not found for AppID {}", config.app_id));
-            let mut event = ProgressEvent::new("error", job_id);
-            event.message = Some(error_msg.clone());
-            emit_progress(app, &event);
-            return Ok(());
+        match internet_archive::check_app_exists(&state.http_client, &config.app_id).await {
+            Ok(true) => {
+                let mut event = ProgressEvent::new("status", job_id);
+                event.step = Some("branch_found".to_string());
+                event.app_id = Some(config.app_id.clone());
+                event.last_updated = Some("Source: Internet Archive".to_string());
+                emit_progress(app, &event);
+            }
+            Ok(false) => {
+                let mut event = ProgressEvent::new("error", job_id);
+                event.message = Some(format!("App {} not found in Internet Archive", config.app_id));
+                emit_progress(app, &event);
+                return Ok(());
+            }
+            Err(e) => {
+                let mut event = ProgressEvent::new("error", job_id);
+                event.message = Some(format!("Internet Archive check failed: {}", e));
+                emit_progress(app, &event);
+                return Ok(());
+            }
         }
-
-        let mut event = ProgressEvent::new("status", job_id);
-        event.step = Some("branch_found".to_string());
-        event.app_id = Some(config.app_id.clone());
-        event.last_updated = branch_result.last_updated;
-        emit_progress(app, &event);
-    } else if config.repo.is_some() {
-        let mut event = ProgressEvent::new("status", job_id);
-        event.step = Some("branch_found".to_string());
-        event.app_id = Some(config.app_id.clone());
-        event.last_updated = Some(format!("Using repo: {}", config.repo.as_deref().unwrap_or("")));
-        emit_progress(app, &event);
     }
 
     if check_cancelled(state, job_id).await {
@@ -311,10 +301,7 @@ async fn run_download_pipeline(
         }
     }
 
-    // Download standard manifests from GitHub
-    let repo = config.repo.as_deref().unwrap_or("SteamAutoCracks/ManifestHub");
-    let sha = config.sha.as_deref().unwrap_or(&config.app_id);
-
+    // Download standard manifests from Internet Archive
     for depot in &standard_depots {
         if check_cancelled(state, job_id).await {
             return Ok(());
@@ -326,15 +313,12 @@ async fn run_download_pipeline(
         event.manifest_id = Some(depot.manifest_id.clone());
         emit_progress(app, &event);
 
-        match manifest_downloader::download_manifest(
+        match internet_archive::download_manifest_file(
             &state.http_client,
             &config.app_id,
             &depot.depot_id,
             &depot.manifest_id,
-            repo,
-            sha,
             &work_dir,
-            config.github_token.as_deref(),
         )
         .await
         {
@@ -433,38 +417,34 @@ async fn run_download_pipeline(
         })
         .collect();
 
-    // If we have a repo with Key.vdf and some depots lack keys, try downloading
-    if let Some(ref repo_name) = config.repo {
-        if depot_infos.iter().any(|d| d.depot_key.is_none()) {
-            if let Some(ref sha_val) = config.sha {
-                let mut event = ProgressEvent::new("status", job_id);
-                event.step = Some("downloading_keyvdf".to_string());
-                emit_progress(app, &event);
+    // If some depots lack keys, try downloading key.vdf from Internet Archive
+    if depot_infos.iter().any(|d| d.depot_key.is_none()) {
+        let mut event = ProgressEvent::new("status", job_id);
+        event.step = Some("downloading_keyvdf".to_string());
+        emit_progress(app, &event);
 
-                match manifest_downloader::download_key_vdf(
-                    &state.http_client,
-                    &config.app_id,
-                    repo_name,
-                    sha_val,
-                    None,
-                    config.github_token.as_deref(),
-                )
-                .await
-                {
-                    Ok(vdf_content) => {
-                        let vdf_keys = vdf_parser::parse_key_vdf(&vdf_content, Some(repo_name));
-                        for depot in &mut depot_infos {
-                            if depot.depot_key.is_none() {
-                                if let Some(key) = vdf_keys.get(&depot.depot_id.to_string()) {
-                                    depot.depot_key = Some(key.clone());
-                                }
-                            }
+        match internet_archive::download_text_file(
+            &state.http_client,
+            &config.app_id,
+            "key.vdf",
+        )
+        .await
+        {
+            Ok(vdf_content) => {
+                let vdf_keys = crate::services::vdf_parser::parse_key_vdf(
+                    &vdf_content,
+                    Some("InternetArchive"),
+                );
+                for depot in &mut depot_infos {
+                    if depot.depot_key.is_none() {
+                        if let Some(key) = vdf_keys.get(&depot.depot_id.to_string()) {
+                            depot.depot_key = Some(key.clone());
                         }
                     }
-                    Err(e) => {
-                        eprintln!("[Download] Key.vdf download/parse skipped: {}", e);
-                    }
                 }
+            }
+            Err(e) => {
+                eprintln!("[Download] Key.vdf download/parse skipped: {}", e);
             }
         }
     }
@@ -615,131 +595,6 @@ pub async fn cancel_download(
     Ok(())
 }
 
-/// Export a script for manual download execution.
-/// On Windows: generates a .bat file. On Linux: generates a .sh file.
-#[command]
-pub async fn export_batch_script(config: serde_json::Value) -> Result<String, String> {
-    let app_id = config["appId"]
-        .as_str()
-        .or_else(|| config["mainAppId"].as_str())
-        .ok_or("Missing appId")?;
-
-    let depots = config["depots"]
-        .as_array()
-        .or_else(|| config["selectedDepots"].as_array())
-        .ok_or("Missing depots array")?;
-
-    let folder_name = config["folderName"]
-        .as_str()
-        .map(String::from)
-        .unwrap_or_else(|| app_id.to_string());
-
-    let download_dir = config["downloadDir"]
-        .as_str()
-        .unwrap_or(".");
-
-    let default_game_name = format!("App {}", app_id);
-    let game_name = config["gameName"]
-        .as_str()
-        .unwrap_or(&default_game_name);
-
-    #[cfg(target_os = "windows")]
-    {
-        // Escape special batch characters
-        let safe_name = escape_batch_chars(game_name);
-
-        let mut script = String::new();
-        script.push_str("@echo off\r\n");
-        script.push_str("echo === Steam Manifest Downloader - Batch Script ===\r\n");
-        script.push_str(&format!("echo Game: {} (AppID: {})\r\n", safe_name, app_id));
-        script.push_str(&format!("echo Download Directory: {}\r\n", download_dir));
-        script.push_str("echo.\r\n");
-        script.push_str("\r\n");
-        script.push_str(&format!("cd /d \"{}\"\r\n", download_dir));
-        script.push_str("\r\n");
-
-        for (i, depot) in depots.iter().enumerate() {
-            let depot_id = depot["depotId"]
-                .as_str()
-                .or_else(|| depot["depot_id"].as_str())
-                .unwrap_or("0");
-
-            let manifest_id = depot["customManifestId"]
-                .as_str()
-                .or_else(|| depot["manifestId"].as_str())
-                .or_else(|| depot["manifest_id"].as_str())
-                .unwrap_or("0");
-
-            script.push_str(&format!("REM Depot {}\r\n", depot_id));
-            script.push_str(&format!(
-                "DepotDownloaderMod.exe -app {} -depot {} -manifest {} -depotkeys \"{}\\steam.keys\" -manifestfile \"{}\\{}_{}.manifest\"\r\n",
-                app_id, depot_id, manifest_id, folder_name, folder_name, depot_id, manifest_id
-            ));
-            script.push_str(&format!(
-                "if %errorlevel% neq 0 echo ERROR: Depot {} failed!\r\n",
-                depot_id
-            ));
-
-            if i < depots.len() - 1 {
-                script.push_str("\r\n");
-            }
-        }
-
-        script.push_str("\r\n");
-        script.push_str("echo.\r\n");
-        script.push_str("echo === All downloads complete! ===\r\n");
-        script.push_str("pause\r\n");
-
-        Ok(script)
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let mut script = String::new();
-        script.push_str("#!/bin/bash\n");
-        script.push_str("echo \"=== Steam Manifest Downloader - Shell Script ===\"\n");
-        script.push_str(&format!("echo \"Game: {} (AppID: {})\"\n", game_name.replace('"', "\\\""), app_id));
-        script.push_str(&format!("echo \"Download Directory: {}\"\n", download_dir));
-        script.push_str("echo\n");
-        script.push_str("\n");
-        script.push_str(&format!("cd \"{}\" || exit 1\n", download_dir));
-        script.push_str("\n");
-
-        for (i, depot) in depots.iter().enumerate() {
-            let depot_id = depot["depotId"]
-                .as_str()
-                .or_else(|| depot["depot_id"].as_str())
-                .unwrap_or("0");
-
-            let manifest_id = depot["customManifestId"]
-                .as_str()
-                .or_else(|| depot["manifestId"].as_str())
-                .or_else(|| depot["manifest_id"].as_str())
-                .unwrap_or("0");
-
-            script.push_str(&format!("# Depot {}\n", depot_id));
-            script.push_str(&format!(
-                "./DepotDownloaderMod -app {} -depot {} -manifest {} -depotkeys \"{}/steam.keys\" -manifestfile \"{}/{}_{}.manifest\"\n",
-                app_id, depot_id, manifest_id, folder_name, folder_name, depot_id, manifest_id
-            ));
-            script.push_str(&format!(
-                "if [ $? -ne 0 ]; then echo \"ERROR: Depot {} failed!\"; fi\n",
-                depot_id
-            ));
-
-            if i < depots.len() - 1 {
-                script.push_str("\n");
-            }
-        }
-
-        script.push_str("\n");
-        script.push_str("echo\n");
-        script.push_str("echo \"=== All downloads complete! ===\"\n");
-
-        Ok(script)
-    }
-}
-
 // --- Helper functions ---
 
 async fn check_cancelled(state: &AppState, job_id: &str) -> bool {
@@ -764,21 +619,6 @@ fn resolve_download_dir(dir_path: Option<&str>) -> Option<PathBuf> {
     }
 
     Some(resolved)
-}
-
-#[cfg(target_os = "windows")]
-fn escape_batch_chars(s: &str) -> String {
-    let mut result = String::with_capacity(s.len());
-    for c in s.chars() {
-        match c {
-            '&' | '|' | '<' | '>' | '^' | '%' => {
-                result.push('^');
-                result.push(c);
-            }
-            _ => result.push(c),
-        }
-    }
-    result
 }
 
 #[cfg(target_os = "windows")]

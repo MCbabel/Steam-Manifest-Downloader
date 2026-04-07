@@ -17,6 +17,7 @@ const state = {
   gameName: null,
   headerImage: null,
   notificationsEnabled: false,
+  notificationSoundEnabled: true,
   depotManifests: {}, // depotId -> { originalName, storedPath }
   githubToken: '',
   // Search mode state
@@ -25,7 +26,18 @@ const state = {
   searchAppId: null,
   searchRepo: null,
   searchSha: null,
-  searchKeyVdfKeys: null
+  searchKeyVdfKeys: null,
+  // Speed tracking
+  speedTracker: {
+    lastPercent: 0,
+    lastTime: 0,
+    samples: [],     // Array of { percent, time } für gleitenden Durchschnitt
+    currentDepotSize: 0,  // Größe des aktuell herunterladenen Depots in Bytes
+    currentDepotId: null,
+    depotStartTime: 0,      // Wann der aktuelle Depot-Download gestartet hat
+    staleTimer: null,        // setInterval für Elapsed-Timer wenn kein Fortschritt
+    lastUpdateTime: 0,       // Letzter Zeitpunkt mit echtem Prozent-Update
+  },
 };
 
 // ============ Constants ============
@@ -55,6 +67,7 @@ const els = {
   uploadLoading: $('#upload-loading'),
   // Search
   searchAppIdInput: $('#search-appid-input'),
+  searchAutocomplete: $('#search-autocomplete'),
   btnSearch: $('#btn-search'),
   searchError: $('#search-error'),
   searchLoading: $('#search-loading'),
@@ -76,10 +89,13 @@ const els = {
   btnDeselectAll: $('#btn-deselect-all'),
   btnBack: $('#btn-back'),
   btnDownload: $('#btn-download'),
-  btnExportBat: $('#btn-export-bat'),
   // Progress (depot download)
   depotProgressFill: $('#depot-progress-fill'),
   depotProgressText: $('#depot-progress-text'),
+  // Speed / ETA
+  downloadSpeedInfo: $('#download-speed-info'),
+  downloadSpeed: $('#download-speed'),
+  downloadEta: $('#download-eta'),
   // Progress
   progressHeader: $('#progress-header'),
   progressBarFill: $('#progress-bar-fill'),
@@ -92,6 +108,7 @@ const els = {
   btnStartOver: $('#btn-start-over'),
   mhApiKey: $('#mh-apikey'),
   downloadDirInput: $('#download-dir'),
+  btnBrowseDir: $('#btn-browse-dir'),
   // Disk Space
   diskSpaceInfo: $('#disk-space-info'),
   diskSpaceText: $('#disk-space-text'),
@@ -118,6 +135,14 @@ const els = {
   btnSettingsSave: $('#btn-settings-save'),
   btnSettingsCancel: $('#btn-settings-cancel'),
   autoUpdateToggle: $('#auto-update-toggle'),
+  // Advanced Settings
+  btnToggleAdvanced: $('#btn-toggle-advanced'),
+  advancedSettingsContent: $('#advanced-settings-content'),
+  ddExtraArgsInput: $('#dd-extra-args-input'),
+  maxRetriesInput: $('#max-retries-input'),
+  speedLimitInput: $('#speed-limit-input'),
+  proxyInput: $('#proxy-input'),
+  notificationSoundToggle: $('#notification-sound-toggle'),
   // Update modal
   updateModal: $('#update-modal'),
   updateVersion: $('#update-version'),
@@ -292,7 +317,8 @@ async function handleFilePath(filePath) {
       depots: (raw.depots || []).map(d => ({
         depotId: String(d.depot_id),
         manifestId: d.manifest_id || 'N/A',
-        depotKey: d.depot_key || null
+        depotKey: d.depot_key || null,
+        sizeBytes: d.size_bytes || null
       }))
     };
     state.mode = 'upload';
@@ -311,8 +337,95 @@ function showUploadError(message) {
   els.uploadError.classList.remove('hidden');
 }
 
+// ============ Autocomplete Search ============
+let autocompleteDebounceTimer = null;
+
+function isNumericInput(str) {
+  return /^\d+$/.test(str.trim());
+}
+
+function hideAutocomplete() {
+  els.searchAutocomplete.classList.add('hidden');
+  els.searchAutocomplete.innerHTML = '';
+}
+
+function showAutocompleteLoading() {
+  els.searchAutocomplete.innerHTML = '<div class="search-autocomplete__loading">Searching...</div>';
+  els.searchAutocomplete.classList.remove('hidden');
+}
+
+function renderAutocompleteResults(results) {
+  if (!results || results.length === 0) {
+    els.searchAutocomplete.innerHTML = '<div class="search-autocomplete__empty">No games found</div>';
+    els.searchAutocomplete.classList.remove('hidden');
+    return;
+  }
+
+  els.searchAutocomplete.innerHTML = results.map(item => `
+    <div class="search-autocomplete__item" data-appid="${item.appId}">
+      <img class="search-autocomplete__img" src="${item.image}" alt="" loading="lazy" onerror="this.style.display='none'">
+      <span class="search-autocomplete__name">${item.name}</span>
+      <span class="search-autocomplete__appid">${item.appId}</span>
+    </div>
+  `).join('');
+  els.searchAutocomplete.classList.remove('hidden');
+
+  // Attach click handlers
+  els.searchAutocomplete.querySelectorAll('.search-autocomplete__item').forEach(el => {
+    el.addEventListener('click', () => {
+      const appId = el.dataset.appid;
+      els.searchAppIdInput.value = appId;
+      hideAutocomplete();
+      performSearch();
+    });
+  });
+}
+
+async function triggerAutocomplete(query) {
+  showAutocompleteLoading();
+  try {
+    const results = await invoke('search_steam_games', { query });
+    // Only render if the input still matches (user may have typed more)
+    const currentVal = els.searchAppIdInput.value.trim();
+    if (currentVal === query || (!isNumericInput(currentVal) && currentVal.length >= 2)) {
+      renderAutocompleteResults(results);
+    }
+  } catch (err) {
+    console.error('[Autocomplete]', err);
+    hideAutocomplete();
+  }
+}
+
+function onSearchInput() {
+  const val = els.searchAppIdInput.value.trim();
+
+  // Clear any pending debounce
+  if (autocompleteDebounceTimer) {
+    clearTimeout(autocompleteDebounceTimer);
+    autocompleteDebounceTimer = null;
+  }
+
+  // If empty or numeric → no autocomplete
+  if (!val || isNumericInput(val)) {
+    hideAutocomplete();
+    return;
+  }
+
+  // Need at least 2 chars for search
+  if (val.length < 2) {
+    hideAutocomplete();
+    return;
+  }
+
+  // Debounce: 400ms
+  autocompleteDebounceTimer = setTimeout(() => {
+    triggerAutocomplete(val);
+  }, 400);
+}
+
 // ============ App ID Search ============
 async function performSearch() {
+  hideAutocomplete();
   const appIdStr = els.searchAppIdInput.value.trim();
   if (!appIdStr) return;
 
@@ -428,40 +541,31 @@ async function fetchSearchGameInfo(appId) {
 function renderRepoList(repos) {
   els.repoList.innerHTML = '';
 
-  // Auto (newest) option
-  const autoCard = document.createElement('div');
-  autoCard.className = 'repo-card repo-card--auto';
-  autoCard.dataset.repoIndex = 'auto';
-  autoCard.innerHTML = `
-    <div class="repo-card__radio"></div>
-    <div class="repo-card__info">
-      <div class="repo-card__name">⚡ Auto (newest)</div>
-      <div class="repo-card__date">Automatically selects the most recently updated repository</div>
-    </div>
-  `;
-  autoCard.addEventListener('click', () => selectRepo('auto'));
-  els.repoList.appendChild(autoCard);
-
   // Individual repo cards
   repos.forEach((repo, index) => {
     const card = document.createElement('div');
     card.className = 'repo-card';
     card.dataset.repoIndex = index;
 
-    const dateStr = repo.date ? formatRepoDate(repo.date) : 'Unknown date';
     const badgeClass = getBadgeClass(repo.type);
+    const dateHtml = repo.date ? `<div class="repo-card__date">Updated: ${formatRepoDate(repo.date)}</div>` : '';
 
     card.innerHTML = `
       <div class="repo-card__radio"></div>
       <div class="repo-card__info">
         <div class="repo-card__name">${escapeHtml(repo.name)}</div>
-        <div class="repo-card__date">Updated: ${dateStr}</div>
+        ${dateHtml}
       </div>
       <span class="repo-card__badge ${badgeClass}">${escapeHtml(repo.source || repo.type || 'unknown')}</span>
     `;
     card.addEventListener('click', () => selectRepo(index));
     els.repoList.appendChild(card);
   });
+
+  // Auto-select the first (and likely only) repo if there's exactly one
+  if (repos.length === 1) {
+    selectRepo(0);
+  }
 }
 
 function formatRepoDate(dateStr) {
@@ -477,6 +581,7 @@ function formatRepoDate(dateStr) {
 function getBadgeClass(type) {
   if (!type) return 'repo-card__badge--github';
   const t = type.toLowerCase();
+  if (t.includes('archive')) return 'repo-card__badge--archive';
   if (t.includes('printedwaste') || t.includes('printed')) return 'repo-card__badge--printedwaste';
   if (t.includes('kernelos')) return 'repo-card__badge--kernelos';
   return 'repo-card__badge--github';
@@ -488,23 +593,14 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-function selectRepo(indexOrAuto) {
+function selectRepo(index) {
   // Deselect all
   $$('.repo-card').forEach(c => c.classList.remove('selected'));
 
-  if (indexOrAuto === 'auto') {
-    if (state.searchRepos.length === 0) {
-      showSearchError('No repositories found');
-      return;
-    }
-    // Select the newest repo (first one, assuming sorted by date)
-    state.selectedRepo = { ...state.searchRepos[0], _auto: true };
-  } else {
-    state.selectedRepo = state.searchRepos[indexOrAuto];
-  }
+  state.selectedRepo = state.searchRepos[index];
 
   // Highlight the selected card
-  const card = els.repoList.querySelector(`[data-repo-index="${indexOrAuto}"]`);
+  const card = els.repoList.querySelector(`[data-repo-index="${index}"]`);
   if (card) card.classList.add('selected');
 
   // Show Next button
@@ -523,7 +619,7 @@ async function proceedFromSearch() {
   els.searchError.classList.add('hidden');
 
   try {
-    const isAlternative = repo.type && !repo.type.toLowerCase().includes('github');
+    const isAlternative = repo.type && !repo.type.toLowerCase().includes('github') && !repo.type.toLowerCase().includes('archive');
     let depots;
 
     if (isAlternative) {
@@ -538,7 +634,8 @@ async function proceedFromSearch() {
       depots = (raw.depots || []).map(d => ({
         depotId: String(d.depot_id),
         manifestId: d.manifest_id ? String(d.manifest_id) : 'N/A',
-        depotKey: d.depot_key || null
+        depotKey: d.depot_key || null,
+        sizeBytes: d.size_bytes || null
       }));
 
       // KernelOS provides depot keys only (no manifest IDs).
@@ -561,7 +658,8 @@ async function proceedFromSearch() {
 
             const ghManifests = (mRaw.manifests || []).map(m => ({
               depotId: String(m.depot_id),
-              manifestId: m.manifest_id || 'N/A'
+              manifestId: m.manifest_id || 'N/A',
+              sizeBytes: m.size_bytes || null
             }));
 
             // Merge: match by depotId, fill in manifestIds from GitHub
@@ -569,6 +667,9 @@ async function proceedFromSearch() {
               const ghMatch = ghManifests.find(m => String(m.depotId) === String(depot.depotId));
               if (ghMatch && ghMatch.manifestId) {
                 depot.manifestId = ghMatch.manifestId;
+              }
+              if (ghMatch && ghMatch.sizeBytes && !depot.sizeBytes) {
+                depot.sizeBytes = ghMatch.sizeBytes;
               }
             }
 
@@ -578,7 +679,8 @@ async function proceedFromSearch() {
                 depots.push({
                   depotId: ghm.depotId,
                   manifestId: ghm.manifestId || 'N/A',
-                  depotKey: null
+                  depotKey: null,
+                  sizeBytes: ghm.sizeBytes || null
                 });
               }
             }
@@ -599,7 +701,7 @@ async function proceedFromSearch() {
         state.searchKeyVdfKeys = null;
       }
     } else {
-      // GitHub repo - fetch manifests
+      // Archive / standard repo - fetch manifests
       const token = getGithubToken();
       const mRaw = await invoke('get_repo_manifests', {
         appId: String(appId),
@@ -612,7 +714,8 @@ async function proceedFromSearch() {
       depots = (mRaw.manifests || []).map(m => ({
         depotId: String(m.depot_id),
         manifestId: m.manifest_id || 'N/A',
-        depotKey: m.depot_key || null
+        depotKey: m.depot_key || null,
+        sizeBytes: m.size_bytes || null
       }));
 
       state.searchRepo = repo.name;
@@ -649,6 +752,7 @@ async function loadSettingsAndDefaults() {
     const settings = await invoke('get_settings');
     defaultDownloadDir = settings.download_location || '';
     state.githubToken = settings.github_token || '';
+    state.notificationSoundEnabled = settings.notification_sound !== false;
     if (els.downloadDirInput) {
       els.downloadDirInput.value = defaultDownloadDir;
     }
@@ -673,6 +777,31 @@ async function saveDownloadDir() {
       console.error('Failed to save download dir:', e);
     }
   }
+}
+
+async function browseDownloadDir() {
+  try {
+    const { open } = window.__TAURI__.dialog;
+    const selected = await open({
+      directory: true,
+      multiple: false,
+      title: 'Select Download Location'
+    });
+    if (selected) {
+      els.downloadDirInput.value = selected;
+    }
+  } catch (e) {
+    console.error('Failed to open folder dialog:', e);
+  }
+}
+
+// ============ "Start Over" — go back to Step 2 with preserved selections ============
+function goBackToSelect() {
+  // Clean up progress listener
+  cleanupProgressListener();
+  state.jobId = null;
+  // Go back to Step 2 (select) — parsedData and selectedDepots are still intact
+  goToStep(2);
 }
 
 // ============ Game Info ============
@@ -713,6 +842,16 @@ async function fetchGameInfo(appId) {
 }
 
 // ============ Depot Selection ============
+function formatBytes(bytes) {
+  if (!bytes || bytes <= 0) return null;
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1) return `${gb.toFixed(2)} GB`;
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 1) return `${mb.toFixed(2)} MB`;
+  const kb = bytes / 1024;
+  return `${kb.toFixed(2)} KB`;
+}
+
 function showSelectionStep() {
   const data = state.parsedData;
   if (!data) return;
@@ -752,13 +891,15 @@ function showSelectionStep() {
   state.depotManifests = {};
 
   data.depots.forEach((depot) => {
+    const sizeFormatted = formatBytes(depot.sizeBytes);
     const item = document.createElement('div');
     item.className = 'depot-item';
     item.dataset.depotId = depot.depotId;
+    if (depot.sizeBytes) item.dataset.sizeBytes = depot.sizeBytes;
     item.innerHTML = `
       <div class="depot-item__checkbox"></div>
       <div class="depot-item__info">
-        <div class="depot-item__depot-id">Depot ${depot.depotId}</div>
+        <div class="depot-item__depot-id">Depot ${depot.depotId}${sizeFormatted ? `<span class="depot-item__size">${sizeFormatted}</span>` : ''}</div>
         <div class="depot-item__manifest-id">Manifest: ${depot.manifestId || 'N/A'}</div>
         <div class="depot-item__custom-manifest">
           <label>Custom:</label>
@@ -831,78 +972,28 @@ function deselectAll() {
 function updateDownloadButton() {
   const count = state.selectedDepots.size;
   els.btnDownload.disabled = count === 0;
-  els.btnExportBat.disabled = count === 0;
+
+  // Calculate total size of selected depots
+  let totalBytes = 0;
+  let hasSizeInfo = false;
+  if (state.parsedData && state.parsedData.depots) {
+    for (const depot of state.parsedData.depots) {
+      if (state.selectedDepots.has(depot.depotId) && depot.sizeBytes) {
+        totalBytes += depot.sizeBytes;
+        hasSizeInfo = true;
+      }
+    }
+  }
+  const sizeLabel = hasSizeInfo ? ` — ~${formatBytes(totalBytes)} total` : '';
+
   els.btnDownload.innerHTML = `
-    Download${count > 0 ? ` (${count})` : ''}
+    Download${count > 0 ? ` (${count})${sizeLabel}` : ''}
     <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
       <polyline points="7 10 12 15 17 10"/>
       <line x1="12" y1="15" x2="12" y2="3"/>
     </svg>
   `;
-}
-
-// ============ Export Batch Script ============
-async function exportBatScript() {
-  const data = state.parsedData;
-  const selectedDepots = data.depots.filter(d => state.selectedDepots.has(d.depotId));
-  if (selectedDepots.length === 0) return;
-
-  const gameName = state.gameName || `App ${data.mainAppId}`;
-  const safeGameName = gameName.replace(/[^a-zA-Z0-9_\- ]/g, '').replace(/\s+/g, '_').substring(0, 60);
-
-  // Collect custom manifest IDs
-  const depotsWithCustomManifests = selectedDepots.map(depot => {
-    const input = document.querySelector(`.custom-manifest-input[data-depot-id="${depot.depotId}"]`);
-    const customManifestId = input ? input.value.trim() : '';
-    return {
-      depotId: depot.depotId,
-      manifestId: depot.manifestId,
-      customManifestId: customManifestId || null
-    };
-  });
-
-  // Determine folder name
-  const folderName = safeGameName ? `${data.mainAppId} - ${safeGameName}` : String(data.mainAppId);
-
-  try {
-    const script = await invoke('export_batch_script', {
-      config: {
-        appId: String(data.mainAppId),
-        depots: depotsWithCustomManifests,
-        folderName,
-        downloadDir: getDownloadDir() || null,
-        gameName
-      }
-    });
-
-    // Use Tauri save dialog to pick where to save the .bat file
-    try {
-      const { save } = window.__TAURI__.dialog;
-      const savePath = await save({
-        filters: [{ name: 'Batch Script', extensions: ['bat'] }],
-        defaultPath: `${data.mainAppId}_${safeGameName}_download.bat`
-      });
-      if (savePath) {
-        // Write using Tauri fs plugin
-        const { writeTextFile } = window.__TAURI__.fs;
-        await writeTextFile(savePath, script);
-      }
-    } catch (dialogErr) {
-      // Fallback: use Blob download if Tauri dialog fails
-      const blob = new Blob([script], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${data.mainAppId}_${safeGameName}_download.bat`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-  } catch (error) {
-    alert('Failed to export script: ' + error);
-  }
 }
 
 // ============ Download Process ============
@@ -993,6 +1084,9 @@ function initProgressUI(depots) {
   // Reset depot download progress bar
   if (els.depotProgressFill) els.depotProgressFill.style.width = '0%';
   if (els.depotProgressText) els.depotProgressText.textContent = '0%';
+  if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
+  clearInterval(state.speedTracker.staleTimer);
+  state.speedTracker.staleTimer = null;
 
   // Build depot progress items
   els.depotProgressList.innerHTML = '';
@@ -1112,6 +1206,22 @@ function handleStatusUpdate(msg) {
       break;
 
     case 'running_downloader':
+      // Reset speed tracker for new depot
+      state.speedTracker.samples = [];
+      state.speedTracker.lastTime = 0;
+      state.speedTracker.lastPercent = 0;
+      state.speedTracker.depotStartTime = Date.now();
+      state.speedTracker.lastUpdateTime = Date.now();
+      // Stop previous stale timer and start new one
+      clearInterval(state.speedTracker.staleTimer);
+      state.speedTracker.staleTimer = null;
+      startStaleTimer();
+      // Set current depot size if available
+      if (msg.depotId) {
+        const depot = state.parsedData?.depots?.find(d => d.depotId === String(msg.depotId));
+        state.speedTracker.currentDepotSize = depot?.sizeBytes || 0;
+        state.speedTracker.currentDepotId = msg.depotId;
+      }
       if (msg.current && msg.total) {
         els.progressStatus.textContent = `Running DepotDownloader ${msg.current}/${msg.total} (Depot ${msg.depotId})...`;
         const baseProgress = state.parsedData ? state.selectedDepots.size : 0;
@@ -1147,12 +1257,123 @@ function updateDepotDownloadProgress(percent) {
   if (els.depotProgressText) {
     els.depotProgressText.textContent = `${percent.toFixed(1)}%`;
   }
+  updateSpeedAndEta(percent);
+}
+
+function updateSpeedAndEta(percent) {
+  const now = Date.now();
+  const tracker = state.speedTracker;
+
+  // Record last update time for stale detection
+  tracker.lastUpdateTime = now;
+
+  // Initialize on first call
+  if (tracker.lastTime === 0) {
+    tracker.lastTime = now;
+    tracker.lastPercent = percent;
+    return;
+  }
+
+  // Add sample
+  tracker.samples.push({ percent, time: now });
+
+  // Keep only last 10 samples (gleitender Durchschnitt)
+  if (tracker.samples.length > 10) {
+    tracker.samples.shift();
+  }
+
+  // Need at least 2 samples
+  if (tracker.samples.length < 2) return;
+
+  // Calculate rate from oldest to newest sample
+  const oldest = tracker.samples[0];
+  const newest = tracker.samples[tracker.samples.length - 1];
+  const timeDelta = (newest.time - oldest.time) / 1000; // seconds
+  const percentDelta = newest.percent - oldest.percent;
+
+  if (timeDelta <= 0 || percentDelta <= 0) return;
+
+  const percentPerSecond = percentDelta / timeDelta;
+  const remainingPercent = 100 - percent;
+  const etaSeconds = remainingPercent / percentPerSecond;
+
+  // Calculate speed in MB/s if we know the depot size
+  let speedText = '';
+  if (tracker.currentDepotSize > 0) {
+    const bytesPerSecond = (tracker.currentDepotSize * percentDelta / 100) / timeDelta;
+    const mbPerSecond = bytesPerSecond / (1024 * 1024);
+    speedText = `↓ ${mbPerSecond.toFixed(1)} MB/s`;
+  } else {
+    speedText = `↓ ${percentPerSecond.toFixed(2)}%/s`;
+  }
+
+  // Format ETA
+  const etaText = formatEta(etaSeconds);
+
+  // Show the info
+  const infoEl = els.downloadSpeedInfo;
+  if (infoEl) {
+    infoEl.classList.remove('hidden');
+    els.downloadSpeed.textContent = speedText;
+    els.downloadEta.textContent = etaText;
+  }
+}
+
+function formatEta(seconds) {
+  if (!isFinite(seconds) || seconds < 0 || seconds > 86400) {
+    return 'calculating...';
+  }
+
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+
+  if (h > 0) {
+    return `~${h}h ${m}m remaining`;
+  } else if (m > 0) {
+    return `~${m}m ${s}s remaining`;
+  } else {
+    return `~${s}s remaining`;
+  }
+}
+
+function startStaleTimer() {
+  if (state.speedTracker.staleTimer) return; // Already running
+
+  state.speedTracker.staleTimer = setInterval(() => {
+    const now = Date.now();
+    const timeSinceLastUpdate = (now - state.speedTracker.lastUpdateTime) / 1000;
+
+    if (timeSinceLastUpdate > 5) {
+      // Switch to elapsed time mode — show time since last progress update
+      const waitingFor = (now - state.speedTracker.lastUpdateTime) / 1000;
+      const infoEl = els.downloadSpeedInfo;
+      if (infoEl) {
+        infoEl.classList.remove('hidden');
+        els.downloadSpeed.textContent = '⏳ Downloading large file...';
+        els.downloadEta.textContent = `waiting ${formatElapsed(waitingFor)}`;
+      }
+    }
+  }, 1000);
+}
+
+function formatElapsed(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
 }
 
 function handleComplete(msg) {
+  clearInterval(state.speedTracker.staleTimer);
+  state.speedTracker.staleTimer = null;
   els.progressBarFill.style.width = '100%';
   els.progressStatus.textContent = '✅ Complete!';
   updateDepotDownloadProgress(100);
+  if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
   showCompletion(true, msg.message);
 
   // Mark remaining depots as done
@@ -1181,6 +1402,9 @@ function handleError(msg) {
 
   // If it's a fatal error (no depotId = pipeline-level error), show Start Over and notify
   if (!msg.depotId) {
+    clearInterval(state.speedTracker.staleTimer);
+    state.speedTracker.staleTimer = null;
+    if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
     showCompletion(false, msg.message);
     showBrowserNotification('Download Failed!', `Error: ${msg.message}`);
     playNotificationSound();
@@ -1189,8 +1413,11 @@ function handleError(msg) {
 }
 
 function handleCancelled(msg) {
+  clearInterval(state.speedTracker.staleTimer);
+  state.speedTracker.staleTimer = null;
   els.progressBarFill.style.width = '0%';
   els.progressStatus.textContent = 'Cancelled';
+  if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
   appendTerminalLine(`\n${msg.message}`, 'error');
   showCompletion(false, msg.message);
   cleanupProgressListener();
@@ -1284,6 +1511,13 @@ async function openSettings() {
     const settings = await invoke('get_settings');
     els.githubTokenInput.value = settings.github_token || '';
     els.autoUpdateToggle.checked = settings.auto_update !== false;
+
+    // Advanced settings
+    els.ddExtraArgsInput.value = (settings.dd_extra_args || []).join(' ');
+    els.maxRetriesInput.value = settings.max_retries ?? 3;
+    els.speedLimitInput.value = settings.download_speed_limit || '';
+    els.proxyInput.value = settings.proxy || '';
+    els.notificationSoundToggle.checked = settings.notification_sound !== false;
   } catch (e) {
     els.githubTokenInput.value = state.githubToken || '';
     els.autoUpdateToggle.checked = true;
@@ -1303,12 +1537,40 @@ async function saveSettings() {
     const currentSettings = await invoke('get_settings');
     currentSettings.github_token = token;
     currentSettings.auto_update = autoUpdate;
+
+    // Advanced settings
+    const argsStr = els.ddExtraArgsInput.value.trim();
+    if (argsStr) {
+      currentSettings.dd_extra_args = argsStr.split(/\s+/).filter(a => a.length > 0);
+    } else {
+      currentSettings.dd_extra_args = ["-max-downloads", "8", "-verify-all"];
+    }
+    currentSettings.max_retries = parseInt(els.maxRetriesInput.value) || 3;
+    currentSettings.download_speed_limit = els.speedLimitInput.value.trim();
+    currentSettings.proxy = els.proxyInput.value.trim();
+    currentSettings.notification_sound = els.notificationSoundToggle.checked;
+
     await invoke('save_settings', { settings: currentSettings });
     state.githubToken = token;
+    state.notificationSoundEnabled = currentSettings.notification_sound;
   } catch (e) {
     console.error('Failed to save settings:', e);
   }
   closeSettings();
+}
+
+function toggleAdvancedSettings() {
+  const content = els.advancedSettingsContent;
+  const arrow = els.btnToggleAdvanced.querySelector('.settings-advanced__arrow');
+  const isHidden = content.classList.contains('hidden');
+
+  if (isHidden) {
+    content.classList.remove('hidden');
+    arrow.classList.add('expanded');
+  } else {
+    content.classList.add('hidden');
+    arrow.classList.remove('expanded');
+  }
 }
 
 function toggleTokenVisibility() {
@@ -1562,6 +1824,7 @@ function showBrowserNotification(title, body, icon) {
 }
 
 function playNotificationSound() {
+  if (!state.notificationSoundEnabled) return;
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = ctx.createOscillator();
@@ -1582,13 +1845,46 @@ function playNotificationSound() {
 // ============ .NET Check ============
 async function checkDotNet() {
   try {
+    // Skip if user already dismissed the warning this session
+    if (sessionStorage.getItem('dotnetWarningDismissed') === 'true') return;
+
     const result = await invoke('check_dotnet');
     if (!result.installed) {
       console.warn('.NET 9 runtime not found. DepotDownloader requires .NET 9.');
-      // Could show a UI warning banner here
+      showDotNetWarning();
     }
   } catch (e) {
     console.error('Failed to check .NET:', e);
+  }
+}
+
+function showDotNetWarning() {
+  const banner = document.getElementById('dotnet-warning');
+  if (!banner) return;
+  banner.classList.remove('hidden');
+
+  // Dismiss button
+  const dismissBtn = document.getElementById('dotnet-warning-dismiss');
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', () => {
+      banner.classList.add('hidden');
+      // Remember dismissal for this session
+      sessionStorage.setItem('dotnetWarningDismissed', 'true');
+    });
+  }
+
+  // Open link in external browser via Tauri shell
+  const installLink = document.getElementById('dotnet-install-link');
+  if (installLink) {
+    installLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      try {
+        window.__TAURI__.shell.open('https://dotnet.microsoft.com/en-us/download/dotnet/9.0');
+      } catch {
+        // Fallback: just let the link work normally
+        window.open('https://dotnet.microsoft.com/en-us/download/dotnet/9.0', '_blank');
+      }
+    });
   }
 }
 
@@ -1601,7 +1897,20 @@ function initEvents() {
   // Search
   els.btnSearch.addEventListener('click', performSearch);
   els.searchAppIdInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') performSearch();
+    if (e.key === 'Enter') {
+      hideAutocomplete();
+      performSearch();
+    }
+    if (e.key === 'Escape') {
+      hideAutocomplete();
+    }
+  });
+  els.searchAppIdInput.addEventListener('input', onSearchInput);
+  // Close autocomplete on click outside
+  document.addEventListener('click', (e) => {
+    if (!els.searchAppIdInput.contains(e.target) && !els.searchAutocomplete.contains(e.target)) {
+      hideAutocomplete();
+    }
   });
   els.btnSearchNext.addEventListener('click', proceedFromSearch);
 
@@ -1610,10 +1919,13 @@ function initEvents() {
   els.btnDeselectAll.addEventListener('click', deselectAll);
   els.btnBack.addEventListener('click', () => goToStep(1));
   els.btnDownload.addEventListener('click', startDownload);
-  els.btnExportBat.addEventListener('click', exportBatScript);
   els.btnNew.addEventListener('click', resetApp);
-  els.btnStartOver.addEventListener('click', resetApp);
+  els.btnStartOver.addEventListener('click', goBackToSelect);
   els.btnCancel.addEventListener('click', showCancelModal);
+  // Browse folder button
+  if (els.btnBrowseDir) {
+    els.btnBrowseDir.addEventListener('click', browseDownloadDir);
+  }
   els.btnCancelYes.addEventListener('click', cancelDownload);
   els.btnCancelNo.addEventListener('click', hideCancelModal);
   // Close modal on backdrop click
@@ -1625,6 +1937,11 @@ function initEvents() {
   els.btnSettingsCancel.addEventListener('click', closeSettings);
   els.btnToggleTokenVis.addEventListener('click', toggleTokenVisibility);
   els.settingsModal.querySelector('.modal__backdrop').addEventListener('click', closeSettings);
+
+  // Advanced settings toggle
+  if (els.btnToggleAdvanced) {
+    els.btnToggleAdvanced.addEventListener('click', toggleAdvancedSettings);
+  }
 
   // Update modal
   els.btnUpdateNow.addEventListener('click', performUpdate);

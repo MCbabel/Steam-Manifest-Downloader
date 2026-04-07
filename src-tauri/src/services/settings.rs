@@ -12,6 +12,15 @@ pub struct Settings {
     pub dd_extra_args: Vec<String>,
     #[serde(default = "default_auto_update")]
     pub auto_update: bool,
+    // Advanced settings
+    #[serde(default = "default_max_retries")]
+    pub max_retries: u32,
+    #[serde(default = "default_notification_sound")]
+    pub notification_sound: bool,
+    #[serde(default)]
+    pub download_speed_limit: String,
+    #[serde(default)]
+    pub proxy: String,
 }
 
 fn default_download_location() -> String {
@@ -46,6 +55,14 @@ fn default_auto_update() -> bool {
     true
 }
 
+fn default_max_retries() -> u32 {
+    3
+}
+
+fn default_notification_sound() -> bool {
+    true
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -53,6 +70,10 @@ impl Default for Settings {
             github_token: String::new(),
             dd_extra_args: default_dd_extra_args(),
             auto_update: default_auto_update(),
+            max_retries: default_max_retries(),
+            notification_sound: default_notification_sound(),
+            download_speed_limit: String::new(),
+            proxy: String::new(),
         }
     }
 }

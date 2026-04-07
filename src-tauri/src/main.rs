@@ -29,12 +29,12 @@ fn main() {
             commands::search_repos,
             commands::get_repo_manifests,
             commands::search_alternative,
+            commands::search_steam_games,
             // Steam
             commands::get_steam_app_info,
             // Download
             commands::start_download,
             commands::cancel_download,
-            commands::export_batch_script,
             // Settings
             commands::get_settings,
             commands::save_settings,
