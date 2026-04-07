@@ -2076,13 +2076,14 @@ body {
   background: linear-gradient(135deg, #f39c12, #e67e22);
   color: #1a1a2e;
   padding: 10px 20px;
+  margin: 0 16px 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
   position: relative;
   z-index: 50;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-sm, 10px);
 }
 
 .dotnet-warning.hidden {
