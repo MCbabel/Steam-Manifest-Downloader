@@ -15,18 +15,6 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 
 </div>
 
----
-
-> [!IMPORTANT]
-> ## 🔍 Game Search by App ID — Temporarily Unavailable
->
-> The **"Search by App ID"** feature is currently **not working** because the upstream GitHub repositories (ManifestHub and others) that this feature relies on are no longer available.
->
-> A fix is being worked on. In the meantime, you can still use the **Lua file upload** method to download manifests.
-
----
----
-
 > [!WARNING]
 > ## ⚠️ Legal Disclaimer
 >
