@@ -44,8 +44,8 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 | | Feature |
 |---|---|
 | 📂 | **Drag & drop** `.lua` file upload |
-| 🔍 | **Multi-repo search** across 5+ GitHub repositories |
-| 📦 | **Automatic manifest download** from ManifestHub |
+| 🔍 | **Multi-repo search** via Internet Archive |
+| 📦 | **Automatic manifest download** from Internet Archive |
 | 🔑 | **Automatic depot keys** generation |
 | ⚡ | **Integrated DepotDownloader** execution |
 | 📊 | **Real-time download** progress tracking |

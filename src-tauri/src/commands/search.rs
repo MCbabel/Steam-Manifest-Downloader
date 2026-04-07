@@ -22,7 +22,7 @@ pub async fn search_repos(
     serde_json::to_value(&result).map_err(|e| format!("Failed to serialize search result: {}", e))
 }
 
-/// Get manifest file listing from a repo's branch.
+/// Get manifest file listing from a repo / Internet Archive.
 /// Returns manifests list with depot keys.
 #[command]
 pub async fn get_repo_manifests(
@@ -32,24 +32,7 @@ pub async fn get_repo_manifests(
     sha: Option<String>,
     github_token: Option<String>,
 ) -> Result<serde_json::Value, String> {
-    // If no SHA provided, we need to look up the branch first
-    let effective_sha = match sha {
-        Some(s) if !s.is_empty() => s,
-        _ => {
-            // Use app_id as branch name to get the SHA
-            let branch_info = crate::services::github_api::get_branch_info(
-                &state.http_client,
-                &repo,
-                &app_id,
-                github_token.as_deref(),
-            )
-            .await?;
-
-            branch_info
-                .sha
-                .ok_or_else(|| format!("Could not determine SHA for branch {} in {}", app_id, repo))?
-        }
-    };
+    let effective_sha = sha.unwrap_or_default();
 
     let result = multi_repo_search::get_repo_manifests(
         &state.http_client,
@@ -114,4 +97,63 @@ pub async fn get_steam_app_info(
             .map_err(|e| format!("Failed to serialize game info: {}", e)),
         None => Ok(serde_json::Value::Null),
     }
+}
+
+/// Search Steam Store for games by name.
+/// Returns a list of matching games with appId, name, and image.
+#[command]
+pub async fn search_steam_games(
+    state: tauri::State<'_, AppState>,
+    query: String,
+) -> Result<serde_json::Value, String> {
+    let query = query.trim().to_string();
+    if query.is_empty() {
+        return Ok(serde_json::json!([]));
+    }
+
+    let response = state
+        .http_client
+        .get("https://store.steampowered.com/api/storesearch/")
+        .query(&[("term", query.as_str()), ("l", "english"), ("cc", "US")])
+        .send()
+        .await
+        .map_err(|e| format!("[SteamSearch] Request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "[SteamSearch] API returned status {}",
+            response.status()
+        ));
+    }
+
+    let data: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("[SteamSearch] Failed to parse JSON: {}", e))?;
+
+    let items = data
+        .get("items")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let results: Vec<serde_json::Value> = items
+        .iter()
+        .take(10)
+        .filter_map(|item| {
+            let id = item.get("id")?.as_u64()?;
+            let name = item.get("name")?.as_str()?;
+            let image = item
+                .get("tiny_image")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            Some(serde_json::json!({
+                "appId": id,
+                "name": name,
+                "image": image
+            }))
+        })
+        .collect();
+
+    Ok(serde_json::json!(results))
 }

@@ -646,6 +646,27 @@ body {
   position: relative;
 }
 
+.dd-path__input-wrap--with-btn {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dd-path__input-wrap--with-btn .dd-path__input {
+  flex: 1;
+}
+
+.dd-path__browse-btn {
+  flex-shrink: 0;
+  padding: 0.7rem 0.85rem !important;
+  font-size: 1.1rem !important;
+  line-height: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .dd-path__input {
   width: 100%;
   padding: 0.7rem 1rem;
@@ -835,6 +856,14 @@ body {
 .depot-item__depot-id {
   font-weight: 600;
   font-size: 0.95rem;
+}
+
+.depot-item__size {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-left: 0.5rem;
+  opacity: 0.7;
 }
 
 .depot-item__manifest-id {
@@ -1377,6 +1406,29 @@ body {
   text-align: right;
 }
 
+/* ============ Download Speed / ETA Info ============ */
+.download-speed-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.download-speed-info__speed {
+  font-family: var(--font-mono);
+}
+
+.download-speed-info__eta {
+  font-family: var(--font-mono);
+}
+
+.download-speed-info__separator {
+  opacity: 0.5;
+}
+
 /* ============ Card Footer Helpers ============ */
 .card__footer-right {
   display: flex;
@@ -1491,6 +1543,93 @@ body {
 
 .search-input::placeholder {
   color: var(--text-muted);
+}
+
+/* ============ Search Input Wrapper (for autocomplete positioning) ============ */
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.search-input-wrapper .search-input {
+  width: 100%;
+}
+
+/* ============ Search Autocomplete Dropdown ============ */
+.search-autocomplete {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-active);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.search-autocomplete.hidden {
+  display: none;
+}
+
+.search-autocomplete__loading {
+  padding: 0.75rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.search-autocomplete__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: background var(--transition);
+  border-bottom: 1px solid var(--border);
+}
+
+.search-autocomplete__item:last-child {
+  border-bottom: none;
+}
+
+.search-autocomplete__item:hover {
+  background: var(--bg-input);
+}
+
+.search-autocomplete__img {
+  width: 40px;
+  height: 20px;
+  object-fit: cover;
+  border-radius: 2px;
+  flex-shrink: 0;
+  background: var(--border);
+}
+
+.search-autocomplete__name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-autocomplete__appid {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.search-autocomplete__empty {
+  padding: 0.75rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
 }
 
 /* ============ Search Results ============ */
@@ -1621,6 +1760,12 @@ body {
   border: 1px solid rgba(248, 81, 73, 0.25);
 }
 
+.repo-card__badge--archive {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
 .repo-card--auto {
   border-style: dashed;
 }
@@ -1639,6 +1784,26 @@ body {
 /* ============ Settings Modal ============ */
 .settings-modal-content {
   text-align: left;
+  max-height: calc(85vh - 2rem);
+  overflow-y: auto;
+  max-width: 480px;
+}
+
+.settings-modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-modal-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-modal-content::-webkit-scrollbar-thumb {
+  background: rgba(88, 166, 255, 0.15);
+  border-radius: 4px;
+}
+
+.settings-modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(88, 166, 255, 0.25);
 }
 
 .settings-field {
@@ -1725,6 +1890,60 @@ body {
 .toggle-switch input:checked + .toggle-switch__slider::before {
   transform: translateX(20px);
   background: #fff;
+}
+
+/* ============ Advanced Settings ============ */
+.settings-advanced {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.settings-advanced__toggle {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  transition: color 0.2s;
+}
+
+.settings-advanced__toggle:hover {
+  color: var(--text-primary);
+}
+
+.settings-advanced__arrow {
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+.settings-advanced__arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.settings-advanced__content {
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-advanced__content .settings-field {
+  margin-bottom: 0;
+}
+
+.settings-field__hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  margin-bottom: 0;
 }
 
 /* ============ Update Modal ============ */
@@ -1850,4 +2069,73 @@ body {
     flex-direction: column;
     gap: 0.5rem;
   }
+}
+
+/* ============ .NET Runtime Warning Banner ============ */
+.dotnet-warning {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: #1a1a2e;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  position: relative;
+  z-index: 50;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dotnet-warning.hidden {
+  display: none;
+}
+
+.dotnet-warning__content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 800px;
+  width: 100%;
+}
+
+.dotnet-warning__icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.dotnet-warning__text {
+  flex: 1;
+}
+
+.dotnet-warning__btn {
+  background: rgba(0, 0, 0, 0.15);
+  color: #1a1a2e;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+
+.dotnet-warning__btn:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.dotnet-warning__dismiss {
+  background: none;
+  border: none;
+  color: #1a1a2e;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
+}
+
+.dotnet-warning__dismiss:hover {
+  opacity: 1;
 }

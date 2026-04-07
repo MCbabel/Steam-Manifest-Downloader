@@ -296,7 +296,6 @@ pub async fn run_depot_downloader(
     // Create new process group on Linux for reliable cleanup
     #[cfg(target_os = "linux")]
     {
-        use std::os::unix::process::CommandExt;
         cmd.process_group(0);
     }
 

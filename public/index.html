@@ -53,6 +53,23 @@
       </div>
     </header>
 
+    <!-- .NET Runtime Warning Banner -->
+    <div id="dotnet-warning" class="dotnet-warning hidden">
+      <div class="dotnet-warning__content">
+        <span class="dotnet-warning__icon">⚠️</span>
+        <span class="dotnet-warning__text">
+          <strong>.NET 9 Runtime</strong> is required but not installed. DepotDownloader will not work without it.
+        </span>
+        <a href="https://dotnet.microsoft.com/en-us/download/dotnet/9.0"
+           id="dotnet-install-link"
+           class="btn btn--small dotnet-warning__btn"
+           target="_blank" rel="noopener">
+          Download .NET 9
+        </a>
+        <button id="dotnet-warning-dismiss" class="dotnet-warning__dismiss" title="Dismiss">&times;</button>
+      </div>
+    </div>
+
     <!-- Step Indicator -->
     <div class="steps">
       <div class="steps__item active" data-step="1">
@@ -118,7 +135,10 @@
           </div>
 
           <div class="search-input-row">
-            <input type="number" id="search-appid-input" class="search-input" placeholder="Enter Steam App ID..." min="1">
+            <div class="search-input-wrapper">
+              <input type="text" id="search-appid-input" class="search-input" placeholder="Search by name or App ID..." autocomplete="off">
+              <div id="search-autocomplete" class="search-autocomplete hidden"></div>
+            </div>
             <button id="btn-search" class="btn btn--primary">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -196,10 +216,11 @@
 
         <div class="settings-section">
           <label for="download-dir" class="settings-section__label">📁 Download Location</label>
-          <div class="dd-path__input-wrap">
+          <div class="dd-path__input-wrap dd-path__input-wrap--with-btn">
             <input type="text" id="download-dir" class="dd-path__input"
               placeholder="Loading default path..."
               value="">
+            <button type="button" id="btn-browse-dir" class="btn btn--small btn--outline dd-path__browse-btn" title="Browse for folder">📂</button>
           </div>
           <p class="dd-path__hint">Default: Documents/SteamDownloads — Game files will be saved in a subfolder here</p>
         </div>
@@ -219,9 +240,6 @@
             &larr; Back
           </button>
           <div class="card__footer-right">
-            <button id="btn-export-bat" class="btn btn--outline" disabled>
-              📄 Export .bat
-            </button>
             <button id="btn-download" class="btn btn--primary" disabled>
               Download Selected
               <svg class="btn__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -256,6 +274,11 @@
             <div id="depot-progress-fill" class="depot-progress-fill" style="width: 0%"></div>
           </div>
           <span id="depot-progress-text" class="depot-progress-text">0%</span>
+        </div>
+        <div id="download-speed-info" class="download-speed-info hidden">
+          <span id="download-speed" class="download-speed-info__speed"></span>
+          <span class="download-speed-info__separator">—</span>
+          <span id="download-eta" class="download-speed-info__eta"></span>
         </div>
 
         <div id="terminal" class="terminal">
@@ -346,6 +369,59 @@
         </div>
         <p class="dd-path__hint">When enabled, the app checks for new versions on GitHub and offers to install them.</p>
       </div>
+
+      <!-- Advanced Settings (collapsible) -->
+      <div class="settings-advanced">
+        <button type="button" id="btn-toggle-advanced" class="settings-advanced__toggle">
+          <span class="settings-advanced__arrow">▶</span>
+          Advanced Settings
+        </button>
+        <div id="advanced-settings-content" class="settings-advanced__content hidden">
+
+          <!-- DepotDownloader Extra Arguments -->
+          <div class="settings-field">
+            <label for="dd-extra-args-input" class="settings-field__label">DepotDownloader Extra Arguments</label>
+            <input type="text" id="dd-extra-args-input" class="dd-path__input" placeholder="-max-downloads 8 -verify-all">
+            <p class="dd-path__hint">Additional command-line arguments passed to DepotDownloaderMod</p>
+          </div>
+
+          <!-- Max Retries -->
+          <div class="settings-field">
+            <label for="max-retries-input" class="settings-field__label">Max Retries on Error</label>
+            <input type="number" id="max-retries-input" class="dd-path__input" min="0" max="10" value="3">
+            <p class="dd-path__hint">Number of retry attempts when a depot download fails</p>
+          </div>
+
+          <!-- Download Speed Limit -->
+          <div class="settings-field">
+            <label for="speed-limit-input" class="settings-field__label">Download Speed Limit (MB/s)</label>
+            <input type="text" id="speed-limit-input" class="dd-path__input" placeholder="Unlimited">
+            <p class="dd-path__hint">Leave empty for unlimited. Applied as DDM argument.</p>
+          </div>
+
+          <!-- Proxy -->
+          <div class="settings-field">
+            <label for="proxy-input" class="settings-field__label">HTTP Proxy</label>
+            <input type="text" id="proxy-input" class="dd-path__input" placeholder="No proxy">
+            <p class="dd-path__hint">Optional proxy URL (e.g., http://proxy:8080 or socks5://proxy:1080)</p>
+          </div>
+
+          <!-- Notification Sound -->
+          <div class="settings-field">
+            <label class="settings-field__label">Notification Sound</label>
+            <div class="settings-field__toggle-wrap">
+              <label class="toggle-switch">
+                <input type="checkbox" id="notification-sound-toggle" checked>
+                <span class="toggle-switch__slider"></span>
+              </label>
+              <span class="settings-field__toggle-text">Play a sound when downloads complete</span>
+            </div>
+            <p class="dd-path__hint">Uses a system notification sound to alert you when all downloads finish.</p>
+          </div>
+
+        </div>
+      </div>
+
       <div class="modal__actions">
         <button id="btn-settings-cancel" class="btn btn--outline">Cancel</button>
         <button id="btn-settings-save" class="btn btn--primary">Save</button>
