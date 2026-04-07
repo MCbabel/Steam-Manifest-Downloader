@@ -74,7 +74,7 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 | | Requirement | Details |
 |---|---|---|
 | 💻 | **Operating System** | Windows 10 / 11 (64-bit) |
-| ⚙️ | **Runtime** | [.NET 8.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (for DepotDownloader) |
+| ⚙️ | **Runtime** | [.NET 9.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) (for DepotDownloader, Windows only) |
 | 🌐 | **Network** | Internet connection |
 
 ---
@@ -87,7 +87,7 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 4. Launch **Steam Manifest Downloader** from the Start Menu
 
 > [!NOTE]
-> Make sure you have the [.NET 8.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) installed. The app will warn you if it's missing.
+> Make sure you have the [.NET 9.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) installed (Windows only). The app will warn you if it's missing.
 
 <details>
 <summary><b>🔧 Building from Source</b></summary>
