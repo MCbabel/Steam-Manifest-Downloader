@@ -43,6 +43,11 @@
       </h1>
       <p class="header__subtitle">Upload a .lua/.st file, select manifests, and download automatically</p>
       <div class="header__actions">
+        <button id="btn-history" class="btn btn--outline header__history-btn" title="Download History">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </button>
         <button id="btn-settings" class="btn btn--outline header__settings-btn" title="Settings">
           ⚙️
         </button>
@@ -456,6 +461,24 @@
         <button id="btn-update-skip" class="btn btn--outline btn--small">Skip This Version</button>
         <button id="btn-update-later" class="btn btn--outline">Later</button>
         <button id="btn-update-now" class="btn btn--primary">Update Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div id="history-modal" class="modal hidden">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content history-modal-content">
+      <h3 class="modal__title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -3px; margin-right: 6px;">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Download History
+      </h3>
+      <div id="history-list" class="history-list"></div>
+      <div class="modal__actions">
+        <button id="btn-history-clear" class="btn btn--outline btn--small" style="margin-right:auto">Clear All</button>
+        <button id="btn-history-close" class="btn btn--primary">Close</button>
       </div>
     </div>
   </div>

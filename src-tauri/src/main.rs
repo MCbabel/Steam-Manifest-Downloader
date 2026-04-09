@@ -49,6 +49,11 @@ fn main() {
             commands::check_for_updates,
             commands::install_update,
             commands::get_auto_update_enabled,
+            // History
+            commands::get_history,
+            commands::remove_history_entry,
+            commands::clear_history,
+            commands::open_folder,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

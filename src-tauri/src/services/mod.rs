@@ -10,6 +10,7 @@ pub mod depot_runner;
 pub mod steam_store_api;
 pub mod settings;
 pub mod embedded_tools;
+pub mod history;
 
 use std::collections::HashMap;
 use std::sync::Arc;

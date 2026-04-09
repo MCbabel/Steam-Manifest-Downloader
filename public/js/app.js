@@ -42,6 +42,8 @@ const state = {
 
 // ============ Constants ============
 const MH_APIKEY_STORAGE_KEY = 'manifestHubApiKey';
+let autoRedownloadPending = false;
+let autoSelectAllOnStep2 = false;
 let defaultDownloadDir = '';
 
 // ============ DOM Elements ============
@@ -143,6 +145,12 @@ const els = {
   speedLimitInput: $('#speed-limit-input'),
   proxyInput: $('#proxy-input'),
   notificationSoundToggle: $('#notification-sound-toggle'),
+  // History
+  btnHistory: $('#btn-history'),
+  historyModal: $('#history-modal'),
+  historyList: $('#history-list'),
+  btnHistoryClear: $('#btn-history-clear'),
+  btnHistoryClose: $('#btn-history-close'),
   // Update modal
   updateModal: $('#update-modal'),
   updateVersion: $('#update-version'),
@@ -566,6 +574,13 @@ function renderRepoList(repos) {
   if (repos.length === 1) {
     selectRepo(0);
   }
+
+  // Auto-proceed for re-download from history
+  if (autoRedownloadPending && repos.length > 0) {
+    autoRedownloadPending = false;
+    selectRepo(0);
+    proceedFromSearch();
+  }
 }
 
 function formatRepoDate(dateStr) {
@@ -938,6 +953,12 @@ function showSelectionStep() {
   if (els.depotSearch) els.depotSearch.value = '';
   if (els.showSelectedOnly) els.showSelectedOnly.checked = false;
 
+  // Auto-select all depots for re-download from history
+  if (autoSelectAllOnStep2) {
+    autoSelectAllOnStep2 = false;
+    selectAll();
+  }
+
   updateDownloadButton();
   goToStep(2);
 }
@@ -1044,7 +1065,8 @@ async function startDownload() {
       selectedDepots: depotsWithCustomManifests,
       manifestHubApiKey: mhApiKey || null,
       downloadDir: getDownloadDir() || null,
-      gameName: state.gameName || null
+      gameName: state.gameName || null,
+      headerImage: state.headerImage || null
     };
 
     // Add search-mode specific fields
@@ -1931,6 +1953,12 @@ function initEvents() {
   // Close modal on backdrop click
   els.cancelModal.querySelector('.modal__backdrop').addEventListener('click', hideCancelModal);
 
+  // History
+  els.btnHistory.addEventListener('click', openHistory);
+  els.btnHistoryClose.addEventListener('click', closeHistory);
+  els.btnHistoryClear.addEventListener('click', clearHistory);
+  els.historyModal.querySelector('.modal__backdrop').addEventListener('click', closeHistory);
+
   // Settings
   els.btnSettings.addEventListener('click', openSettings);
   els.btnSettingsSave.addEventListener('click', saveSettings);
@@ -2023,6 +2051,149 @@ function initTauri() {
 
   // Check for updates after a short delay (non-blocking)
   setTimeout(checkForUpdates, 1500);
+}
+
+// ============ Download History ============
+async function openHistory() {
+  els.historyModal.classList.remove('hidden');
+  await loadHistory();
+}
+
+function closeHistory() {
+  els.historyModal.classList.add('hidden');
+}
+
+async function loadHistory() {
+  els.historyList.innerHTML = '<div class="history-loading"><div class="spinner"></div><span>Loading history...</span></div>';
+
+  try {
+    const entries = await invoke('get_history');
+    renderHistory(entries);
+  } catch (e) {
+    els.historyList.innerHTML = '<div class="history-empty">Failed to load history.</div>';
+    console.error('Failed to load history:', e);
+  }
+}
+
+function renderHistory(entries) {
+  if (!entries || entries.length === 0) {
+    els.historyList.innerHTML = '<div class="history-empty">No downloads yet. Your download history will appear here.</div>';
+    els.btnHistoryClear.style.display = 'none';
+    return;
+  }
+
+  els.btnHistoryClear.style.display = '';
+  els.historyList.innerHTML = entries.map(entry => {
+    const date = entry.completed_at ? formatHistoryDate(entry.completed_at) : formatHistoryDate(entry.started_at);
+    const badgeClass = entry.status === 'complete' ? 'history-entry__badge--complete'
+      : entry.status === 'partial' ? 'history-entry__badge--partial'
+      : entry.status === 'cancelled' ? 'history-entry__badge--cancelled'
+      : 'history-entry__badge--failed';
+    const statusLabel = entry.status === 'complete' ? 'Complete'
+      : entry.status === 'partial' ? 'Partial'
+      : entry.status === 'cancelled' ? 'Cancelled'
+      : 'Failed';
+    const imgHtml = entry.header_image
+      ? `<img class="history-entry__image" src="${escapeHtml(entry.header_image)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+      : '<div class="history-entry__image history-entry__image--placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>';
+    const name = entry.game_name ? escapeHtml(entry.game_name) : `App ${escapeHtml(entry.app_id)}`;
+
+    return `
+      <div class="history-entry" data-entry-id="${escapeHtml(entry.id)}">
+        ${imgHtml}
+        <div class="history-entry__info">
+          <div class="history-entry__name">${name}</div>
+          <div class="history-entry__meta">
+            <span class="history-entry__appid">App ${escapeHtml(entry.app_id)}</span>
+            <span class="history-entry__date">${date}</span>
+            <span class="history-entry__badge ${badgeClass}">${statusLabel}</span>
+          </div>
+          <div class="history-entry__depots">${entry.depots_downloaded}/${entry.depot_count} depots downloaded</div>
+        </div>
+        <div class="history-entry__actions">
+          <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" title="Re-download">🔄</button>
+          <button class="btn btn--small btn--outline history-action-folder" data-path="${escapeHtml(entry.download_dir)}" title="Open Folder"${entry.status === 'cancelled' ? ' disabled' : ''}>📂</button>
+          <button class="btn btn--small btn--outline history-action-remove" data-entry-id="${escapeHtml(entry.id)}" title="Remove">🗑</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Attach event handlers
+  els.historyList.querySelectorAll('.history-action-redownload').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const appId = btn.dataset.appId;
+      closeHistory();
+      // Reset state for new search
+      state.parsedData = null;
+      state.selectedDepots.clear();
+      state.jobId = null;
+      state.depotManifests = {};
+      state.searchRepos = [];
+      state.selectedRepo = null;
+      state.searchAppId = null;
+      state.searchSha = null;
+      state.searchKeyVdfKeys = null;
+      cleanupProgressListener();
+      els.gameInfoBanner.classList.add('hidden');
+      els.searchResults.classList.add('hidden');
+      els.searchNextRow.classList.add('hidden');
+      els.searchError.classList.add('hidden');
+      els.searchGameBanner.classList.add('hidden');
+      els.manifestLoading.classList.add('hidden');
+      resetUpload();
+      // Set flags for auto-proceed to step 2 with all depots selected
+      autoRedownloadPending = true;
+      autoSelectAllOnStep2 = true;
+      switchTab('search');
+      els.searchAppIdInput.value = appId;
+      goToStep(1);
+      performSearch();
+    });
+  });
+
+  els.historyList.querySelectorAll('.history-action-folder').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        await invoke('open_folder', { path: btn.dataset.path });
+      } catch (err) {
+        console.error('Failed to open folder:', err);
+      }
+    });
+  });
+
+  els.historyList.querySelectorAll('.history-action-remove').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        await invoke('remove_history_entry', { entryId: btn.dataset.entryId });
+        await loadHistory();
+      } catch (err) {
+        console.error('Failed to remove history entry:', err);
+      }
+    });
+  });
+}
+
+function formatHistoryDate(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) +
+      ', ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return dateStr;
+  }
+}
+
+async function clearHistory() {
+  try {
+    await invoke('clear_history');
+    await loadHistory();
+  } catch (e) {
+    console.error('Failed to clear history:', e);
+  }
 }
 
 // ============ Init ============
