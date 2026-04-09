@@ -14,6 +14,7 @@ use crate::services::manifest_hub_api;
 use crate::services::steam_store_api;
 use crate::services::lua_parser::DepotInfo;
 use crate::services::depot_keys_generator;
+use crate::services::history;
 
 #[derive(Debug, Deserialize)]
 pub struct DownloadConfig {
@@ -31,6 +32,8 @@ pub struct DownloadConfig {
     pub download_location: Option<String>,
     #[serde(rename = "manifestHubApiKey")]
     pub manifest_hub_api_key: Option<String>,
+    #[serde(rename = "headerImage", default)]
+    pub header_image: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -74,7 +77,7 @@ pub async fn start_download(
     // Fetch game info for folder naming
     let mut folder_name = config.app_id.clone();
     let mut game_name = config.game_name.clone();
-    let mut header_image: Option<String> = None;
+    let mut header_image: Option<String> = config.header_image.clone();
 
     if game_name.is_none() {
         match steam_store_api::get_game_info(
@@ -133,7 +136,10 @@ pub async fn start_download(
     let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
 
     // Spawn the download pipeline
+    let download_dir_for_history = download_dir.to_string_lossy().to_string();
     tokio::spawn(async move {
+        let started_at = chrono::Utc::now();
+
         let state_ref = AppState {
             app_handle: app_clone.clone(),
             active_jobs: active_jobs.clone(),
@@ -154,22 +160,56 @@ pub async fn start_download(
         )
         .await;
 
-        match result {
-            Ok(_) => {}
-            Err(e) => {
-                // Check if cancelled
-                let is_cancelled = {
-                    let jobs = active_jobs.lock().await;
-                    jobs.get(&job_id_clone)
-                        .map(|j| j.status == "cancelled")
-                        .unwrap_or(false)
-                };
+        // Check if the job was cancelled
+        let is_cancelled = {
+            let jobs = active_jobs.lock().await;
+            jobs.get(&job_id_clone)
+                .map(|j| j.status == "cancelled")
+                .unwrap_or(false)
+        };
 
+        match result {
+            Ok(_) => {
+                // Record cancelled downloads in history
+                if is_cancelled {
+                    let entry = history::HistoryEntry {
+                        id: Uuid::new_v4().to_string(),
+                        app_id: config.app_id.clone(),
+                        game_name: game_name.clone(),
+                        header_image: header_image.clone(),
+                        depot_count: config.depots.len(),
+                        depots_downloaded: 0,
+                        status: "cancelled".to_string(),
+                        download_dir: download_dir_for_history.clone(),
+                        started_at: started_at.to_rfc3339(),
+                        completed_at: Some(chrono::Utc::now().to_rfc3339()),
+                        source_repo: None,
+                    };
+                    let _ = history::add_entry(&app_data_dir, entry).await;
+                }
+            }
+            Err(e) => {
                 if !is_cancelled {
                     let mut event = ProgressEvent::new("error", &job_id_clone);
                     event.message = Some(format!("Unexpected error: {}", e));
                     emit_progress(&app_clone, &event);
                 }
+
+                // Record failed downloads in history
+                let entry = history::HistoryEntry {
+                    id: Uuid::new_v4().to_string(),
+                    app_id: config.app_id.clone(),
+                    game_name: game_name.clone(),
+                    header_image: header_image.clone(),
+                    depot_count: config.depots.len(),
+                    depots_downloaded: 0,
+                    status: if is_cancelled { "cancelled" } else { "failed" }.to_string(),
+                    download_dir: download_dir_for_history.clone(),
+                    started_at: started_at.to_rfc3339(),
+                    completed_at: Some(chrono::Utc::now().to_rfc3339()),
+                    source_repo: None,
+                };
+                let _ = history::add_entry(&app_data_dir, entry).await;
             }
         }
 
@@ -383,6 +423,23 @@ async fn run_download_pipeline(
         let mut event = ProgressEvent::new("error", job_id);
         event.message = Some(error_msg.clone());
         emit_progress(app, &event);
+
+        // Record failed download in history
+        let entry = history::HistoryEntry {
+            id: uuid::Uuid::new_v4().to_string(),
+            app_id: config.app_id.clone(),
+            game_name: _game_name.map(|s| s.to_string()),
+            header_image: _header_image.map(|s| s.to_string()),
+            depot_count: config.depots.len(),
+            depots_downloaded: 0,
+            status: "failed".to_string(),
+            download_dir: work_dir.to_string_lossy().to_string(),
+            started_at: _started_at.to_rfc3339(),
+            completed_at: Some(chrono::Utc::now().to_rfc3339()),
+            source_repo: None,
+        };
+        let _ = history::add_entry(app_data_dir, entry).await;
+
         return Ok(());
     }
 
@@ -530,6 +587,29 @@ async fn run_download_pipeline(
     ));
     event.results = Some(serde_json::Value::Array(download_results));
     emit_progress(app, &event);
+
+    // Record download in history
+    let status = if dl_success_count == run_depots.len() {
+        "complete"
+    } else if dl_success_count > 0 {
+        "partial"
+    } else {
+        "failed"
+    };
+    let entry = history::HistoryEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        app_id: config.app_id.clone(),
+        game_name: _game_name.map(|s| s.to_string()),
+        header_image: _header_image.map(|s| s.to_string()),
+        depot_count: run_depots.len(),
+        depots_downloaded: dl_success_count,
+        status: status.to_string(),
+        download_dir: work_dir.to_string_lossy().to_string(),
+        started_at: _started_at.to_rfc3339(),
+        completed_at: Some(chrono::Utc::now().to_rfc3339()),
+        source_repo: None,
+    };
+    let _ = history::add_entry(app_data_dir, entry).await;
 
     // Mark job as complete
     {
