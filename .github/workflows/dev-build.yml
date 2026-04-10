@@ -9,14 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  debounce:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Wait 5 minutes for more commits
-        run: sleep 300
-
   build-windows:
-    needs: debounce
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,7 +31,6 @@ jobs:
           path: src-tauri/target/release/steam-manifest-downloader.exe
 
   build-linux:
-    needs: debounce
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
