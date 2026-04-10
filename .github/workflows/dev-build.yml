@@ -1,0 +1,171 @@
+name: Dev Build
+
+on:
+  push:
+    branches: [dev]
+
+concurrency:
+  group: dev-build
+  cancel-in-progress: true
+
+jobs:
+  debounce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait 5 minutes for more commits
+        run: sleep 300
+
+  build-windows:
+    needs: debounce
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Tauri CLI
+        run: cargo install cargo-binstall --locked && cargo binstall tauri-cli --version "^2.0" -y
+
+      - name: Build
+        run: cargo tauri build
+
+      - name: Upload portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-portable
+          path: src-tauri/target/release/steam-manifest-downloader.exe
+
+  build-linux:
+    needs: debounce
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build binary in Arch Linux container
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/workspace" \
+            -w /workspace \
+            archlinux:latest \
+            bash -c '
+              set -e
+              pacman -Syu --noconfirm
+              pacman -S --noconfirm \
+                base-devel webkit2gtk-4.1 gtk3 libappindicator-gtk3 \
+                librsvg patchelf curl wget file openssl pkgconf
+
+              curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+              source /root/.cargo/env
+
+              cargo install cargo-binstall --locked
+              cargo binstall tauri-cli --version "^2.0" -y
+
+              NO_STRIP=true cargo tauri build --no-bundle
+              ls -la src-tauri/target/release/steam-manifest-downloader
+            '
+
+      - name: Create AppImage
+        run: |
+          set -e
+          BINARY="src-tauri/target/release/steam-manifest-downloader"
+          APP_NAME="Steam Manifest Downloader"
+          VERSION=$(grep -oP '"version":\s*"\K[^"]+' src-tauri/tauri.conf.json)
+
+          if [ ! -f "$BINARY" ]; then echo "ERROR: Binary not found"; exit 1; fi
+
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          cp "$BINARY" AppDir/usr/bin/steam-manifest-downloader
+          chmod +x AppDir/usr/bin/steam-manifest-downloader
+
+          cat > AppDir/usr/share/applications/steam-manifest-downloader.desktop << 'DESKTOP'
+          [Desktop Entry]
+          Categories=Utility;
+          Exec=steam-manifest-downloader
+          Icon=steam-manifest-downloader
+          Name=Steam Manifest Downloader
+          Type=Application
+          Terminal=false
+          DESKTOP
+          sed -i 's/^          //' AppDir/usr/share/applications/steam-manifest-downloader.desktop
+
+          cp assets/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/steam-manifest-downloader.png
+
+          cat > AppDir/AppRun << 'APPRUN'
+          #!/bin/bash
+          SELF_DIR="$(dirname "$(readlink -f "$0")")"
+          export PATH="${SELF_DIR}/usr/bin:${PATH}"
+          exec "${SELF_DIR}/usr/bin/steam-manifest-downloader" "$@"
+          APPRUN
+          sed -i 's/^          //' AppDir/AppRun
+          chmod +x AppDir/AppRun
+
+          ln -sf usr/share/applications/steam-manifest-downloader.desktop AppDir/steam-manifest-downloader.desktop
+          ln -sf usr/share/icons/hicolor/256x256/apps/steam-manifest-downloader.png AppDir/steam-manifest-downloader.png
+
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O appimagetool
+          chmod +x appimagetool
+          ARCH=x86_64 ./appimagetool AppDir "${APP_NAME}_${VERSION}_amd64.AppImage"
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: "Steam Manifest Downloader_*_amd64.AppImage"
+
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version and commit info
+        id: info
+        run: |
+          VERSION=$(grep -oP '"version":\s*"\K[^"]+' src-tauri/tauri.conf.json)
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Rename artifacts with dev label
+        run: |
+          VERSION="${{ steps.info.outputs.version }}"
+          SHA="${{ steps.info.outputs.short_sha }}"
+
+          mv "artifacts/windows-portable/steam-manifest-downloader.exe" \
+             "artifacts/windows-portable/Steam-Manifest-Downloader_${VERSION}-dev-${SHA}_portable.exe"
+
+          cd artifacts/linux-appimage
+          for f in *.AppImage; do
+            mv "$f" "$(echo "$f" | sed "s/${VERSION}/${VERSION}-dev-${SHA}/")"
+          done
+
+      - name: Delete existing dev-latest release
+        run: gh release delete dev-latest --yes --cleanup-tag || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create dev pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-latest
+          name: "Dev Build v${{ steps.info.outputs.version }} (${{ steps.info.outputs.short_sha }})"
+          prerelease: true
+          target_commitish: ${{ github.sha }}
+          body: |
+            **Automated dev build** from [`${{ steps.info.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+
+            > This is a development build and may be unstable. For stable releases, see the [latest release](${{ github.server_url }}/${{ github.repository }}/releases/latest).
+
+            **Changes:** ${{ github.event.head_commit.message }}
+          files: |
+            artifacts/windows-portable/*
+            artifacts/linux-appimage/*
