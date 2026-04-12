@@ -3,6 +3,11 @@ name: Dev Build
 on:
   push:
     branches: [dev]
+    paths:
+      - 'src-tauri/**'
+      - 'public/**'
+      - 'assets/**'
+      - '.github/workflows/dev-build.yml'
 
 concurrency:
   group: dev-build
