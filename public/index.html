@@ -91,6 +91,11 @@
         <div class="steps__number">3</div>
         <div class="steps__label">Download</div>
       </div>
+      <div class="steps__connector steps__connector--shortcut hidden" id="step4-connector"></div>
+      <div class="steps__item steps__item--shortcut hidden" data-step="4" id="step4-indicator">
+        <div class="steps__number">4</div>
+        <div class="steps__label">Shortcut</div>
+      </div>
     </div>
 
     <!-- Step 1: File Upload / App ID Search -->
@@ -307,8 +312,62 @@
               ↩ Start Over
             </button>
           </div>
+          <button id="btn-goto-shortcuts" class="btn btn--primary hidden">
+            Create Shortcuts
+          </button>
           <button id="btn-new" class="btn btn--primary hidden">
             Start New Download
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 4: Shortcut Creation (Windows only) -->
+    <section id="step-shortcut" class="step hidden">
+      <div class="card">
+        <h2 class="shortcut-header">Create Shortcuts</h2>
+        <p class="shortcut-description">Create desktop or start menu shortcuts to launch the downloaded game.</p>
+
+        <!-- Exe Selection -->
+        <div class="shortcut-exe-section">
+          <label for="shortcut-exe-path" class="settings-section__label">Game Executable</label>
+          <div class="dd-path__input-wrap dd-path__input-wrap--with-btn">
+            <input type="text" id="shortcut-exe-path" class="dd-path__input" placeholder="Detecting executable..." readonly>
+            <button type="button" id="btn-browse-exe" class="btn btn--small btn--outline dd-path__browse-btn" title="Browse for executable">Browse</button>
+          </div>
+          <p class="dd-path__hint">Auto-detected game executable. Click browse or select from detected files below.</p>
+        </div>
+
+        <!-- Detected Executables (collapsible) -->
+        <div id="shortcut-detected-section" class="shortcut-detected-section hidden">
+          <button type="button" id="btn-toggle-detected" class="settings-advanced__toggle">
+            <span class="settings-advanced__arrow">&#9654;</span>
+            Other detected executables
+          </button>
+          <div id="shortcut-detected-list" class="shortcut-detected-list hidden"></div>
+        </div>
+
+        <!-- Shortcut Options -->
+        <div class="shortcut-options">
+          <label class="shortcut-option">
+            <input type="checkbox" id="shortcut-desktop" checked>
+            <span>Create Desktop Shortcut</span>
+          </label>
+          <label class="shortcut-option">
+            <input type="checkbox" id="shortcut-startmenu" checked>
+            <span>Create Start Menu Shortcut</span>
+          </label>
+        </div>
+
+        <!-- Status Message -->
+        <div id="shortcut-status" class="completion-message hidden"></div>
+
+        <div class="card__footer">
+          <button id="btn-skip-shortcut" class="btn btn--outline">
+            Skip
+          </button>
+          <button id="btn-create-shortcuts" class="btn btn--primary">
+            Create Shortcuts
           </button>
         </div>
       </div>

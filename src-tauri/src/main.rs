@@ -54,6 +54,10 @@ fn main() {
             commands::remove_history_entry,
             commands::clear_history,
             commands::open_folder,
+            // Shortcuts
+            commands::is_shortcut_supported,
+            commands::detect_executables,
+            commands::create_shortcuts,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

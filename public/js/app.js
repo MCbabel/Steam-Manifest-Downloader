@@ -16,6 +16,8 @@ const state = {
   unlistenProgress: null,
   gameName: null,
   headerImage: null,
+  downloadDir: null,
+  shortcutSupported: false,
   notificationsEnabled: false,
   notificationSoundEnabled: true,
   depotManifests: {}, // depotId -> { originalName, storedPath }
@@ -163,7 +165,22 @@ const els = {
   updateActions: $('#update-actions'),
   btnUpdateNow: $('#btn-update-now'),
   btnUpdateLater: $('#btn-update-later'),
-  btnUpdateSkip: $('#btn-update-skip')
+  btnUpdateSkip: $('#btn-update-skip'),
+  // Step 4: Shortcuts
+  stepShortcut: $('#step-shortcut'),
+  step4Connector: $('#step4-connector'),
+  step4Indicator: $('#step4-indicator'),
+  btnGotoShortcuts: $('#btn-goto-shortcuts'),
+  shortcutExePath: $('#shortcut-exe-path'),
+  btnBrowseExe: $('#btn-browse-exe'),
+  shortcutDetectedSection: $('#shortcut-detected-section'),
+  btnToggleDetected: $('#btn-toggle-detected'),
+  shortcutDetectedList: $('#shortcut-detected-list'),
+  shortcutDesktop: $('#shortcut-desktop'),
+  shortcutStartMenu: $('#shortcut-startmenu'),
+  shortcutStatus: $('#shortcut-status'),
+  btnSkipShortcut: $('#btn-skip-shortcut'),
+  btnCreateShortcuts: $('#btn-create-shortcuts'),
 };
 
 // ============ Helper: Get GitHub Token ============
@@ -176,7 +193,8 @@ function goToStep(step) {
   state.currentStep = step;
 
   // Update step sections
-  [els.stepUpload, els.stepSelect, els.stepProgress].forEach((el, i) => {
+  [els.stepUpload, els.stepSelect, els.stepProgress, els.stepShortcut].forEach((el, i) => {
+    if (!el) return;
     el.classList.toggle('active', i + 1 === step);
     el.classList.toggle('hidden', i + 1 !== step);
   });
@@ -1082,6 +1100,7 @@ async function startDownload() {
     const result = await invoke('start_download', { config: downloadConfig });
 
     state.jobId = result.jobId;
+    state.downloadDir = result.downloadDir;
 
     // Listen for progress events (replaces WebSocket)
     connectProgressListener();
@@ -1498,6 +1517,10 @@ function showCompletion(success, message) {
   els.btnNew.classList.remove('hidden');
   els.btnCancel.classList.add('hidden');
   els.btnStartOver.classList.remove('hidden');
+  // Show shortcut button only on success + Windows
+  if (els.btnGotoShortcuts) {
+    els.btnGotoShortcuts.classList.toggle('hidden', !(success && state.shortcutSupported));
+  }
 }
 
 function resetApp() {
@@ -1506,6 +1529,7 @@ function resetApp() {
   state.jobId = null;
   state.gameName = null;
   state.headerImage = null;
+  state.downloadDir = null;
   state.depotManifests = {};
   state.searchRepos = [];
   state.selectedRepo = null;
@@ -1513,6 +1537,12 @@ function resetApp() {
   state.searchSha = null;
   state.searchKeyVdfKeys = null;
   cleanupProgressListener();
+  // Reset shortcut UI
+  if (els.shortcutStatus) els.shortcutStatus.classList.add('hidden');
+  if (els.btnGotoShortcuts) els.btnGotoShortcuts.classList.add('hidden');
+  if (els.shortcutDetectedSection) els.shortcutDetectedSection.classList.add('hidden');
+  if (els.shortcutDetectedList) els.shortcutDetectedList.innerHTML = '';
+  if (els.shortcutExePath) els.shortcutExePath.value = '';
   // Reset game info banner
   els.gameInfoBanner.classList.add('hidden');
   els.gameInfoLoading.classList.add('hidden');
@@ -1987,6 +2017,28 @@ function initEvents() {
   if (els.showSelectedOnly) {
     els.showSelectedOnly.addEventListener('change', applyDepotFilters);
   }
+
+  // Step 4: Shortcuts
+  if (els.btnGotoShortcuts) {
+    els.btnGotoShortcuts.addEventListener('click', goToShortcutStep);
+  }
+  if (els.btnBrowseExe) {
+    els.btnBrowseExe.addEventListener('click', browseExe);
+  }
+  if (els.btnCreateShortcuts) {
+    els.btnCreateShortcuts.addEventListener('click', createShortcuts);
+  }
+  if (els.btnSkipShortcut) {
+    els.btnSkipShortcut.addEventListener('click', skipShortcuts);
+  }
+  if (els.btnToggleDetected) {
+    els.btnToggleDetected.addEventListener('click', () => {
+      const list = els.shortcutDetectedList;
+      const arrow = els.btnToggleDetected.querySelector('.settings-advanced__arrow');
+      list.classList.toggle('hidden');
+      if (arrow) arrow.textContent = list.classList.contains('hidden') ? '\u25B6' : '\u25BC';
+    });
+  }
 }
 
 // ============ Tauri Integration (replaces Electron) ============
@@ -2048,6 +2100,9 @@ function initTauri() {
 
   // Check .NET at startup
   checkDotNet();
+
+  // Check shortcut support (Windows only)
+  checkShortcutSupport();
 
   // Check for updates after a short delay (non-blocking)
   setTimeout(checkForUpdates, 1500);
@@ -2194,6 +2249,151 @@ async function clearHistory() {
   } catch (e) {
     console.error('Failed to clear history:', e);
   }
+}
+
+// ============ Step 4: Shortcut Creation ============
+async function checkShortcutSupport() {
+  try {
+    const result = await invoke('is_shortcut_supported');
+    state.shortcutSupported = result.supported;
+    if (state.shortcutSupported) {
+      if (els.step4Connector) els.step4Connector.classList.remove('hidden');
+      if (els.step4Indicator) els.step4Indicator.classList.remove('hidden');
+    }
+  } catch (e) {
+    console.error('Failed to check shortcut support:', e);
+  }
+}
+
+async function goToShortcutStep() {
+  goToStep(4);
+  await detectExecutables();
+}
+
+async function detectExecutables() {
+  if (!state.downloadDir) return;
+  els.shortcutExePath.value = 'Scanning for executables...';
+  els.btnCreateShortcuts.disabled = true;
+  els.shortcutDetectedSection.classList.add('hidden');
+
+  try {
+    const result = await invoke('detect_executables', { downloadDir: state.downloadDir });
+    const exes = result.executables || [];
+
+    if (exes.length === 0) {
+      els.shortcutExePath.value = '';
+      els.shortcutExePath.placeholder = 'No executables found. Browse manually.';
+      els.btnCreateShortcuts.disabled = false;
+      return;
+    }
+
+    // Set the recommended exe
+    const recommended = exes.find(e => e.recommended) || exes[0];
+    els.shortcutExePath.value = recommended.path;
+    els.btnCreateShortcuts.disabled = false;
+
+    // Show other detected exes if more than 1
+    if (exes.length > 1) {
+      els.shortcutDetectedSection.classList.remove('hidden');
+      els.shortcutDetectedList.innerHTML = exes.map(exe => {
+        const sizeStr = formatShortcutFileSize(exe.size);
+        const recBadge = exe.recommended ? ' <span class="shortcut-exe-badge">Recommended</span>' : '';
+        return `<div class="shortcut-exe-item" data-path="${escapeHtml(exe.path)}">
+          <span class="shortcut-exe-item__name">${escapeHtml(exe.name)}${recBadge}</span>
+          <span class="shortcut-exe-item__size">${sizeStr}</span>
+        </div>`;
+      }).join('');
+
+      // Click to select
+      els.shortcutDetectedList.querySelectorAll('.shortcut-exe-item').forEach(item => {
+        item.addEventListener('click', () => {
+          els.shortcutExePath.value = item.dataset.path;
+          els.btnCreateShortcuts.disabled = false;
+        });
+      });
+    }
+  } catch (e) {
+    console.error('Failed to detect executables:', e);
+    els.shortcutExePath.value = '';
+    els.shortcutExePath.placeholder = 'Detection failed. Browse manually.';
+    els.btnCreateShortcuts.disabled = false;
+  }
+}
+
+async function browseExe() {
+  try {
+    const { open } = window.__TAURI__.dialog;
+    const filePath = await open({
+      defaultPath: state.downloadDir || undefined,
+      filters: [{ name: 'Executables', extensions: ['exe'] }],
+      title: 'Select Game Executable'
+    });
+    if (filePath) {
+      els.shortcutExePath.value = filePath;
+      els.btnCreateShortcuts.disabled = false;
+    }
+  } catch (e) {
+    console.error('Failed to browse for exe:', e);
+  }
+}
+
+async function createShortcuts() {
+  const exePath = els.shortcutExePath.value.trim();
+  if (!exePath) return;
+
+  const createDesktop = els.shortcutDesktop.checked;
+  const createStartMenu = els.shortcutStartMenu.checked;
+
+  if (!createDesktop && !createStartMenu) {
+    showShortcutStatus(false, 'Please select at least one shortcut location.');
+    return;
+  }
+
+  els.btnCreateShortcuts.disabled = true;
+  els.btnCreateShortcuts.textContent = 'Creating...';
+
+  try {
+    const gameName = state.gameName || 'Game';
+    const result = await invoke('create_shortcuts', {
+      exePath,
+      gameName,
+      iconPath: null,
+      createDesktop,
+      createStartMenu
+    });
+
+    const messages = [];
+    if (result.desktop) messages.push('Desktop shortcut created');
+    if (result.startMenu) messages.push('Start menu shortcut created');
+    if (result.errors && result.errors.length > 0) {
+      messages.push('Errors: ' + result.errors.join(', '));
+    }
+
+    const allGood = (!createDesktop || result.desktop) && (!createStartMenu || result.startMenu);
+    showShortcutStatus(allGood, messages.join('. ') + '.');
+  } catch (e) {
+    showShortcutStatus(false, `Failed to create shortcuts: ${e}`);
+  } finally {
+    els.btnCreateShortcuts.disabled = false;
+    els.btnCreateShortcuts.textContent = 'Create Shortcuts';
+  }
+}
+
+function showShortcutStatus(success, message) {
+  els.shortcutStatus.classList.remove('hidden', 'completion-message--success', 'completion-message--error');
+  els.shortcutStatus.classList.add(success ? 'completion-message--success' : 'completion-message--error');
+  els.shortcutStatus.textContent = message;
+}
+
+function skipShortcuts() {
+  resetApp();
+}
+
+function formatShortcutFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+  return (bytes / 1073741824).toFixed(2) + ' GB';
 }
 
 // ============ Init ============
