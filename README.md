@@ -40,7 +40,6 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 | 🎮 | **Steam Store API** integration — game names + cover art |
 | 🌙 | **Dark / Light theme** support |
 | ⚙️ | **Configurable** download location & GitHub token |
-| 📝 | **Batch script export** (`.bat`) |
 | 🔒 | **Fully self-contained** — DepotDownloaderMod embedded |
 
 ---
@@ -249,7 +248,6 @@ This project is licensed under the [GPL-2.0 License](LICENSE).
 ## 🙏 Credits & Acknowledgments
 
 - **[DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod)** — Steam depot downloading engine
-- **[ManifestHub](https://manifesthub1.filegear-sg.me/)** — Manifest file API
 - **[Steam Store API](https://store.steampowered.com/api/)** — Game metadata & artwork
 - **[Tauri](https://v2.tauri.app/)** — Desktop application framework
 
