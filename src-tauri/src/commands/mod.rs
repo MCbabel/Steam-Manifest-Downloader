@@ -6,6 +6,7 @@ mod system;
 mod window;
 mod updater;
 mod history;
+mod shortcuts;
 
 pub use file_ops::*;
 pub use search::*;
@@ -15,3 +16,4 @@ pub use system::*;
 pub use window::*;
 pub use updater::*;
 pub use history::*;
+pub use shortcuts::*;
