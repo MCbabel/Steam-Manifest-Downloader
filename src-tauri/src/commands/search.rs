@@ -10,12 +10,10 @@ use crate::services::steam_store_api;
 pub async fn search_repos(
     state: tauri::State<'_, AppState>,
     app_id: String,
-    github_token: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let result = multi_repo_search::search_repos(
         &state.http_client,
         &app_id,
-        github_token.as_deref(),
     )
     .await?;
 
@@ -30,7 +28,6 @@ pub async fn get_repo_manifests(
     app_id: String,
     repo: String,
     sha: Option<String>,
-    github_token: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let effective_sha = sha.unwrap_or_default();
 
@@ -39,7 +36,6 @@ pub async fn get_repo_manifests(
         &app_id,
         &repo,
         &effective_sha,
-        github_token.as_deref(),
     )
     .await?;
 

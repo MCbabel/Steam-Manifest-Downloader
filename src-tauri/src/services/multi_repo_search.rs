@@ -49,7 +49,6 @@ pub struct RepoManifests {
 pub async fn search_repos(
     client: &Client,
     app_id: &str,
-    _token: Option<&str>,
 ) -> Result<SearchResult, String> {
     let mut found = Vec::new();
 
@@ -85,7 +84,6 @@ pub async fn get_repo_manifests(
     app_id: &str,
     _repo: &str,
     _sha: &str,
-    _token: Option<&str>,
 ) -> Result<RepoManifests, String> {
     let app_data = internet_archive::get_app_data(client, app_id).await?;
 

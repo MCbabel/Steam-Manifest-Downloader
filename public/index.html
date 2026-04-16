@@ -308,15 +308,9 @@
             <button id="btn-cancel" class="btn btn--danger">
               ✕ Cancel Download
             </button>
-            <button id="btn-start-over" class="btn btn--outline hidden">
-              ↩ Start Over
-            </button>
           </div>
-          <button id="btn-goto-shortcuts" class="btn btn--primary hidden">
-            Create Shortcuts
-          </button>
-          <button id="btn-new" class="btn btn--primary hidden">
-            Start New Download
+          <button id="btn-next-step" class="btn btn--primary hidden">
+            Next
           </button>
         </div>
       </div>
@@ -349,23 +343,34 @@
 
         <!-- Shortcut Options -->
         <div class="shortcut-options">
-          <label class="shortcut-option">
-            <input type="checkbox" id="shortcut-desktop" checked>
-            <span>Create Desktop Shortcut</span>
-          </label>
-          <label class="shortcut-option">
-            <input type="checkbox" id="shortcut-startmenu" checked>
-            <span>Create Start Menu Shortcut</span>
-          </label>
+          <div class="shortcut-option">
+            <span class="shortcut-option__label">Desktop Shortcut</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="shortcut-desktop" checked>
+              <span class="toggle-switch__slider"></span>
+            </label>
+          </div>
+          <div class="shortcut-option">
+            <span class="shortcut-option__label">Start Menu Shortcut</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="shortcut-startmenu" checked>
+              <span class="toggle-switch__slider"></span>
+            </label>
+          </div>
         </div>
 
         <!-- Status Message -->
         <div id="shortcut-status" class="completion-message hidden"></div>
 
         <div class="card__footer">
-          <button id="btn-skip-shortcut" class="btn btn--outline">
-            Skip
-          </button>
+          <div class="card__footer-left">
+            <button id="btn-shortcut-start-over" class="btn btn--outline">
+              &#8617; Start Over
+            </button>
+            <button id="btn-shortcut-new" class="btn btn--outline">
+              Start New Download
+            </button>
+          </div>
           <button id="btn-create-shortcuts" class="btn btn--primary">
             Create Shortcuts
           </button>
@@ -414,14 +419,6 @@
     <div class="modal__backdrop"></div>
     <div class="modal__content settings-modal-content">
       <h3 class="modal__title">⚙️ Settings</h3>
-      <div class="settings-field">
-        <label for="github-token-input" class="settings-field__label">GitHub Personal Access Token</label>
-        <div class="settings-field__input-wrap">
-          <input type="password" id="github-token-input" class="dd-path__input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-          <button id="btn-toggle-token-vis" class="btn btn--small btn--outline settings-field__toggle" type="button" title="Show/Hide">👁</button>
-        </div>
-        <p class="dd-path__hint">Optional. Increases GitHub API rate limit from 60 to 5,000 requests/hour.</p>
-      </div>
       <div class="settings-field">
         <label class="settings-field__label">Auto-Update</label>
         <div class="settings-field__toggle-wrap">

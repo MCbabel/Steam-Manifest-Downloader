@@ -3,19 +3,12 @@ use tauri::command;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
-/// Check if shortcut creation is supported on this platform.
-/// Only Windows is supported since downloaded Steam depots contain .exe files.
 #[command]
 pub async fn is_shortcut_supported() -> Result<serde_json::Value, String> {
     #[cfg(target_os = "windows")]
-    {
-        Ok(serde_json::json!({ "supported": true }))
-    }
-
+    { Ok(serde_json::json!({ "supported": true })) }
     #[cfg(not(target_os = "windows"))]
-    {
-        Ok(serde_json::json!({ "supported": false }))
-    }
+    { Ok(serde_json::json!({ "supported": false })) }
 }
 
 /// Scan a download directory for executable files and rank them by likelihood
