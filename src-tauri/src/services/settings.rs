@@ -6,8 +6,6 @@ use tokio::fs;
 pub struct Settings {
     #[serde(default = "default_download_location")]
     pub download_location: String,
-    #[serde(default)]
-    pub github_token: String,
     #[serde(default = "default_dd_extra_args")]
     pub dd_extra_args: Vec<String>,
     #[serde(default = "default_auto_update")]
@@ -67,7 +65,6 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             download_location: default_download_location(),
-            github_token: String::new(),
             dd_extra_args: default_dd_extra_args(),
             auto_update: default_auto_update(),
             max_retries: default_max_retries(),

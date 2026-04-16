@@ -21,7 +21,6 @@ const state = {
   notificationsEnabled: false,
   notificationSoundEnabled: true,
   depotManifests: {}, // depotId -> { originalName, storedPath }
-  githubToken: '',
   // Search mode state
   searchRepos: [],
   selectedRepo: null,
@@ -46,6 +45,7 @@ const state = {
 const MH_APIKEY_STORAGE_KEY = 'manifestHubApiKey';
 let autoRedownloadPending = false;
 let autoSelectAllOnStep2 = false;
+let autoSelectDepotIds = null; // specific depot IDs to re-select, or null for all
 let defaultDownloadDir = '';
 
 // ============ DOM Elements ============
@@ -107,9 +107,9 @@ const els = {
   depotProgressList: $('#depot-progress-list'),
   terminalOutput: $('#terminal-output'),
   completionMessage: $('#completion-message'),
-  btnNew: $('#btn-new'),
+  // btnNew removed - now in Step 4
   btnCancel: $('#btn-cancel'),
-  btnStartOver: $('#btn-start-over'),
+  // btnStartOver removed - now in Step 4
   mhApiKey: $('#mh-apikey'),
   downloadDirInput: $('#download-dir'),
   btnBrowseDir: $('#btn-browse-dir'),
@@ -134,8 +134,6 @@ const els = {
   // Settings
   btnSettings: $('#btn-settings'),
   settingsModal: $('#settings-modal'),
-  githubTokenInput: $('#github-token-input'),
-  btnToggleTokenVis: $('#btn-toggle-token-vis'),
   btnSettingsSave: $('#btn-settings-save'),
   btnSettingsCancel: $('#btn-settings-cancel'),
   autoUpdateToggle: $('#auto-update-toggle'),
@@ -170,7 +168,7 @@ const els = {
   stepShortcut: $('#step-shortcut'),
   step4Connector: $('#step4-connector'),
   step4Indicator: $('#step4-indicator'),
-  btnGotoShortcuts: $('#btn-goto-shortcuts'),
+  btnNextStep: $('#btn-next-step'),
   shortcutExePath: $('#shortcut-exe-path'),
   btnBrowseExe: $('#btn-browse-exe'),
   shortcutDetectedSection: $('#shortcut-detected-section'),
@@ -179,14 +177,10 @@ const els = {
   shortcutDesktop: $('#shortcut-desktop'),
   shortcutStartMenu: $('#shortcut-startmenu'),
   shortcutStatus: $('#shortcut-status'),
-  btnSkipShortcut: $('#btn-skip-shortcut'),
   btnCreateShortcuts: $('#btn-create-shortcuts'),
+  btnShortcutNew: $('#btn-shortcut-new'),
+  btnShortcutStartOver: $('#btn-shortcut-start-over'),
 };
-
-// ============ Helper: Get GitHub Token ============
-function getGithubToken() {
-  return state.githubToken || '';
-}
 
 // ============ Step Navigation ============
 function goToStep(step) {
@@ -478,10 +472,8 @@ async function performSearch() {
   fetchSearchGameInfo(appId);
 
   try {
-    const token = getGithubToken();
     const raw = await invoke('search_repos', {
       appId: String(appId),
-      githubToken: token || null
     });
 
     els.searchLoading.classList.add('hidden');
@@ -505,13 +497,13 @@ async function performSearch() {
     }
 
     if (repos.length === 0 && githubRateLimited) {
-      showSearchError('GitHub API rate limit exceeded — GitHub repositories are currently unavailable. Add a GitHub Personal Access Token in Settings (⚙️) to increase the rate limit.');
+      showSearchError('Search sources are currently unavailable. Please try again later.');
       return;
     }
 
-    // Show rate limit info or rate-limited warning
+    // Show rate limit warning
     if (githubRateLimited) {
-      els.searchRateLimit.innerHTML = '⚠️ <strong>GitHub rate limit exceeded</strong> — GitHub repos not shown. Add a <em>GitHub Personal Access Token</em> in <a href="#" onclick="document.getElementById(\'btn-settings\').click(); return false;">Settings</a> to fix this.';
+      els.searchRateLimit.innerHTML = '⚠️ <strong>Some sources temporarily unavailable.</strong>';
       els.searchRateLimit.style.color = '#e67e22';
     } else {
       els.searchRateLimit.textContent = '';
@@ -681,12 +673,10 @@ async function proceedFromSearch() {
         const githubRepo = state.searchRepos.find(r => r.type === 'github');
         if (githubRepo) {
           try {
-            const token = getGithubToken();
             const mRaw = await invoke('get_repo_manifests', {
               appId: String(appId),
               repo: githubRepo.name,
               sha: githubRepo.sha || null,
-              githubToken: token || null
             });
 
             const ghManifests = (mRaw.manifests || []).map(m => ({
@@ -735,12 +725,10 @@ async function proceedFromSearch() {
       }
     } else {
       // Archive / standard repo - fetch manifests
-      const token = getGithubToken();
       const mRaw = await invoke('get_repo_manifests', {
         appId: String(appId),
         repo: repo.name,
         sha: repo.sha || null,
-        githubToken: token || null
       });
 
       // Normalize response
@@ -784,7 +772,6 @@ async function loadSettingsAndDefaults() {
   try {
     const settings = await invoke('get_settings');
     defaultDownloadDir = settings.download_location || '';
-    state.githubToken = settings.github_token || '';
     state.notificationSoundEnabled = settings.notification_sound !== false;
     if (els.downloadDirInput) {
       els.downloadDirInput.value = defaultDownloadDir;
@@ -971,10 +958,21 @@ function showSelectionStep() {
   if (els.depotSearch) els.depotSearch.value = '';
   if (els.showSelectedOnly) els.showSelectedOnly.checked = false;
 
-  // Auto-select all depots for re-download from history
+  // Auto-select depots for re-download from history
   if (autoSelectAllOnStep2) {
     autoSelectAllOnStep2 = false;
-    selectAll();
+    if (autoSelectDepotIds && autoSelectDepotIds.length > 0) {
+      document.querySelectorAll('.depot-item').forEach(item => {
+        const depotId = item.dataset.depotId;
+        if (autoSelectDepotIds.includes(depotId)) {
+          state.selectedDepots.add(depotId);
+          item.classList.add('selected');
+        }
+      });
+      autoSelectDepotIds = null;
+    } else {
+      selectAll();
+    }
   }
 
   updateDownloadButton();
@@ -1091,8 +1089,6 @@ async function startDownload() {
     if (state.mode === 'search') {
       if (state.searchRepo) downloadConfig.repo = state.searchRepo;
       if (state.searchSha) downloadConfig.sha = state.searchSha;
-      const token = getGithubToken();
-      if (token) downloadConfig.githubToken = token;
       if (state.searchKeyVdfKeys) downloadConfig.keyVdfKeys = state.searchKeyVdfKeys;
     }
 
@@ -1116,11 +1112,10 @@ function initProgressUI(depots) {
   els.progressStatus.textContent = 'Initializing...';
   els.terminalOutput.innerHTML = '';
   els.completionMessage.classList.add('hidden');
-  els.btnNew.classList.add('hidden');
+  if (els.btnNextStep) els.btnNextStep.classList.add('hidden');
   els.btnCancel.classList.remove('hidden');
   els.btnCancel.disabled = false;
   els.btnCancel.innerHTML = '✕ Cancel Download';
-  els.btnStartOver.classList.add('hidden');
   els.diskSpaceInfo.classList.add('hidden');
   // Reset depot download progress bar
   if (els.depotProgressFill) els.depotProgressFill.style.width = '0%';
@@ -1514,12 +1509,11 @@ function showCompletion(success, message) {
   els.completionMessage.classList.remove('hidden', 'completion-message--success', 'completion-message--error');
   els.completionMessage.classList.add(success ? 'completion-message--success' : 'completion-message--error');
   els.completionMessage.textContent = message;
-  els.btnNew.classList.remove('hidden');
   els.btnCancel.classList.add('hidden');
-  els.btnStartOver.classList.remove('hidden');
-  // Show shortcut button only on success + Windows
-  if (els.btnGotoShortcuts) {
-    els.btnGotoShortcuts.classList.toggle('hidden', !(success && state.shortcutSupported));
+  // Show Next button on success (goes to Step 4 if shortcuts supported, otherwise acts as reset)
+  if (els.btnNextStep) {
+    els.btnNextStep.classList.toggle('hidden', !success);
+    els.btnNextStep.textContent = state.shortcutSupported ? 'Next' : 'Start New Download';
   }
 }
 
@@ -1539,10 +1533,11 @@ function resetApp() {
   cleanupProgressListener();
   // Reset shortcut UI
   if (els.shortcutStatus) els.shortcutStatus.classList.add('hidden');
-  if (els.btnGotoShortcuts) els.btnGotoShortcuts.classList.add('hidden');
   if (els.shortcutDetectedSection) els.shortcutDetectedSection.classList.add('hidden');
   if (els.shortcutDetectedList) els.shortcutDetectedList.innerHTML = '';
   if (els.shortcutExePath) els.shortcutExePath.value = '';
+  if (els.btnCreateShortcuts) { els.btnCreateShortcuts.disabled = false; els.btnCreateShortcuts.textContent = 'Create Shortcuts'; }
+  if (els.btnNextStep) els.btnNextStep.classList.add('hidden');
   // Reset game info banner
   els.gameInfoBanner.classList.add('hidden');
   els.gameInfoLoading.classList.add('hidden');
@@ -1561,7 +1556,6 @@ async function openSettings() {
   // Load fresh settings from backend
   try {
     const settings = await invoke('get_settings');
-    els.githubTokenInput.value = settings.github_token || '';
     els.autoUpdateToggle.checked = settings.auto_update !== false;
 
     // Advanced settings
@@ -1571,10 +1565,8 @@ async function openSettings() {
     els.proxyInput.value = settings.proxy || '';
     els.notificationSoundToggle.checked = settings.notification_sound !== false;
   } catch (e) {
-    els.githubTokenInput.value = state.githubToken || '';
     els.autoUpdateToggle.checked = true;
   }
-  els.githubTokenInput.type = 'password';
   els.settingsModal.classList.remove('hidden');
 }
 
@@ -1583,11 +1575,9 @@ function closeSettings() {
 }
 
 async function saveSettings() {
-  const token = els.githubTokenInput.value.trim();
   const autoUpdate = els.autoUpdateToggle.checked;
   try {
     const currentSettings = await invoke('get_settings');
-    currentSettings.github_token = token;
     currentSettings.auto_update = autoUpdate;
 
     // Advanced settings
@@ -1603,7 +1593,6 @@ async function saveSettings() {
     currentSettings.notification_sound = els.notificationSoundToggle.checked;
 
     await invoke('save_settings', { settings: currentSettings });
-    state.githubToken = token;
     state.notificationSoundEnabled = currentSettings.notification_sound;
   } catch (e) {
     console.error('Failed to save settings:', e);
@@ -1622,17 +1611,6 @@ function toggleAdvancedSettings() {
   } else {
     content.classList.add('hidden');
     arrow.classList.remove('expanded');
-  }
-}
-
-function toggleTokenVisibility() {
-  const input = els.githubTokenInput;
-  if (input.type === 'password') {
-    input.type = 'text';
-    els.btnToggleTokenVis.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    els.btnToggleTokenVis.textContent = '👁';
   }
 }
 
@@ -1826,8 +1804,8 @@ async function cancelDownload() {
       showCompletion(false, 'Download ended. You can start over.');
     } else {
       appendTerminalLine(`Cancel request failed: ${errStr}`, 'error');
-      // Still show Start Over so user isn't stuck
-      els.btnStartOver.classList.remove('hidden');
+      // Still show Next so user isn't stuck
+      if (els.btnNextStep) els.btnNextStep.classList.remove('hidden');
       els.btnCancel.classList.add('hidden');
     }
   }
@@ -1971,8 +1949,7 @@ function initEvents() {
   els.btnDeselectAll.addEventListener('click', deselectAll);
   els.btnBack.addEventListener('click', () => goToStep(1));
   els.btnDownload.addEventListener('click', startDownload);
-  els.btnNew.addEventListener('click', resetApp);
-  els.btnStartOver.addEventListener('click', goBackToSelect);
+  // btnNew and btnStartOver moved to Step 4
   els.btnCancel.addEventListener('click', showCancelModal);
   // Browse folder button
   if (els.btnBrowseDir) {
@@ -1993,7 +1970,6 @@ function initEvents() {
   els.btnSettings.addEventListener('click', openSettings);
   els.btnSettingsSave.addEventListener('click', saveSettings);
   els.btnSettingsCancel.addEventListener('click', closeSettings);
-  els.btnToggleTokenVis.addEventListener('click', toggleTokenVisibility);
   els.settingsModal.querySelector('.modal__backdrop').addEventListener('click', closeSettings);
 
   // Advanced settings toggle
@@ -2018,18 +1994,35 @@ function initEvents() {
     els.showSelectedOnly.addEventListener('change', applyDepotFilters);
   }
 
-  // Step 4: Shortcuts
-  if (els.btnGotoShortcuts) {
-    els.btnGotoShortcuts.addEventListener('click', goToShortcutStep);
+  // Step 3 → Step 4 / Reset
+  if (els.btnNextStep) {
+    els.btnNextStep.addEventListener('click', () => {
+      if (state.shortcutSupported) {
+        goToShortcutStep();
+      } else {
+        resetApp();
+      }
+    });
   }
+
+  // Step 4: Shortcuts
   if (els.btnBrowseExe) {
     els.btnBrowseExe.addEventListener('click', browseExe);
   }
   if (els.btnCreateShortcuts) {
     els.btnCreateShortcuts.addEventListener('click', createShortcuts);
   }
-  if (els.btnSkipShortcut) {
-    els.btnSkipShortcut.addEventListener('click', skipShortcuts);
+  if (els.shortcutDesktop) {
+    els.shortcutDesktop.addEventListener('change', updateCreateShortcutsButton);
+  }
+  if (els.shortcutStartMenu) {
+    els.shortcutStartMenu.addEventListener('change', updateCreateShortcutsButton);
+  }
+  if (els.btnShortcutNew) {
+    els.btnShortcutNew.addEventListener('click', resetApp);
+  }
+  if (els.btnShortcutStartOver) {
+    els.btnShortcutStartOver.addEventListener('click', () => goToStep(2));
   }
   if (els.btnToggleDetected) {
     els.btnToggleDetected.addEventListener('click', () => {
@@ -2166,7 +2159,7 @@ function renderHistory(entries) {
           <div class="history-entry__depots">${entry.depots_downloaded}/${entry.depot_count} depots downloaded</div>
         </div>
         <div class="history-entry__actions">
-          <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" title="Re-download">🔄</button>
+          <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" data-depot-ids="${(entry.depot_ids || []).join(',')}" title="Re-download">🔄</button>
           <button class="btn btn--small btn--outline history-action-folder" data-path="${escapeHtml(entry.download_dir)}" title="Open Folder"${entry.status === 'cancelled' ? ' disabled' : ''}>📂</button>
           <button class="btn btn--small btn--outline history-action-remove" data-entry-id="${escapeHtml(entry.id)}" title="Remove">🗑</button>
         </div>
@@ -2179,6 +2172,7 @@ function renderHistory(entries) {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const appId = btn.dataset.appId;
+      const depotIds = (btn.dataset.depotIds || '').split(',').filter(Boolean);
       closeHistory();
       // Reset state for new search
       state.parsedData = null;
@@ -2198,9 +2192,10 @@ function renderHistory(entries) {
       els.searchGameBanner.classList.add('hidden');
       els.manifestLoading.classList.add('hidden');
       resetUpload();
-      // Set flags for auto-proceed to step 2 with all depots selected
+      // Set flags for auto-proceed to step 2 with previously downloaded depots
       autoRedownloadPending = true;
       autoSelectAllOnStep2 = true;
+      autoSelectDepotIds = depotIds.length > 0 ? depotIds : null;
       switchTab('search');
       els.searchAppIdInput.value = appId;
       goToStep(1);
@@ -2371,9 +2366,16 @@ async function createShortcuts() {
 
     const allGood = (!createDesktop || result.desktop) && (!createStartMenu || result.startMenu);
     showShortcutStatus(allGood, messages.join('. ') + '.');
+
+    if (allGood) {
+      els.btnCreateShortcuts.disabled = true;
+      els.btnCreateShortcuts.textContent = 'Shortcuts Created';
+    } else {
+      els.btnCreateShortcuts.disabled = false;
+      els.btnCreateShortcuts.textContent = 'Create Shortcuts';
+    }
   } catch (e) {
     showShortcutStatus(false, `Failed to create shortcuts: ${e}`);
-  } finally {
     els.btnCreateShortcuts.disabled = false;
     els.btnCreateShortcuts.textContent = 'Create Shortcuts';
   }
@@ -2385,8 +2387,10 @@ function showShortcutStatus(success, message) {
   els.shortcutStatus.textContent = message;
 }
 
-function skipShortcuts() {
-  resetApp();
+function updateCreateShortcutsButton() {
+  if (!els.btnCreateShortcuts) return;
+  const anySelected = els.shortcutDesktop.checked || els.shortcutStartMenu.checked;
+  els.btnCreateShortcuts.disabled = !anySelected;
 }
 
 function formatShortcutFileSize(bytes) {

@@ -1172,16 +1172,13 @@ body {
 .shortcut-option {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  cursor: pointer;
-  color: var(--text-primary);
-  font-size: 0.9rem;
+  justify-content: space-between;
+  padding: 0.5rem 0;
 }
 
-.shortcut-option input[type="checkbox"] {
-  accent-color: var(--accent);
-  width: 18px;
-  height: 18px;
+.shortcut-option__label {
+  color: var(--text-primary);
+  font-size: 0.9rem;
 }
 
 .shortcut-detected-section {
@@ -2320,18 +2317,20 @@ body {
 }
 
 .history-entry__image {
-  width: 80px;
-  height: 38px;
+  width: 120px;
+  height: 56px;
   object-fit: cover;
-  border-radius: 4px;
+  border-radius: 6px;
   flex-shrink: 0;
   background: var(--bg-card-solid);
+  border: 1px solid var(--border);
 }
 
 .history-entry__image--placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
+  opacity: 0.5;
 }
 
 .history-entry__info {

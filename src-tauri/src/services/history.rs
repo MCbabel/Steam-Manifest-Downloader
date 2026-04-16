@@ -18,6 +18,8 @@ pub struct HistoryEntry {
     pub started_at: String,
     pub completed_at: Option<String>,
     pub source_repo: Option<String>,
+    #[serde(default)]
+    pub depot_ids: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

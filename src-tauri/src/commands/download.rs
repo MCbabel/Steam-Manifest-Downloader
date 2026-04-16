@@ -184,6 +184,7 @@ pub async fn start_download(
                         started_at: started_at.to_rfc3339(),
                         completed_at: Some(chrono::Utc::now().to_rfc3339()),
                         source_repo: None,
+                        depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
                     };
                     let _ = history::add_entry(&app_data_dir, entry).await;
                 }
@@ -208,6 +209,7 @@ pub async fn start_download(
                     started_at: started_at.to_rfc3339(),
                     completed_at: Some(chrono::Utc::now().to_rfc3339()),
                     source_repo: None,
+                    depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
                 };
                 let _ = history::add_entry(&app_data_dir, entry).await;
             }
@@ -437,6 +439,7 @@ async fn run_download_pipeline(
             started_at: _started_at.to_rfc3339(),
             completed_at: Some(chrono::Utc::now().to_rfc3339()),
             source_repo: None,
+            depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
         };
         let _ = history::add_entry(app_data_dir, entry).await;
 
@@ -608,6 +611,7 @@ async fn run_download_pipeline(
         started_at: _started_at.to_rfc3339(),
         completed_at: Some(chrono::Utc::now().to_rfc3339()),
         source_repo: None,
+        depot_ids: run_depots.iter().map(|d| d.depot_id.clone()).collect(),
     };
     let _ = history::add_entry(app_data_dir, entry).await;
 
