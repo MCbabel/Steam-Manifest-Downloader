@@ -479,6 +479,39 @@
             <p class="dd-path__hint">Uses a system notification sound to alert you when all downloads finish.</p>
           </div>
 
+          <!-- Debug / Build Info -->
+          <div class="settings-field">
+            <label class="settings-field__label">Debug Info</label>
+            <div id="build-info" class="build-info">
+              <div class="build-info__row">
+                <span class="build-info__key">Channel</span>
+                <span class="build-info__val"><span id="build-info-channel" class="build-info__badge">—</span></span>
+              </div>
+              <div class="build-info__row">
+                <span class="build-info__key">Version</span>
+                <span class="build-info__val" id="build-info-version">—</span>
+              </div>
+              <div class="build-info__row">
+                <span class="build-info__key">Commit</span>
+                <span class="build-info__val" id="build-info-sha">—</span>
+              </div>
+              <div class="build-info__row">
+                <span class="build-info__key">Build date</span>
+                <span class="build-info__val" id="build-info-date">—</span>
+              </div>
+              <div class="build-info__row">
+                <span class="build-info__key">Profile</span>
+                <span class="build-info__val" id="build-info-profile">—</span>
+              </div>
+              <div class="build-info__row">
+                <span class="build-info__key">Platform</span>
+                <span class="build-info__val" id="build-info-platform">—</span>
+              </div>
+            </div>
+            <button type="button" id="btn-copy-build-info" class="btn btn--outline build-info__copy">Copy debug info</button>
+            <p class="dd-path__hint">Paste this into bug reports so the maintainer knows which build you're running.</p>
+          </div>
+
         </div>
       </div>
 

@@ -52,6 +52,10 @@ jobs:
         run: cargo install cargo-binstall --locked && cargo binstall tauri-cli --version "^2.0" -y
 
       - name: Build Tauri app
+        env:
+          SMD_BUILD_CHANNEL: stable
+          SMD_GIT_SHA: ${{ github.sha }}
+          SMD_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
         run: cargo tauri build
 
       - name: Sign executables with SignTool
@@ -103,8 +107,13 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build binary in Arch Linux container
+        env:
+          SMD_BUILD_CHANNEL: stable
+          SMD_GIT_SHA: ${{ github.sha }}
+          SMD_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
         run: |
           docker run --rm \
+            -e SMD_BUILD_CHANNEL -e SMD_GIT_SHA -e SMD_BUILD_DATE \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
             archlinux:latest \

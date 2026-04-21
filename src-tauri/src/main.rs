@@ -40,6 +40,7 @@ fn main() {
             // System
             commands::check_dotnet,
             commands::get_disk_space,
+            commands::get_build_info,
             // Window
             commands::minimize_window,
             commands::maximize_window,

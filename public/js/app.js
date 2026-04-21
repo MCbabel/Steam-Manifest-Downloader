@@ -144,6 +144,14 @@ const els = {
   speedLimitInput: $('#speed-limit-input'),
   proxyInput: $('#proxy-input'),
   notificationSoundToggle: $('#notification-sound-toggle'),
+  // Debug / Build Info
+  buildInfoChannel: $('#build-info-channel'),
+  buildInfoVersion: $('#build-info-version'),
+  buildInfoSha: $('#build-info-sha'),
+  buildInfoDate: $('#build-info-date'),
+  buildInfoProfile: $('#build-info-profile'),
+  buildInfoPlatform: $('#build-info-platform'),
+  btnCopyBuildInfo: $('#btn-copy-build-info'),
   // History
   btnHistory: $('#btn-history'),
   historyModal: $('#history-modal'),
@@ -1448,7 +1456,59 @@ async function openSettings() {
   } catch (e) {
     els.autoUpdateToggle.checked = true;
   }
+  loadBuildInfo();
   els.settingsModal.classList.remove('hidden');
+}
+
+function channelLabel(channel) {
+  switch (channel) {
+    case 'stable': return { text: 'Stable', cls: 'build-info__badge--stable' };
+    case 'dev':    return { text: 'Dev',    cls: 'build-info__badge--dev' };
+    case 'dev-local': return { text: 'Dev (local)', cls: 'build-info__badge--local' };
+    default:       return { text: channel || '—', cls: 'build-info__badge--local' };
+  }
+}
+
+async function loadBuildInfo() {
+  try {
+    const info = await invoke('get_build_info');
+    state.buildInfo = info;
+
+    const { text, cls } = channelLabel(info.channel);
+    els.buildInfoChannel.textContent = text;
+    els.buildInfoChannel.className = `build-info__badge ${cls}`;
+
+    els.buildInfoVersion.textContent = info.version || '—';
+    els.buildInfoSha.textContent = info.gitSha || 'unknown';
+    els.buildInfoDate.textContent = info.buildDate || 'unknown';
+    els.buildInfoProfile.textContent = info.profile || '—';
+    els.buildInfoPlatform.textContent = `${info.targetOs || '?'} / ${info.targetArch || '?'}`;
+  } catch (e) {
+    console.error('Failed to load build info:', e);
+  }
+}
+
+async function copyBuildInfo() {
+  const info = state.buildInfo;
+  if (!info) return;
+  const text = [
+    `Channel: ${info.channel}`,
+    `Version: ${info.version}`,
+    `Commit: ${info.gitSha}`,
+    `Build date: ${info.buildDate}`,
+    `Profile: ${info.profile}`,
+    `Platform: ${info.targetOs}/${info.targetArch}`,
+  ].join('\n');
+
+  try {
+    await navigator.clipboard.writeText(text);
+    const btn = els.btnCopyBuildInfo;
+    const original = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  } catch (e) {
+    console.error('Clipboard write failed:', e);
+  }
 }
 
 function closeSettings() {
@@ -1866,6 +1926,11 @@ function initEvents() {
   // Advanced settings toggle
   if (els.btnToggleAdvanced) {
     els.btnToggleAdvanced.addEventListener('click', toggleAdvancedSettings);
+  }
+
+  // Copy build/debug info
+  if (els.btnCopyBuildInfo) {
+    els.btnCopyBuildInfo.addEventListener('click', copyBuildInfo);
   }
 
   // Update modal
