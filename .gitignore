@@ -6,6 +6,9 @@
 src-tauri/target/
 target/
 
+# ---- Tauri auto-generated (rebuilt on every `cargo tauri build`) ----
+src-tauri/gen/
+
 # ---- Build output (Electron / Tauri bundles) ----
 dist/
 
