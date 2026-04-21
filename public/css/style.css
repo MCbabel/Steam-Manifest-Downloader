@@ -2018,6 +2018,78 @@ body {
   margin-bottom: 0;
 }
 
+/* ============ Debug / Build Info ============ */
+.build-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 0.85rem;
+}
+
+.build-info__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 22px;
+}
+
+.build-info__key {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.build-info__val {
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.8rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.build-info__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(127, 127, 127, 0.2);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.build-info__badge--stable {
+  background: rgba(46, 160, 67, 0.18);
+  color: #4ade80;
+  border-color: rgba(46, 160, 67, 0.4);
+}
+
+.build-info__badge--dev {
+  background: rgba(218, 143, 35, 0.18);
+  color: #f0b33c;
+  border-color: rgba(218, 143, 35, 0.4);
+}
+
+.build-info__badge--local {
+  background: rgba(88, 96, 114, 0.25);
+  color: #9aa3b2;
+  border-color: rgba(88, 96, 114, 0.5);
+}
+
+.build-info__copy {
+  margin-top: 8px;
+  align-self: flex-start;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+}
+
 /* ============ Update Modal ============ */
 .update-modal-content {
   text-align: left;

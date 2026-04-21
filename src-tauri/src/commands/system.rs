@@ -2,6 +2,31 @@ use tauri::command;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+/// Return build/version info for the Settings → Debug Info panel.
+///
+/// `SMD_BUILD_CHANNEL`, `SMD_GIT_SHA` and `SMD_BUILD_DATE` are injected by CI
+/// (`dev-build.yml` → `dev`, `release.yml` → `stable`). If missing (local
+/// `cargo tauri dev` / `cargo tauri build`), the channel falls back to
+/// `dev-local` so the UI can distinguish "built on a maintainer's machine"
+/// from "built by CI from dev".
+#[command]
+pub fn get_build_info() -> serde_json::Value {
+    let channel = option_env!("SMD_BUILD_CHANNEL").unwrap_or("dev-local");
+    let git_sha = option_env!("SMD_GIT_SHA").unwrap_or("unknown");
+    let build_date = option_env!("SMD_BUILD_DATE").unwrap_or("unknown");
+
+    let profile = if cfg!(debug_assertions) { "debug" } else { "release" };
+
+    serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "channel": channel,
+        "gitSha": git_sha,
+        "buildDate": build_date,
+        "profile": profile,
+        "targetOs": std::env::consts::OS,
+        "targetArch": std::env::consts::ARCH,
+    })
+}
 
 /// Check if .NET 9 runtime is installed.
 /// On Linux, the DDM binary is self-contained so dotnet is not needed.
