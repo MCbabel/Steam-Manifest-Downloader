@@ -209,7 +209,8 @@ pub async fn get_app_data(
     let lua_filename = format!("{}.lua", app_id);
     let lua_content = download_text_file(client, app_id, &lua_filename).await?;
 
-    let lua_result = crate::services::lua_parser::parse_lua_file(&lua_content);
+    let lua_result = crate::services::lua_parser::parse_lua_file(&lua_content)
+        .map_err(|e| format!("Failed to parse {}.lua from Internet Archive: {}", app_id, e))?;
 
     // Download key.vdf from ALL archives and merge keys
     let mut depot_keys = HashMap::new();

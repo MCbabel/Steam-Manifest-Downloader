@@ -1734,13 +1734,6 @@ body {
   margin-top: 1rem;
 }
 
-.search-rate-limit {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-align: right;
-  margin-bottom: 0.75rem;
-}
-
 .repo-list {
   display: flex;
   flex-direction: column;
@@ -1837,24 +1830,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   flex-shrink: 0;
-}
-
-.repo-card__badge--github {
-  background: rgba(88, 166, 255, 0.12);
-  color: var(--accent);
-  border: 1px solid rgba(88, 166, 255, 0.25);
-}
-
-.repo-card__badge--printedwaste {
-  background: rgba(63, 185, 80, 0.1);
-  color: var(--success);
-  border: 1px solid rgba(63, 185, 80, 0.25);
-}
-
-.repo-card__badge--kernelos {
-  background: rgba(248, 81, 73, 0.1);
-  color: var(--error);
-  border: 1px solid rgba(248, 81, 73, 0.25);
 }
 
 .repo-card__badge--archive {

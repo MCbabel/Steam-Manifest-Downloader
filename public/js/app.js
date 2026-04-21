@@ -76,7 +76,6 @@ const els = {
   searchError: $('#search-error'),
   searchLoading: $('#search-loading'),
   searchResults: $('#search-results'),
-  searchRateLimit: $('#search-rate-limit'),
   repoList: $('#repo-list'),
   searchNextRow: $('#search-next-row'),
   btnSearchNext: $('#btn-search-next'),
@@ -294,7 +293,7 @@ async function handleDepotManifestFile(depotId) {
 
     const statusEl = document.querySelector(`.depot-manifest-status[data-depot-id="${depotId}"]`);
     const btnEl = document.querySelector(`.depot-manifest-btn[data-depot-id="${depotId}"]`);
-    if (statusEl) statusEl.innerHTML = `<span class="manifest-uploaded">✓ ${fileName}</span>`;
+    if (statusEl) statusEl.innerHTML = `<span class="manifest-uploaded">✓ ${escapeHtml(fileName)}</span>`;
     if (btnEl) btnEl.textContent = '📁 Replace';
   } catch (error) {
     console.error('Failed to select manifest file:', error);
@@ -382,23 +381,13 @@ function renderAutocompleteResults(results) {
   }
 
   els.searchAutocomplete.innerHTML = results.map(item => `
-    <div class="search-autocomplete__item" data-appid="${item.appId}">
-      <img class="search-autocomplete__img" src="${item.image}" alt="" loading="lazy" onerror="this.style.display='none'">
-      <span class="search-autocomplete__name">${item.name}</span>
-      <span class="search-autocomplete__appid">${item.appId}</span>
+    <div class="search-autocomplete__item" data-appid="${escapeHtml(String(item.appId))}">
+      <img class="search-autocomplete__img" src="${escapeHtml(item.image || '')}" alt="" loading="lazy" onerror="this.style.display='none'">
+      <span class="search-autocomplete__name">${escapeHtml(item.name || '')}</span>
+      <span class="search-autocomplete__appid">${escapeHtml(String(item.appId))}</span>
     </div>
   `).join('');
   els.searchAutocomplete.classList.remove('hidden');
-
-  // Attach click handlers
-  els.searchAutocomplete.querySelectorAll('.search-autocomplete__item').forEach(el => {
-    el.addEventListener('click', () => {
-      const appId = el.dataset.appid;
-      els.searchAppIdInput.value = appId;
-      hideAutocomplete();
-      performSearch();
-    });
-  });
 }
 
 async function triggerAutocomplete(query) {
@@ -479,7 +468,6 @@ async function performSearch() {
     els.searchLoading.classList.add('hidden');
     els.btnSearch.disabled = false;
 
-    // Normalize response: raw has repos[] and github_rate_limited
     const repos = (raw.repos || []).map(r => ({
       name: r.repo,
       date: r.date,
@@ -489,28 +477,11 @@ async function performSearch() {
     }));
     state.searchRepos = repos;
 
-    const githubRateLimited = raw.github_rate_limited;
-
-    if (repos.length === 0 && !githubRateLimited) {
-      showSearchError('No repositories found for this App ID');
+    if (repos.length === 0) {
+      showSearchError('No manifests found for this App ID on the Internet Archive.');
       return;
     }
 
-    if (repos.length === 0 && githubRateLimited) {
-      showSearchError('Search sources are currently unavailable. Please try again later.');
-      return;
-    }
-
-    // Show rate limit warning
-    if (githubRateLimited) {
-      els.searchRateLimit.innerHTML = '⚠️ <strong>Some sources temporarily unavailable.</strong>';
-      els.searchRateLimit.style.color = '#e67e22';
-    } else {
-      els.searchRateLimit.textContent = '';
-      els.searchRateLimit.style.color = '';
-    }
-
-    // Render repo cards
     renderRepoList(repos);
     els.searchResults.classList.remove('hidden');
   } catch (error) {
@@ -565,7 +536,6 @@ function renderRepoList(repos) {
     card.className = 'repo-card';
     card.dataset.repoIndex = index;
 
-    const badgeClass = getBadgeClass(repo.type);
     const dateHtml = repo.date ? `<div class="repo-card__date">Updated: ${formatRepoDate(repo.date)}</div>` : '';
 
     card.innerHTML = `
@@ -574,7 +544,7 @@ function renderRepoList(repos) {
         <div class="repo-card__name">${escapeHtml(repo.name)}</div>
         ${dateHtml}
       </div>
-      <span class="repo-card__badge ${badgeClass}">${escapeHtml(repo.source || repo.type || 'unknown')}</span>
+      <span class="repo-card__badge repo-card__badge--archive">${escapeHtml(repo.source || repo.type || 'unknown')}</span>
     `;
     card.addEventListener('click', () => selectRepo(index));
     els.repoList.appendChild(card);
@@ -601,15 +571,6 @@ function formatRepoDate(dateStr) {
   } catch {
     return dateStr;
   }
-}
-
-function getBadgeClass(type) {
-  if (!type) return 'repo-card__badge--github';
-  const t = type.toLowerCase();
-  if (t.includes('archive')) return 'repo-card__badge--archive';
-  if (t.includes('printedwaste') || t.includes('printed')) return 'repo-card__badge--printedwaste';
-  if (t.includes('kernelos')) return 'repo-card__badge--kernelos';
-  return 'repo-card__badge--github';
 }
 
 function escapeHtml(str) {
@@ -644,110 +605,27 @@ async function proceedFromSearch() {
   els.searchError.classList.add('hidden');
 
   try {
-    const isAlternative = repo.type && !repo.type.toLowerCase().includes('github') && !repo.type.toLowerCase().includes('archive');
-    let depots;
+    const mRaw = await invoke('get_repo_manifests', {
+      appId: String(appId),
+      repo: repo.name,
+      sha: repo.sha || null,
+    });
 
-    if (isAlternative) {
-      // Alternative source — send source name (e.g. 'PrintedWaste', 'KernelOS')
-      const sourceName = repo.source || repo.type;
-      const raw = await invoke('search_alternative', {
-        appId: String(appId),
-        source: sourceName
-      });
+    const depots = (mRaw.manifests || []).map(m => ({
+      depotId: String(m.depot_id),
+      manifestId: m.manifest_id || 'N/A',
+      depotKey: m.depot_key || null,
+      sizeBytes: m.size_bytes || null
+    }));
 
-      // Normalize response: raw.depots[] with depot_id, manifest_id, depot_key
-      depots = (raw.depots || []).map(d => ({
-        depotId: String(d.depot_id),
-        manifestId: d.manifest_id ? String(d.manifest_id) : 'N/A',
-        depotKey: d.depot_key || null,
-        sizeBytes: d.size_bytes || null
-      }));
-
-      // KernelOS provides depot keys only (no manifest IDs).
-      // If depots have keys but no manifestIds, fetch manifests from the best GitHub repo.
-      const isKernelOS = sourceName === 'KernelOS' || sourceName === 'kernelos';
-      const needsManifests = depots.length > 0 && depots.every(d => !d.manifestId || d.manifestId === 'N/A');
-
-      if (isKernelOS && needsManifests && state.searchRepos && state.searchRepos.length > 0) {
-        // Find the first GitHub repo in the search results
-        const githubRepo = state.searchRepos.find(r => r.type === 'github');
-        if (githubRepo) {
-          try {
-            const mRaw = await invoke('get_repo_manifests', {
-              appId: String(appId),
-              repo: githubRepo.name,
-              sha: githubRepo.sha || null,
-            });
-
-            const ghManifests = (mRaw.manifests || []).map(m => ({
-              depotId: String(m.depot_id),
-              manifestId: m.manifest_id || 'N/A',
-              sizeBytes: m.size_bytes || null
-            }));
-
-            // Merge: match by depotId, fill in manifestIds from GitHub
-            for (const depot of depots) {
-              const ghMatch = ghManifests.find(m => String(m.depotId) === String(depot.depotId));
-              if (ghMatch && ghMatch.manifestId) {
-                depot.manifestId = ghMatch.manifestId;
-              }
-              if (ghMatch && ghMatch.sizeBytes && !depot.sizeBytes) {
-                depot.sizeBytes = ghMatch.sizeBytes;
-              }
-            }
-
-            // Also add any GitHub-only depots that KernelOS didn't have keys for
-            for (const ghm of ghManifests) {
-              if (!depots.find(d => String(d.depotId) === String(ghm.depotId))) {
-                depots.push({
-                  depotId: ghm.depotId,
-                  manifestId: ghm.manifestId || 'N/A',
-                  depotKey: null,
-                  sizeBytes: ghm.sizeBytes || null
-                });
-              }
-            }
-
-            state.searchRepo = githubRepo.name;
-            state.searchSha = githubRepo.sha;
-            state.searchKeyVdfKeys = mRaw.depot_keys || null;
-            console.log(`[KernelOS] Merged manifests from ${githubRepo.name} with KernelOS depot keys`);
-          } catch (mergeErr) {
-            console.warn('[KernelOS] Failed to fetch GitHub manifests for merge:', mergeErr);
-          }
-        }
-      }
-
-      if (!state.searchRepo) {
-        state.searchRepo = null;
-        state.searchSha = null;
-        state.searchKeyVdfKeys = null;
-      }
-    } else {
-      // Archive / standard repo - fetch manifests
-      const mRaw = await invoke('get_repo_manifests', {
-        appId: String(appId),
-        repo: repo.name,
-        sha: repo.sha || null,
-      });
-
-      // Normalize response
-      depots = (mRaw.manifests || []).map(m => ({
-        depotId: String(m.depot_id),
-        manifestId: m.manifest_id || 'N/A',
-        depotKey: m.depot_key || null,
-        sizeBytes: m.size_bytes || null
-      }));
-
-      state.searchRepo = repo.name;
-      state.searchSha = repo.sha;
-      state.searchKeyVdfKeys = mRaw.depot_keys || null;
-    }
+    state.searchRepo = repo.name;
+    state.searchSha = repo.sha;
+    state.searchKeyVdfKeys = mRaw.depot_keys || null;
 
     els.manifestLoading.classList.add('hidden');
 
     if (depots.length === 0) {
-      showSearchError('No manifests found for this App ID in the selected repository');
+      showSearchError('No manifests found for this App ID on the Internet Archive.');
       els.searchNextRow.classList.remove('hidden');
       return;
     }
@@ -916,22 +794,25 @@ function showSelectionStep() {
     item.className = 'depot-item';
     item.dataset.depotId = depot.depotId;
     if (depot.sizeBytes) item.dataset.sizeBytes = depot.sizeBytes;
+    const safeDepotId = escapeHtml(String(depot.depotId));
+    const safeManifestId = escapeHtml(String(depot.manifestId || 'N/A'));
+    const safeSize = sizeFormatted ? escapeHtml(sizeFormatted) : '';
     item.innerHTML = `
       <div class="depot-item__checkbox"></div>
       <div class="depot-item__info">
-        <div class="depot-item__depot-id">Depot ${depot.depotId}${sizeFormatted ? `<span class="depot-item__size">${sizeFormatted}</span>` : ''}</div>
-        <div class="depot-item__manifest-id">Manifest: ${depot.manifestId || 'N/A'}</div>
+        <div class="depot-item__depot-id">Depot ${safeDepotId}${safeSize ? `<span class="depot-item__size">${safeSize}</span>` : ''}</div>
+        <div class="depot-item__manifest-id">Manifest: ${safeManifestId}</div>
         <div class="depot-item__custom-manifest">
           <label>Custom:</label>
-          <input type="text" data-depot-id="${depot.depotId}" class="custom-manifest-input"
+          <input type="text" data-depot-id="${safeDepotId}" class="custom-manifest-input"
             placeholder="Custom manifest ID (optional)"
             onclick="event.stopPropagation()">
         </div>
         <div class="depot-item__manifest-upload">
-          <button type="button" class="btn btn--small btn--outline depot-manifest-btn" data-depot-id="${depot.depotId}">
+          <button type="button" class="btn btn--small btn--outline depot-manifest-btn" data-depot-id="${safeDepotId}">
             📁 Upload .manifest
           </button>
-          <span class="depot-manifest-status" data-depot-id="${depot.depotId}"></span>
+          <span class="depot-manifest-status" data-depot-id="${safeDepotId}"></span>
         </div>
       </div>
     `;
@@ -1132,7 +1013,7 @@ function initProgressUI(depots) {
     item.id = `depot-progress-${depot.depotId}`;
     item.innerHTML = `
       <div class="depot-progress-item__icon depot-progress-item__icon--pending">●</div>
-      <div class="depot-progress-item__label">Depot ${depot.depotId}</div>
+      <div class="depot-progress-item__label">Depot ${escapeHtml(String(depot.depotId))}</div>
       <div class="depot-progress-item__status">Waiting...</div>
     `;
     els.depotProgressList.appendChild(item);
@@ -1942,6 +1823,16 @@ function initEvents() {
       hideAutocomplete();
     }
   });
+  // Delegated autocomplete-item clicks so each re-render doesn't stack listeners
+  els.searchAutocomplete.addEventListener('click', (e) => {
+    const item = e.target.closest('.search-autocomplete__item');
+    if (!item) return;
+    const appId = item.dataset.appid;
+    if (!appId) return;
+    els.searchAppIdInput.value = appId;
+    hideAutocomplete();
+    performSearch();
+  });
   els.btnSearchNext.addEventListener('click', proceedFromSearch);
 
   // Select
@@ -2159,7 +2050,7 @@ function renderHistory(entries) {
           <div class="history-entry__depots">${entry.depots_downloaded}/${entry.depot_count} depots downloaded</div>
         </div>
         <div class="history-entry__actions">
-          <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" data-depot-ids="${(entry.depot_ids || []).join(',')}" title="Re-download">🔄</button>
+          <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" data-depot-ids="${escapeHtml((entry.depot_ids || []).join(','))}" title="Re-download">🔄</button>
           <button class="btn btn--small btn--outline history-action-folder" data-path="${escapeHtml(entry.download_dir)}" title="Open Folder"${entry.status === 'cancelled' ? ' disabled' : ''}>📂</button>
           <button class="btn btn--small btn--outline history-action-remove" data-entry-id="${escapeHtml(entry.id)}" title="Remove">🗑</button>
         </div>

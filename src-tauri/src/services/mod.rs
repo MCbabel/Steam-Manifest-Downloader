@@ -2,7 +2,6 @@ pub mod lua_parser;
 pub mod st_parser;
 pub mod vdf_parser;
 pub mod multi_repo_search;
-pub mod alternative_sources;
 pub mod manifest_hub_api;
 pub mod internet_archive;
 pub mod depot_keys_generator;

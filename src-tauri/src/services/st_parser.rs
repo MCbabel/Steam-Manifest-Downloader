@@ -57,6 +57,7 @@ pub fn parse_st_file(buffer: &[u8]) -> Result<LuaParseResult, String> {
 
     let lua_content = String::from_utf8_lossy(&decompressed[512..]).to_string();
 
-    // Parse with lua_parser
-    Ok(parse_lua_file(&lua_content))
+    // Parse the embedded lua content. Any parse failure (e.g. no recognised entries)
+    // is propagated so the UI can show a meaningful message.
+    parse_lua_file(&lua_content).map_err(|e| format!(".st file parsed but its payload is invalid: {}", e))
 }

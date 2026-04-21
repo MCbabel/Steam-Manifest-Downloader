@@ -1,7 +1,21 @@
 use regex::Regex;
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 const SEAN_WHO_XOR_KEY: &[u8] = b"Scalping dogs, I'll fuck you";
+
+// Matches a depot block of the form:
+//     "1995891"
+//     {
+//         "DecryptionKey" "hexvalue"
+//     }
+fn depot_block_pattern() -> &'static Regex {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    PATTERN.get_or_init(|| {
+        Regex::new(r#"(?si)"(\d+)"\s*\{[^}]*"DecryptionKey"\s+"([^"]+)"[^}]*\}"#)
+            .expect("depot-block pattern is a valid regex")
+    })
+}
 
 /// Parse a Key.vdf file content into a depot-key map.
 ///
@@ -14,20 +28,10 @@ const SEAN_WHO_XOR_KEY: &[u8] = b"Scalping dogs, I'll fuck you";
 pub fn parse_key_vdf(vdf_content: &str, repo: Option<&str>) -> HashMap<String, String> {
     let mut result = HashMap::new();
 
-    // Regex to match depot blocks with DecryptionKey
-    // Matches patterns like:
-    //   "1995891"
-    //   {
-    //       "DecryptionKey" "hexvalue"
-    //   }
-    let depot_block_re =
-        Regex::new(r#"(?si)"(\d+)"\s*\{[^}]*"DecryptionKey"\s+"([^"]+)"[^}]*\}"#).unwrap();
-
-    for cap in depot_block_re.captures_iter(vdf_content) {
+    for cap in depot_block_pattern().captures_iter(vdf_content) {
         let depot_id = cap[1].to_string();
         let mut depot_key = cap[2].to_string();
 
-        // sean-who/ManifestAutoUpdate uses XOR encryption on depot keys
         if let Some(r) = repo {
             if r.contains("sean-who") {
                 depot_key = xor_decrypt_hex(&depot_key, SEAN_WHO_XOR_KEY);

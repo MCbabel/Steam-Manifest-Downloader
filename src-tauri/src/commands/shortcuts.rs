@@ -238,6 +238,10 @@ pub async fn create_shortcuts(
 }
 
 /// Create a .lnk shortcut using PowerShell on Windows.
+///
+/// All user-derived values are passed through environment variables rather than
+/// being interpolated into the PowerShell script. This keeps the script body
+/// constant and prevents any value from being parsed as PowerShell code.
 #[cfg(target_os = "windows")]
 fn create_lnk_shortcut(
     safe_name: &str,
@@ -247,28 +251,26 @@ fn create_lnk_shortcut(
     description: &str,
     folder_type: &str, // "Desktop" or "Programs"
 ) -> Result<(), String> {
-    // Escape single quotes for PowerShell
-    let ps_escape = |s: &str| s.replace('\'', "''");
-
-    let script = format!(
-        "$folder = [Environment]::GetFolderPath('{}');\
-         $ws = New-Object -ComObject WScript.Shell;\
-         $s = $ws.CreateShortcut(\"$folder\\{}.lnk\");\
-         $s.TargetPath = '{}';\
-         $s.WorkingDirectory = '{}';\
-         $s.Description = '{}';\
-         $s.IconLocation = '{}';\
-         $s.Save()",
-        folder_type,
-        ps_escape(safe_name),
-        ps_escape(exe_path),
-        ps_escape(working_dir),
-        ps_escape(description),
-        ps_escape(icon_path),
-    );
+    const SCRIPT: &str = "\
+        $ErrorActionPreference = 'Stop';\
+        $folder = [Environment]::GetFolderPath($env:SMD_FOLDER);\
+        $target = Join-Path $folder ($env:SMD_NAME + '.lnk');\
+        $ws = New-Object -ComObject WScript.Shell;\
+        $s = $ws.CreateShortcut($target);\
+        $s.TargetPath = $env:SMD_TARGET;\
+        $s.WorkingDirectory = $env:SMD_WORKDIR;\
+        $s.Description = $env:SMD_DESC;\
+        $s.IconLocation = $env:SMD_ICON;\
+        $s.Save()";
 
     let mut cmd = std::process::Command::new("powershell");
-    cmd.args(["-NoProfile", "-Command", &script]);
+    cmd.args(["-NoProfile", "-NonInteractive", "-Command", SCRIPT]);
+    cmd.env("SMD_FOLDER", folder_type);
+    cmd.env("SMD_NAME", safe_name);
+    cmd.env("SMD_TARGET", exe_path);
+    cmd.env("SMD_WORKDIR", working_dir);
+    cmd.env("SMD_DESC", description);
+    cmd.env("SMD_ICON", icon_path);
     cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
     match cmd.output() {
