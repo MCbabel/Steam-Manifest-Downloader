@@ -61,21 +61,71 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 
 | | Requirement | Details |
 |---|---|---|
-| 💻 | **Operating System** | Windows 10 / 11 (64-bit) |
-| ⚙️ | **Runtime** | [.NET 9.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) (for DepotDownloader, Windows only) |
+| 💻 | **Operating System** | Windows 10 / 11 (64-bit) or a modern Linux distro (glibc ≥ 2.35) |
+| ⚙️ | **Runtime (Windows)** | [.NET 9.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) — required by DepotDownloader |
+| 📦 | **Runtime (Linux)** | `webkit2gtk-4.1`, `libayatana-appindicator3`, `librsvg2` (install commands below) |
 | 🌐 | **Network** | Internet connection |
 
 ---
 
 ## 📥 Installation
 
-1. Head to the [**Releases**](../../releases) page
-2. Download the latest `.exe` installer (NSIS) for Windows
-3. Run the installer — installs per-user, **no admin required**
-4. Launch **Steam Manifest Downloader** from the Start Menu
+### 🪟 Windows
+
+1. Head to the [**Releases**](../../releases) page and download the latest `.exe` installer (NSIS)
+2. Run the installer — installs per-user, **no admin required**
+3. Launch **Steam Manifest Downloader** from the Start Menu
 
 > [!NOTE]
-> Make sure you have the [.NET 9.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) installed (Windows only). The app will warn you if it's missing.
+> Make sure you have the [.NET 9.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) installed. The app will warn you on first launch if it's missing.
+
+### 🐧 Linux
+
+Download the latest `.AppImage` from [**Releases**](../../releases).
+
+Tauri apps on Linux don't bundle their own browser engine — they render the UI through the system **WebKitGTK**. Install the runtime for your distro:
+
+<details>
+<summary><b>Ubuntu / Debian</b> (22.04+ / 12+)</summary>
+
+```bash
+sudo apt install libwebkit2gtk-4.1-0 libayatana-appindicator3-1 librsvg2-2
+```
+</details>
+
+<details>
+<summary><b>Arch / CachyOS / Manjaro</b></summary>
+
+```bash
+sudo pacman -S webkit2gtk-4.1 libayatana-appindicator librsvg
+```
+</details>
+
+<details>
+<summary><b>Fedora</b></summary>
+
+```bash
+sudo dnf install webkit2gtk4.1 libappindicator-gtk3 librsvg2
+```
+</details>
+
+<details>
+<summary><b>openSUSE</b> (Tumbleweed / Leap 15.6+)</summary>
+
+```bash
+sudo zypper install libwebkit2gtk-4_1-0 libayatana-appindicator3-1 librsvg-2-2
+```
+</details>
+
+Then make the AppImage executable and launch it:
+
+```bash
+chmod +x Steam\ Manifest\ Downloader_*_amd64.AppImage
+./Steam\ Manifest\ Downloader_*_amd64.AppImage
+```
+
+> [!NOTE]
+> On **NixOS**, portable binaries can't find system libs through the normal loader paths. Launch via `steam-run ./Steam\ Manifest\ Downloader_*_amd64.AppImage`, or wrap the binary in a Nix derivation that lists `webkitgtk_4_1`, `libayatana-appindicator`, `librsvg` and `gtk3` as build inputs.
 
 <details>
 <summary><b>🔧 Building from Source</b></summary>
