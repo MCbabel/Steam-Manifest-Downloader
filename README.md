@@ -4,12 +4,13 @@
 
 **A sleek desktop app for downloading Steam game depots using manifest data.**
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue?style=for-the-badge)
-![License](https://img.shields.io/badge/license-GPL--2.0-blue?style=for-the-badge)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-0078D6?style=for-the-badge&logo=windows)
-![Built with](https://img.shields.io/badge/built_with-Rust-dea584?style=for-the-badge&logo=rust)
-![Tauri](https://img.shields.io/badge/Tauri_v2-FFC131?style=for-the-badge&logo=tauri&logoColor=white)
-![Downloads](https://img.shields.io/github/downloads/MCbabel/Steam-Manifest-Downloader/total?style=for-the-badge&color=brightgreen)
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![License](https://img.shields.io/badge/license-GPL--2.0-blue)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-0078D6?logo=windows)
+![Built with](https://img.shields.io/badge/built_with-Rust-dea584?logo=rust)
+![Tauri](https://img.shields.io/badge/Tauri_v2-FFC131?logo=tauri&logoColor=white)
+![Downloads](https://img.shields.io/github/downloads/MCbabel/Steam-Manifest-Downloader/total?color=brightgreen)
+[![Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Ftokei.kojix2.net%2Fbadge%2Fgithub%2FMCbabel%2FSteam-Manifest-Downloader%2Flines)](https://tokei.kojix2.net/github/MCbabel/Steam-Manifest-Downloader)
 
 Upload `.lua` files, search across GitHub repos, and let the app handle manifests, depot keys, and downloads — all in one click.
 
@@ -179,11 +180,11 @@ The `include_bytes!` macro in `src-tauri/src/services/embedded_tools.rs` embeds 
 
 <div align="center">
 
-![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
-![Tauri](https://img.shields.io/badge/Tauri_v2-FFC131?style=for-the-badge&logo=tauri&logoColor=white)
-![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
-![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Rust](https://img.shields.io/badge/Rust-000000?logo=rust&logoColor=white)
+![Tauri](https://img.shields.io/badge/Tauri_v2-FFC131?logo=tauri&logoColor=white)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
 
 </div>
 
@@ -237,7 +238,7 @@ DepoDownloaderWebApp/
 
 <div align="center">
 
-![License](https://img.shields.io/badge/license-GPL--2.0-blue?style=for-the-badge)
+![License](https://img.shields.io/badge/license-GPL--2.0-blue)
 
 This project is licensed under the [GPL-2.0 License](LICENSE).
 
