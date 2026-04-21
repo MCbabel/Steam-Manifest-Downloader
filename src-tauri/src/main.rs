@@ -28,7 +28,6 @@ fn main() {
             // Search
             commands::search_repos,
             commands::get_repo_manifests,
-            commands::search_alternative,
             commands::search_steam_games,
             // Steam
             commands::get_steam_app_info,

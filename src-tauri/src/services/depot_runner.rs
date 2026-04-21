@@ -1,8 +1,16 @@
 use std::path::Path;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use std::time::Duration;
+use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::Command;
+use tokio::task::JoinHandle;
 use tauri::{AppHandle, Emitter};
+
+/// How often buffered child-process output is flushed to the frontend.
+const STREAM_THROTTLE: Duration = Duration::from_millis(150);
+
+/// Maximum buffered lines before a forced flush, regardless of the throttle.
+const STREAM_BATCH_MAX: usize = 50;
 
 #[cfg(target_os = "windows")]
 use std::sync::Arc;
@@ -219,6 +227,53 @@ pub fn emit_progress(app: &AppHandle, event: &ProgressEvent) {
     }
 }
 
+/// Forward a child-process output stream to the frontend as throttled,
+/// buffered progress events. Returns the join handle of the spawned task.
+fn spawn_stream_forwarder<R>(
+    reader: Option<R>,
+    stream_name: &'static str,
+    app: AppHandle,
+    job_id: String,
+    depot_id: String,
+) -> JoinHandle<()>
+where
+    R: AsyncRead + Unpin + Send + 'static,
+{
+    tokio::spawn(async move {
+        let Some(reader) = reader else { return };
+        let buf_reader = BufReader::new(reader);
+        let mut lines = buf_reader.lines();
+        let mut last_emit = tokio::time::Instant::now();
+        let mut buffer: Vec<String> = Vec::new();
+
+        let flush = |buffer: &mut Vec<String>| {
+            let combined = buffer.join("\n");
+            let mut event = ProgressEvent::new("output", &job_id);
+            event.depot_id = Some(depot_id.clone());
+            event.stream = Some(stream_name.to_string());
+            event.output = Some(combined);
+            emit_progress(&app, &event);
+            buffer.clear();
+        };
+
+        while let Ok(Some(line)) = lines.next_line().await {
+            buffer.push(line);
+
+            let now = tokio::time::Instant::now();
+            if now.duration_since(last_emit) >= STREAM_THROTTLE
+                || buffer.len() >= STREAM_BATCH_MAX
+            {
+                flush(&mut buffer);
+                last_emit = now;
+            }
+        }
+
+        if !buffer.is_empty() {
+            flush(&mut buffer);
+        }
+    })
+}
+
 /// Depot configuration for running DepotDownloaderMod.
 #[derive(Debug, Clone)]
 pub struct DepotRunConfig {
@@ -319,89 +374,22 @@ pub async fn run_depot_downloader(
         }
     }
 
-    // Stream stdout with throttling
-    let stdout = child.stdout.take();
-    let stderr = child.stderr.take();
+    // Stream stdout and stderr with throttling
+    let stdout_handle = spawn_stream_forwarder(
+        child.stdout.take(),
+        "stdout",
+        app.clone(),
+        job_id.to_string(),
+        depot.depot_id.clone(),
+    );
 
-    let app_stdout = app.clone();
-    let job_id_stdout = job_id.to_string();
-    let depot_id_stdout = depot.depot_id.clone();
-
-    let stdout_handle = tokio::spawn(async move {
-        if let Some(stdout) = stdout {
-            let reader = BufReader::new(stdout);
-            let mut lines = reader.lines();
-            let mut last_emit = tokio::time::Instant::now();
-            let mut buffer: Vec<String> = Vec::new();
-            let throttle_interval = tokio::time::Duration::from_millis(150);
-
-            while let Ok(Some(line)) = lines.next_line().await {
-                buffer.push(line);
-
-                let now = tokio::time::Instant::now();
-                if now.duration_since(last_emit) >= throttle_interval || buffer.len() >= 50 {
-                    let combined = buffer.join("\n");
-                    let mut event = ProgressEvent::new("output", &job_id_stdout);
-                    event.depot_id = Some(depot_id_stdout.clone());
-                    event.stream = Some("stdout".to_string());
-                    event.output = Some(combined);
-                    emit_progress(&app_stdout, &event);
-                    buffer.clear();
-                    last_emit = now;
-                }
-            }
-
-            // Emit remaining buffered lines
-            if !buffer.is_empty() {
-                let combined = buffer.join("\n");
-                let mut event = ProgressEvent::new("output", &job_id_stdout);
-                event.depot_id = Some(depot_id_stdout.clone());
-                event.stream = Some("stdout".to_string());
-                event.output = Some(combined);
-                emit_progress(&app_stdout, &event);
-            }
-        }
-    });
-
-    let app_stderr = app.clone();
-    let job_id_stderr = job_id.to_string();
-    let depot_id_stderr = depot.depot_id.clone();
-
-    let stderr_handle = tokio::spawn(async move {
-        if let Some(stderr) = stderr {
-            let reader = BufReader::new(stderr);
-            let mut lines = reader.lines();
-            let mut last_emit = tokio::time::Instant::now();
-            let mut buffer: Vec<String> = Vec::new();
-            let throttle_interval = tokio::time::Duration::from_millis(150);
-
-            while let Ok(Some(line)) = lines.next_line().await {
-                buffer.push(line);
-
-                let now = tokio::time::Instant::now();
-                if now.duration_since(last_emit) >= throttle_interval || buffer.len() >= 50 {
-                    let combined = buffer.join("\n");
-                    let mut event = ProgressEvent::new("output", &job_id_stderr);
-                    event.depot_id = Some(depot_id_stderr.clone());
-                    event.stream = Some("stderr".to_string());
-                    event.output = Some(combined);
-                    emit_progress(&app_stderr, &event);
-                    buffer.clear();
-                    last_emit = now;
-                }
-            }
-
-            // Emit remaining buffered lines
-            if !buffer.is_empty() {
-                let combined = buffer.join("\n");
-                let mut event = ProgressEvent::new("output", &job_id_stderr);
-                event.depot_id = Some(depot_id_stderr.clone());
-                event.stream = Some("stderr".to_string());
-                event.output = Some(combined);
-                emit_progress(&app_stderr, &event);
-            }
-        }
-    });
+    let stderr_handle = spawn_stream_forwarder(
+        child.stderr.take(),
+        "stderr",
+        app.clone(),
+        job_id.to_string(),
+        depot.depot_id.clone(),
+    );
 
     // Wait for process to complete
     let status = child

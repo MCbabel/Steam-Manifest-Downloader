@@ -16,6 +16,10 @@ use crate::services::lua_parser::DepotInfo;
 use crate::services::depot_keys_generator;
 use crate::services::history;
 
+/// Delay before a finished job entry is purged from the active-jobs map.
+/// Kept around briefly so the UI can still look up the final status.
+const JOB_RETENTION: std::time::Duration = std::time::Duration::from_secs(30 * 60);
+
 #[derive(Debug, Deserialize)]
 pub struct DownloadConfig {
     #[serde(rename = "mainAppId", alias = "app_id")]
@@ -50,6 +54,27 @@ pub struct DepotConfig {
     pub uploaded_manifest_path: Option<String>,
 }
 
+/// Validate all numeric IDs in the download request before any work starts.
+/// Rejects non-numeric or out-of-range values at the trust boundary so the
+/// pipeline never sees silently-zeroed IDs.
+fn validate_download_ids(config: &DownloadConfig) -> Result<(), String> {
+    config
+        .app_id
+        .parse::<u64>()
+        .map_err(|_| format!("Invalid App ID '{}': expected a numeric Steam App ID", config.app_id))?;
+
+    for depot in &config.depots {
+        depot.depot_id.parse::<u64>().map_err(|_| {
+            format!(
+                "Invalid depot ID '{}': expected a numeric Steam depot ID",
+                depot.depot_id
+            )
+        })?;
+    }
+
+    Ok(())
+}
+
 /// Start a download job. Returns { jobId, downloadDir } immediately,
 /// then runs the download pipeline asynchronously emitting progress events.
 #[command]
@@ -58,6 +83,8 @@ pub async fn start_download(
     state: tauri::State<'_, AppState>,
     config: DownloadConfig,
 ) -> Result<serde_json::Value, String> {
+    validate_download_ids(&config)?;
+
     let job_id = Uuid::new_v4().to_string();
 
     // Determine base download directory
@@ -95,7 +122,13 @@ pub async fn start_download(
                     }
                 }
             }
-            _ => {}
+            Ok(None) => {}
+            Err(e) => {
+                eprintln!(
+                    "[Download] Steam Store lookup failed for app {}: {}. Using App ID as folder name.",
+                    config.app_id, e
+                );
+            }
         }
     } else if let Some(ref name) = game_name {
         let sanitized = steam_store_api::sanitize_game_name(name);
@@ -186,7 +219,9 @@ pub async fn start_download(
                         source_repo: None,
                         depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
                     };
-                    let _ = history::add_entry(&app_data_dir, entry).await;
+                    if let Err(err) = history::add_entry(&app_data_dir, entry).await {
+                        eprintln!("[Download] Failed to record cancelled job in history: {}", err);
+                    }
                 }
             }
             Err(e) => {
@@ -211,15 +246,16 @@ pub async fn start_download(
                     source_repo: None,
                     depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
                 };
-                let _ = history::add_entry(&app_data_dir, entry).await;
+                if let Err(err) = history::add_entry(&app_data_dir, entry).await {
+                    eprintln!("[Download] Failed to record failed job in history: {}", err);
+                }
             }
         }
 
-        // Schedule cleanup after 30 min
         let active_jobs_cleanup = active_jobs.clone();
         let job_id_cleanup = job_id_clone.clone();
         tokio::spawn(async move {
-            tokio::time::sleep(tokio::time::Duration::from_secs(30 * 60)).await;
+            tokio::time::sleep(JOB_RETENTION).await;
             let mut jobs = active_jobs_cleanup.lock().await;
             jobs.remove(&job_id_cleanup);
         });
@@ -322,8 +358,12 @@ async fn run_download_pipeline(
 
             match tokio::fs::copy(uploaded_path, &dest_path).await {
                 Ok(_) => {
-                    // Clean up temp file
-                    let _ = tokio::fs::remove_file(uploaded_path).await;
+                    if let Err(err) = tokio::fs::remove_file(uploaded_path).await {
+                        eprintln!(
+                            "[Download] Failed to remove temp upload '{}': {}",
+                            uploaded_path, err
+                        );
+                    }
                     let mut event = ProgressEvent::new("status", job_id);
                     event.step = Some("downloading_manifest".to_string());
                     event.depot_id = Some(depot.depot_id.clone());
@@ -441,7 +481,9 @@ async fn run_download_pipeline(
             source_repo: None,
             depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
         };
-        let _ = history::add_entry(app_data_dir, entry).await;
+        if let Err(err) = history::add_entry(app_data_dir, entry).await {
+            eprintln!("[Download] Failed to record failed download in history: {}", err);
+        }
 
         return Ok(());
     }
@@ -470,7 +512,7 @@ async fn run_download_pipeline(
             }
 
             DepotInfo {
-                depot_id: d.depot_id.parse().unwrap_or(0),
+                depot_id: d.depot_id.parse().expect("depot IDs are validated at entry"),
                 depot_key: key,
                 manifest_id: Some(d.custom_manifest_id.as_deref().unwrap_or(&d.manifest_id).to_string()),
             }
@@ -511,7 +553,7 @@ async fn run_download_pipeline(
 
     // Generate steam.keys file
     let keys_result = depot_keys_generator::generate_depot_keys(
-        config.app_id.parse().unwrap_or(0),
+        config.app_id.parse().expect("app_id is validated at entry"),
         &depot_infos,
         Some(folder_name),
         base_dir,
@@ -613,7 +655,9 @@ async fn run_download_pipeline(
         source_repo: None,
         depot_ids: run_depots.iter().map(|d| d.depot_id.clone()).collect(),
     };
-    let _ = history::add_entry(app_data_dir, entry).await;
+    if let Err(err) = history::add_entry(app_data_dir, entry).await {
+        eprintln!("[Download] Failed to record completed job in history: {}", err);
+    }
 
     // Mark job as complete
     {

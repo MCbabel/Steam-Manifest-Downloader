@@ -1,11 +1,11 @@
 use tauri::command;
 use crate::services::AppState;
 use crate::services::multi_repo_search;
-use crate::services::alternative_sources;
 use crate::services::steam_store_api;
 
-/// Search all known repos for an App ID.
-/// Returns { repos: [...], githubRateLimited: bool }
+/// Search the Internet Archive for an App ID.
+/// Returns `{ repos: [...] }`. The repo list currently has at most one entry
+/// (Internet Archive) but is kept as an array for UI symmetry.
 #[command]
 pub async fn search_repos(
     state: tauri::State<'_, AppState>,
@@ -20,7 +20,7 @@ pub async fn search_repos(
     serde_json::to_value(&result).map_err(|e| format!("Failed to serialize search result: {}", e))
 }
 
-/// Get manifest file listing from a repo / Internet Archive.
+/// Get manifest file listing for an App ID from the Internet Archive.
 /// Returns manifests list with depot keys.
 #[command]
 pub async fn get_repo_manifests(
@@ -40,39 +40,6 @@ pub async fn get_repo_manifests(
     .await?;
 
     serde_json::to_value(&result).map_err(|e| format!("Failed to serialize manifests: {}", e))
-}
-
-/// Search alternative sources (kernelos or printedwaste).
-#[command]
-pub async fn search_alternative(
-    state: tauri::State<'_, AppState>,
-    app_id: String,
-    source: String,
-) -> Result<serde_json::Value, String> {
-    match source.to_lowercase().as_str() {
-        "printedwaste" => {
-            let result = alternative_sources::download_from_printed_waste(
-                &state.http_client,
-                &app_id,
-            )
-            .await?;
-            serde_json::to_value(&result)
-                .map_err(|e| format!("Failed to serialize PrintedWaste result: {}", e))
-        }
-        "kernelos" => {
-            // Use a temp directory for KernelOS extraction
-            let temp_dir = std::env::temp_dir().join("steam_manifest_downloader");
-            let result = alternative_sources::download_from_kernel_os(
-                &state.http_client,
-                &app_id,
-                &temp_dir,
-            )
-            .await?;
-            serde_json::to_value(&result)
-                .map_err(|e| format!("Failed to serialize KernelOS result: {}", e))
-        }
-        _ => Err(format!("Unknown alternative source: {}. Use 'kernelos' or 'printedwaste'.", source)),
-    }
 }
 
 /// Get Steam Store app info (name, header image, etc.).

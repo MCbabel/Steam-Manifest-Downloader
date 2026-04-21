@@ -11,18 +11,12 @@ pub struct RepoResult {
     pub sha: Option<String>,
     #[serde(rename = "type")]
     pub source_type: String,
-    /// For alternative sources
     pub source: Option<String>,
-    /// KernelOS download URL
-    pub download_url: Option<String>,
-    /// KernelOS expiry
-    pub expires_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
     pub repos: Vec<RepoResult>,
-    pub github_rate_limited: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,14 +39,14 @@ pub struct RepoManifests {
 }
 
 /// Search Internet Archive for an App ID.
-/// Returns a SearchResult with a single RepoResult if the app exists.
+/// Returns a SearchResult with a single RepoResult if the app exists, or an empty
+/// list if it does not.
 pub async fn search_repos(
     client: &Client,
     app_id: &str,
 ) -> Result<SearchResult, String> {
     let mut found = Vec::new();
 
-    // Check Internet Archive
     match internet_archive::check_app_exists(client, app_id).await {
         Ok(true) => {
             found.push(RepoResult {
@@ -61,23 +55,18 @@ pub async fn search_repos(
                 sha: None,
                 source_type: "archive".to_string(),
                 source: Some("Internet Archive".to_string()),
-                download_url: None,
-                expires_at: None,
             });
         }
         Ok(false) => {}
         Err(e) => {
-            eprintln!("[MultiRepoSearch] Internet Archive check failed: {}", e);
+            eprintln!("[Search] Internet Archive check failed: {}", e);
         }
     }
 
-    Ok(SearchResult {
-        repos: found,
-        github_rate_limited: false,
-    })
+    Ok(SearchResult { repos: found })
 }
 
-/// Get manifest file listing from the Internet Archive for an app.
+/// Get the manifest file listing from the Internet Archive for an app.
 /// Downloads and parses the .lua file and optional key.vdf to build the manifest list.
 pub async fn get_repo_manifests(
     client: &Client,
@@ -89,7 +78,6 @@ pub async fn get_repo_manifests(
 
     let lua_filename = Some(format!("{}.lua", app_id));
 
-    // Build file list from manifests
     let mut files = Vec::new();
     if let Some(ref lua_file) = lua_filename {
         files.push(lua_file.clone());
