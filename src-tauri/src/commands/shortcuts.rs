@@ -11,8 +11,6 @@ pub async fn is_shortcut_supported() -> Result<serde_json::Value, String> {
     { Ok(serde_json::json!({ "supported": false })) }
 }
 
-/// Scan a download directory for executable files and rank them by likelihood
-/// of being the main game executable.
 #[command]
 pub async fn detect_executables(download_dir: String) -> Result<serde_json::Value, String> {
     let dir_path = std::path::PathBuf::from(&download_dir);
@@ -20,14 +18,14 @@ pub async fn detect_executables(download_dir: String) -> Result<serde_json::Valu
         return Err("Download directory does not exist".to_string());
     }
 
-    let mut exes: Vec<(String, String, u64)> = Vec::new(); // (path, name, size)
+    let mut exes: Vec<(String, String, u64)> = Vec::new();
     scan_dir_recursive(&dir_path, &mut exes, 0, 5).await;
 
     if exes.is_empty() {
         return Ok(serde_json::json!({ "executables": [] }));
     }
 
-    // Extract game name hint from folder name (e.g. "220 - Half-Life 2" -> "half-life 2")
+    // Folder names look like "220 - Half-Life 2"; pull the name half as a hint.
     let folder_name = dir_path
         .file_name()
         .unwrap_or_default()
@@ -43,33 +41,28 @@ pub async fn detect_executables(download_dir: String) -> Result<serde_json::Valu
         .filter(|w| w.len() > 2)
         .collect();
 
-    // Score each executable
     let mut scored: Vec<(i64, String, String, u64)> = exes
         .into_iter()
         .map(|(path, name, size)| {
             let name_lower = name.to_lowercase();
             let mut score: i64 = 0;
 
-            // Blacklist known non-game executables
             if is_blacklisted(&name_lower) {
                 score -= 10000;
             }
 
-            // Name match bonus
             for word in &hint_words {
                 if name_lower.contains(word) {
                     score += 500;
                 }
             }
 
-            // Size bonus (MB scale)
             score += (size / (1024 * 1024)) as i64;
 
             (score, path, name, size)
         })
         .collect();
 
-    // Sort by score descending
     scored.sort_by(|a, b| b.0.cmp(&a.0));
 
     let executables: Vec<serde_json::Value> = scored
@@ -88,7 +81,6 @@ pub async fn detect_executables(download_dir: String) -> Result<serde_json::Valu
     Ok(serde_json::json!({ "executables": executables }))
 }
 
-/// Recursively scan for .exe files.
 async fn scan_dir_recursive(
     dir: &std::path::Path,
     results: &mut Vec<(String, String, u64)>,
@@ -127,7 +119,6 @@ async fn scan_dir_recursive(
     }
 }
 
-/// Check if an executable name matches known non-game executables.
 fn is_blacklisted(name_lower: &str) -> bool {
     const BLACKLIST_EXACT: &[&str] = &[
         "unins000.exe",
@@ -175,8 +166,6 @@ fn is_blacklisted(name_lower: &str) -> bool {
     false
 }
 
-/// Create desktop and/or start menu shortcuts for a game executable.
-/// Windows-only: uses PowerShell WScript.Shell COM to create .lnk files.
 #[command]
 pub async fn create_shortcuts(
     exe_path: String,
@@ -205,7 +194,6 @@ pub async fn create_shortcuts(
 
         let icon = icon_path.unwrap_or_else(|| exe_path.clone());
 
-        // Sanitize game name for filename
         let safe_name: String = game_name
             .chars()
             .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' { c } else { '_' })
@@ -237,11 +225,8 @@ pub async fn create_shortcuts(
     }
 }
 
-/// Create a .lnk shortcut using PowerShell on Windows.
-///
-/// All user-derived values are passed through environment variables rather than
-/// being interpolated into the PowerShell script. This keeps the script body
-/// constant and prevents any value from being parsed as PowerShell code.
+// User-derived values go via env vars, not string-interpolated into the script,
+// so nothing the caller supplies can be parsed as PowerShell.
 #[cfg(target_os = "windows")]
 fn create_lnk_shortcut(
     safe_name: &str,

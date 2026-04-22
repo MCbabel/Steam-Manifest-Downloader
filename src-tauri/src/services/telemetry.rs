@@ -9,8 +9,9 @@ use uuid::Uuid;
 
 use crate::services::settings::{self as settings_service, TelemetryConsent};
 
-// Dev key. Rotate before prod: generate a fresh keypair, bake the public bytes
-// here, ship the matching private key to the telemetry server.
+// Rotate: generate a fresh X25519 keypair, replace these bytes, ship the new
+// private half to the server. Old clients keep sending against the old pubkey
+// until they update.
 const SERVER_PUBLIC_KEY: [u8; 32] = [
     0x11, 0x78, 0x0b, 0xa9, 0x94, 0xb5, 0x3d, 0xde, 0xeb, 0x5c, 0x3d, 0xba,
     0x2e, 0x96, 0x13, 0x8c, 0x42, 0xfa, 0xe5, 0x22, 0x8f, 0xc5, 0xbe, 0x78,
@@ -95,7 +96,7 @@ impl Telemetry {
     pub fn spawn_background_flush(self) {
         tauri::async_runtime::spawn(async move {
             let mut interval = tokio::time::interval(FLUSH_INTERVAL);
-            interval.tick().await; // skip the immediate first tick
+            interval.tick().await;
             loop {
                 interval.tick().await;
                 self.flush().await;
@@ -219,9 +220,8 @@ impl Telemetry {
     }
 }
 
-/// Allowlist of event kinds the frontend is permitted to emit. Anything else
-/// is rejected at the command boundary so the JS layer can't spam arbitrary
-/// labels (which would make the server-side schema unmaintainable).
+// Allowlist enforced at the command boundary so the JS layer can't invent
+// new event kinds and break the server-side schema.
 const ALLOWED_EVENT_KINDS: &[&str] = &[
     "app_start",
     "settings_opened",

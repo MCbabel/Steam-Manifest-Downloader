@@ -11,7 +11,6 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            // Initialize app data directory
             let app_data = app.path().app_data_dir().expect("Failed to get app data dir");
             std::fs::create_dir_all(&app_data).ok();
 

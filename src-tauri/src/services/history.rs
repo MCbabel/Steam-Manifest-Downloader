@@ -60,11 +60,7 @@ async fn save_history(app_data_dir: &Path, history: &History) -> Result<(), Stri
 
 pub async fn add_entry(app_data_dir: &Path, entry: HistoryEntry) -> Result<(), String> {
     let mut history = load_history(app_data_dir).await;
-
-    // Insert at the beginning (newest first)
     history.entries.insert(0, entry);
-
-    // Trim to max entries
     if history.entries.len() > MAX_HISTORY_ENTRIES {
         history.entries.truncate(MAX_HISTORY_ENTRIES);
     }

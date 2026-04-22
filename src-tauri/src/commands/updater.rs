@@ -5,7 +5,6 @@ use crate::services::settings as settings_service;
 const GITHUB_REPO: &str = "MCbabel/Steam-Manifest-Downloader";
 const USER_AGENT: &str = "SteamManifestDownloader";
 
-/// Check GitHub for a newer release. Returns update info or null.
 #[command]
 pub async fn check_for_updates(app: AppHandle) -> Result<serde_json::Value, String> {
     let current_version = app.config().version.clone().unwrap_or_default();
@@ -34,12 +33,11 @@ pub async fn check_for_updates(app: AppHandle) -> Result<serde_json::Value, Stri
     let tag = release["tag_name"].as_str().unwrap_or("");
     let remote_version = tag.trim_start_matches('v');
 
-    // Simple semver comparison
     if !is_newer_version(&current_version, remote_version) {
         return Ok(serde_json::json!({ "available": false }));
     }
 
-    // Find the NSIS installer asset (.exe in the assets, not portable)
+    // NSIS installer, not the portable .exe.
     let mut installer_url = None;
     if let Some(assets) = release["assets"].as_array() {
         for asset in assets {
@@ -62,12 +60,10 @@ pub async fn check_for_updates(app: AppHandle) -> Result<serde_json::Value, Stri
     }))
 }
 
-/// Download the installer and run it, then exit the current app.
 #[command]
 pub async fn install_update(app: AppHandle, installer_url: String) -> Result<(), String> {
     let client = reqwest::Client::new();
 
-    // Download to temp directory
     let temp_dir = std::env::temp_dir().join("SteamManifestDownloader");
     std::fs::create_dir_all(&temp_dir)
         .map_err(|e| format!("Failed to create temp dir: {}", e))?;
@@ -91,7 +87,6 @@ pub async fn install_update(app: AppHandle, installer_url: String) -> Result<(),
     std::fs::write(&installer_path, &bytes)
         .map_err(|e| format!("Failed to save installer: {}", e))?;
 
-    // Launch the installer and exit
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
@@ -101,20 +96,19 @@ pub async fn install_update(app: AppHandle, installer_url: String) -> Result<(),
             .map_err(|e| format!("Failed to launch installer: {}", e))?;
     }
 
+    // No silent installer path on Linux — just open the release in the browser.
     #[cfg(target_os = "linux")]
     {
-        // On Linux, open the release page in the browser instead
         let _ = std::process::Command::new("xdg-open")
             .arg(&installer_url)
             .spawn();
     }
 
-    // Exit the app so the installer can replace files
+    // Exit so the NSIS installer can replace the running binary.
     app.exit(0);
     Ok(())
 }
 
-/// Get the auto_update setting value.
 #[command]
 pub async fn get_auto_update_enabled(app: AppHandle) -> Result<bool, String> {
     let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
@@ -122,7 +116,6 @@ pub async fn get_auto_update_enabled(app: AppHandle) -> Result<bool, String> {
     Ok(settings.auto_update)
 }
 
-/// Simple semver comparison: returns true if remote > current
 fn is_newer_version(current: &str, remote: &str) -> bool {
     let parse = |v: &str| -> (u64, u64, u64) {
         let parts: Vec<u64> = v.split('.').filter_map(|p| p.parse().ok()).collect();

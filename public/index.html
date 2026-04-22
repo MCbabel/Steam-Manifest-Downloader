@@ -8,7 +8,6 @@
 </head>
 <body>
 <div class="app-shell">
-  <!-- Custom Title Bar -->
   <div class="title-bar" id="title-bar">
     <div class="title-bar__drag-region">
       <div class="title-bar__icon">
@@ -31,7 +30,6 @@
 
   <div class="scroll-wrapper">
   <div class="app">
-    <!-- Header -->
     <header class="header">
       <h1 class="header__title">
         <svg class="header__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -58,7 +56,6 @@
       </div>
     </header>
 
-    <!-- .NET Runtime Warning Banner -->
     <div id="dotnet-warning" class="dotnet-warning hidden">
       <div class="dotnet-warning__content">
         <span class="dotnet-warning__icon">⚠️</span>
@@ -75,7 +72,6 @@
       </div>
     </div>
 
-    <!-- Step Indicator -->
     <div class="steps">
       <div class="steps__item active" data-step="1">
         <div class="steps__number">1</div>
@@ -98,16 +94,13 @@
       </div>
     </div>
 
-    <!-- Step 1: File Upload / App ID Search -->
     <section id="step-upload" class="step active">
       <div class="card">
-        <!-- Tab Bar -->
         <div class="tab-bar">
           <button class="tab-bar__tab active" data-tab="upload" id="tab-upload">📁 Upload File</button>
           <button class="tab-bar__tab" data-tab="search" id="tab-search">🔍 Search by App ID</button>
         </div>
 
-        <!-- Upload Tab Content -->
         <div id="tab-content-upload" class="tab-content active">
           <div id="drop-zone" class="drop-zone">
             <svg class="drop-zone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -133,9 +126,7 @@
           </div>
         </div>
 
-        <!-- Search Tab Content -->
         <div id="tab-content-search" class="tab-content">
-          <!-- Game Info Banner (shown after search) -->
           <div id="search-game-banner" class="game-info-banner hidden">
             <img id="search-game-image" class="game-info-banner__image" src="" alt="Game Cover">
             <div class="game-info-banner__details">
@@ -163,19 +154,16 @@
             <span>Searching repositories...</span>
           </div>
 
-          <!-- Search Results -->
           <div id="search-results" class="search-results hidden">
             <div id="repo-list" class="repo-list"></div>
           </div>
 
-          <!-- Next button after selecting a repo -->
           <div id="search-next-row" class="search-next-row hidden">
             <button id="btn-search-next" class="btn btn--primary">
               Next →
             </button>
           </div>
 
-          <!-- Loading state for manifest fetching -->
           <div id="manifest-loading" class="loading hidden">
             <div class="spinner"></div>
             <span>Fetching manifests...</span>
@@ -184,10 +172,8 @@
       </div>
     </section>
 
-    <!-- Step 2: Depot/Manifest Selection -->
     <section id="step-select" class="step hidden">
       <div class="card">
-        <!-- Game Info Banner -->
         <div id="game-info-banner" class="game-info-banner hidden">
           <img id="game-header-image" class="game-info-banner__image" src="" alt="Game Cover">
           <div class="game-info-banner__details">
@@ -262,7 +248,6 @@
       </div>
     </section>
 
-    <!-- Step 3: Download Progress -->
     <section id="step-progress" class="step hidden">
       <div class="card">
         <div id="disk-space-info" class="disk-space-info hidden">
@@ -315,13 +300,11 @@
       </div>
     </section>
 
-    <!-- Step 4: Shortcut Creation (Windows only) -->
     <section id="step-shortcut" class="step hidden">
       <div class="card">
         <h2 class="shortcut-header">Create Shortcuts</h2>
         <p class="shortcut-description">Create desktop or start menu shortcuts to launch the downloaded game.</p>
 
-        <!-- Exe Selection -->
         <div class="shortcut-exe-section">
           <label for="shortcut-exe-path" class="settings-section__label">Game Executable</label>
           <div class="dd-path__input-wrap dd-path__input-wrap--with-btn">
@@ -331,7 +314,6 @@
           <p class="dd-path__hint">Auto-detected game executable. Click browse or select from detected files below.</p>
         </div>
 
-        <!-- Detected Executables (collapsible) -->
         <div id="shortcut-detected-section" class="shortcut-detected-section hidden">
           <button type="button" id="btn-toggle-detected" class="settings-advanced__toggle">
             <span class="settings-advanced__arrow">&#9654;</span>
@@ -340,7 +322,6 @@
           <div id="shortcut-detected-list" class="shortcut-detected-list hidden"></div>
         </div>
 
-        <!-- Shortcut Options -->
         <div class="shortcut-options">
           <div class="shortcut-option">
             <span class="shortcut-option__label">Desktop Shortcut</span>
@@ -358,7 +339,6 @@
           </div>
         </div>
 
-        <!-- Status Message -->
         <div id="shortcut-status" class="completion-message hidden"></div>
 
         <div class="card__footer">
@@ -379,7 +359,6 @@
   </div>
   </div>
 
-  <!-- Cancel Confirmation Modal -->
   <div id="cancel-modal" class="modal hidden">
     <div class="modal__backdrop"></div>
     <div class="modal__content">
@@ -395,7 +374,6 @@
     </div>
   </div>
 
-  <!-- Close Confirmation Modal -->
   <div id="close-modal" class="modal hidden">
     <div class="modal__backdrop"></div>
     <div class="modal__content">
@@ -413,7 +391,6 @@
 
 
 
-  <!-- Telemetry Consent Modal (first-run only) -->
   <div id="telemetry-modal" class="modal hidden">
     <div class="modal__backdrop"></div>
     <div class="modal__content telemetry-modal-content">
@@ -449,7 +426,6 @@
     </div>
   </div>
 
-  <!-- Settings Modal -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal__backdrop"></div>
     <div class="modal__content settings-modal-content">
@@ -466,7 +442,6 @@
         <p class="dd-path__hint">When enabled, the app checks for new versions on GitHub and offers to install them.</p>
       </div>
 
-      <!-- Advanced Settings (collapsible) -->
       <div class="settings-advanced">
         <button type="button" id="btn-toggle-advanced" class="settings-advanced__toggle">
           <span class="settings-advanced__arrow">▶</span>
@@ -474,35 +449,30 @@
         </button>
         <div id="advanced-settings-content" class="settings-advanced__content hidden">
 
-          <!-- DepotDownloader Extra Arguments -->
           <div class="settings-field">
             <label for="dd-extra-args-input" class="settings-field__label">DepotDownloader Extra Arguments</label>
             <input type="text" id="dd-extra-args-input" class="dd-path__input" placeholder="-max-downloads 8 -verify-all">
             <p class="dd-path__hint">Additional command-line arguments passed to DepotDownloaderMod</p>
           </div>
 
-          <!-- Max Retries -->
           <div class="settings-field">
             <label for="max-retries-input" class="settings-field__label">Max Retries on Error</label>
             <input type="number" id="max-retries-input" class="dd-path__input" min="0" max="10" value="3">
             <p class="dd-path__hint">Number of retry attempts when a depot download fails</p>
           </div>
 
-          <!-- Download Speed Limit -->
           <div class="settings-field">
             <label for="speed-limit-input" class="settings-field__label">Download Speed Limit (MB/s)</label>
             <input type="text" id="speed-limit-input" class="dd-path__input" placeholder="Unlimited">
             <p class="dd-path__hint">Leave empty for unlimited. Applied as DDM argument.</p>
           </div>
 
-          <!-- Proxy -->
           <div class="settings-field">
             <label for="proxy-input" class="settings-field__label">HTTP Proxy</label>
             <input type="text" id="proxy-input" class="dd-path__input" placeholder="No proxy">
             <p class="dd-path__hint">Optional proxy URL (e.g., http://proxy:8080 or socks5://proxy:1080)</p>
           </div>
 
-          <!-- Notification Sound -->
           <div class="settings-field">
             <label class="settings-field__label">Notification Sound</label>
             <div class="settings-field__toggle-wrap">
@@ -515,7 +485,6 @@
             <p class="dd-path__hint">Uses a system notification sound to alert you when all downloads finish.</p>
           </div>
 
-          <!-- Anonymous Telemetry -->
           <div class="settings-field">
             <label class="settings-field__label">Anonymous Usage Statistics</label>
             <div class="settings-field__toggle-wrap">
@@ -528,7 +497,6 @@
             <p class="dd-path__hint">End-to-end encrypted. No game IDs, file contents, or account info are ever sent. <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/blob/main/PRIVACY.md" target="_blank" rel="noopener">Privacy details</a>.</p>
           </div>
 
-          <!-- Debug / Build Info -->
           <div class="settings-field">
             <label class="settings-field__label">Debug Info</label>
             <div id="build-info" class="build-info">
@@ -571,7 +539,6 @@
     </div>
   </div>
 
-  <!-- Update Available Modal -->
   <div id="update-modal" class="modal hidden">
     <div class="modal__backdrop"></div>
     <div class="modal__content update-modal-content">
@@ -602,7 +569,6 @@
     </div>
   </div>
 
-  <!-- History Modal -->
   <div id="history-modal" class="modal hidden">
     <div class="modal__backdrop"></div>
     <div class="modal__content history-modal-content">
@@ -620,7 +586,7 @@
     </div>
   </div>
 
-</div><!-- /.app-shell -->
+</div>
   <script src="js/app.js"></script>
 </body>
 </html>

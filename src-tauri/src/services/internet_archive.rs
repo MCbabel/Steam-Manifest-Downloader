@@ -9,7 +9,7 @@ struct ArchiveSource {
     prefix: &'static str,
 }
 
-/// All Internet Archive ZIP sources to search, in order of priority.
+// Order = priority: branches.zip is checked first, fallback to NEW-depot-keys.
 const ARCHIVES: &[ArchiveSource] = &[
     ArchiveSource {
         archive_path: "/33/items/manifest-hub-repo/branches.zip",
@@ -21,7 +21,6 @@ const ARCHIVES: &[ArchiveSource] = &[
     },
 ];
 
-/// Build URL for a file inside a specific Internet Archive ZIP.
 fn build_url(source: &ArchiveSource, app_id: &str, filename: &str) -> String {
     let file_path = format!("{}/{}/{}", source.prefix, app_id, filename);
     let encoded_path = file_path.replace("/", "%2F");
@@ -31,7 +30,6 @@ fn build_url(source: &ArchiveSource, app_id: &str, filename: &str) -> String {
     )
 }
 
-/// Check if an App ID exists in any Internet Archive source.
 pub async fn check_app_exists(client: &Client, app_id: &str) -> Result<bool, String> {
     let lua_filename = format!("{}.lua", app_id);
 
@@ -51,7 +49,6 @@ pub async fn check_app_exists(client: &Client, app_id: &str) -> Result<bool, Str
     Ok(false)
 }
 
-/// Download a text file from the first archive that has it.
 pub async fn download_text_file(
     client: &Client,
     app_id: &str,
@@ -85,7 +82,6 @@ pub async fn download_text_file(
     Err(format!("File not found: {} ({})", filename, last_status))
 }
 
-/// Download a text file from ALL archives that have it. Returns all successful results.
 async fn download_text_file_from_all(
     client: &Client,
     app_id: &str,
@@ -112,7 +108,6 @@ async fn download_text_file_from_all(
     results
 }
 
-/// Download a binary file (like .manifest) from the first archive that has it.
 pub async fn download_manifest_file(
     client: &Client,
     app_id: &str,
@@ -160,8 +155,7 @@ pub async fn download_manifest_file(
     Err(format!("Manifest not found: {} ({})", filename, last_error))
 }
 
-/// Extract depot sizes from the {AppID}.json file.
-/// Maps (depot_id, manifest_gid) → size in bytes.
+// Returns (depot_id, manifest_gid) → size.
 fn extract_depot_sizes(json: &serde_json::Value) -> HashMap<(String, String), u64> {
     let mut sizes = HashMap::new();
 
@@ -171,7 +165,7 @@ fn extract_depot_sizes(json: &serde_json::Value) -> HashMap<(String, String), u6
     };
 
     for (depot_id, depot_value) in depot_obj {
-        // Skip non-depot entries (like "depotdeltapatches", "baselanguages", etc.)
+        // "depot" also contains non-depot keys like "depotdeltapatches" / "baselanguages".
         let manifests = match depot_value.get("manifests").and_then(|v| v.as_object()) {
             Some(m) => m,
             None => continue,
@@ -189,7 +183,7 @@ fn extract_depot_sizes(json: &serde_json::Value) -> HashMap<(String, String), u6
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(0);
 
-            // Only store non-trivial sizes (skip size=7 which is empty/placeholder)
+            // size == 7 is a placeholder meaning "unknown"; drop it.
             if size > 100 {
                 sizes.insert((depot_id.clone(), gid), size);
             }
@@ -199,20 +193,17 @@ fn extract_depot_sizes(json: &serde_json::Value) -> HashMap<(String, String), u6
     sizes
 }
 
-/// Download and parse the .lua file for an app, also try key.vdf from ALL sources.
-/// Returns structured app data with manifests and depot keys.
 pub async fn get_app_data(
     client: &Client,
     app_id: &str,
 ) -> Result<AppArchiveData, String> {
-    // Download .lua file (first archive that has it)
     let lua_filename = format!("{}.lua", app_id);
     let lua_content = download_text_file(client, app_id, &lua_filename).await?;
 
     let lua_result = crate::services::lua_parser::parse_lua_file(&lua_content)
         .map_err(|e| format!("Failed to parse {}.lua from Internet Archive: {}", app_id, e))?;
 
-    // Download key.vdf from ALL archives and merge keys
+    // key.vdf values differ between archives; merge all of them so more depots get keys.
     let mut depot_keys = HashMap::new();
     for vdf_content in download_text_file_from_all(client, app_id, "key.vdf").await {
         let vdf_keys =
@@ -220,7 +211,6 @@ pub async fn get_app_data(
         depot_keys.extend(vdf_keys);
     }
 
-    // Try to download {AppID}.json for depot sizes (first archive that has it)
     let depot_sizes = match download_text_file(client, app_id, &format!("{}.json", app_id)).await {
         Ok(json_content) => {
             match serde_json::from_str::<serde_json::Value>(&json_content) {
@@ -231,23 +221,20 @@ pub async fn get_app_data(
                 }
             }
         }
-        Err(_) => HashMap::new(), // Graceful fallback: no sizes available
+        Err(_) => HashMap::new(),
     };
 
-    // Merge lua depot keys
     for depot in &lua_result.depots {
         if let Some(ref key) = depot.depot_key {
             depot_keys.insert(depot.depot_id.to_string(), key.clone());
         }
     }
 
-    // Build manifest list from lua data
     let manifests: Vec<ManifestInfo> = lua_result
         .depots
         .iter()
         .filter_map(|d| {
             d.manifest_id.as_ref().map(|mid| {
-                // Look up size for this depot+manifest combo
                 let size_bytes = depot_sizes
                     .get(&(d.depot_id.to_string(), mid.clone()))
                     .copied();

@@ -18,7 +18,7 @@ use tokio::sync::Mutex;
 use tauri::AppHandle;
 
 pub struct AppState {
-    #[allow(dead_code)] // Stored for potential future use; currently only set during construction
+    #[allow(dead_code)]
     pub app_handle: AppHandle,
     pub active_jobs: Arc<Mutex<HashMap<String, JobInfo>>>,
     pub http_client: reqwest::Client,
@@ -46,11 +46,12 @@ impl AppState {
     }
 
     pub fn has_active_downloads(&self) -> bool {
-        // Use try_lock to avoid blocking the UI thread
+        // try_lock so this stays callable from the UI thread; treat contention
+        // as "active" because the mutex is only held during job mutation.
         if let Ok(jobs) = self.active_jobs.try_lock() {
             jobs.values().any(|j| j.status == "downloading" || j.status == "running")
         } else {
-            true // Assume active if we can't check
+            true
         }
     }
 }

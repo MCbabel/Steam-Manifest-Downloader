@@ -1,12 +1,7 @@
-/* ========================================
-   Steam Manifest Downloader — Landing Page
-   Scroll animations & interactions
-   ======================================== */
-
 (function () {
   'use strict';
 
-  // --- Scroll Reveal with Intersection Observer ---
+  // Scroll Reveal with Intersection Observer
   const revealElements = document.querySelectorAll('.reveal');
 
   if ('IntersectionObserver' in window) {
@@ -31,7 +26,7 @@
     revealElements.forEach((el) => el.classList.add('visible'));
   }
 
-  // --- Navbar scroll effect ---
+  // Navbar scroll effect
   const nav = document.getElementById('nav');
   let lastScroll = 0;
 
@@ -48,7 +43,7 @@
   window.addEventListener('scroll', handleNavScroll, { passive: true });
   handleNavScroll();
 
-  // --- Smooth scroll for anchor links ---
+  // Smooth scroll for anchor links
   document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
     anchor.addEventListener('click', function (e) {
       const targetId = this.getAttribute('href');
@@ -62,7 +57,7 @@
     });
   });
 
-  // --- Step number count-up animation ---
+  // Step number count-up animation
   const stepNumbers = document.querySelectorAll('.step-number');
 
   if ('IntersectionObserver' in window) {
@@ -100,7 +95,7 @@
     setTimeout(tick, 200);
   }
 
-  // --- Active nav link highlight on scroll ---
+  // Active nav link highlight on scroll
   const sections = document.querySelectorAll('section[id]');
   const navLinks = document.querySelectorAll('.nav-links a');
 
@@ -139,7 +134,7 @@
   window.addEventListener('scroll', highlightNavLink, { passive: true });
   highlightNavLink();
 
-  // --- Mobile Hamburger Menu Toggle ---
+  // Mobile Hamburger Menu Toggle
   const hamburger = document.getElementById('navHamburger');
   const mobileMenu = document.getElementById('mobileMenu');
   const mobileMenuClose = document.getElementById('mobileMenuClose');

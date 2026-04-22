@@ -1,10 +1,6 @@
 use std::path::PathBuf;
 use tokio::fs;
 
-// ---------------------------------------------------------------------------
-// Platform-specific embedded DepotDownloaderMod files
-// ---------------------------------------------------------------------------
-
 #[cfg(target_os = "windows")]
 mod platform {
     pub const DDM_FILES: &[(&str, &[u8])] = &[
@@ -30,22 +26,16 @@ mod platform {
     pub const EXE_NAME: &str = "DepotDownloaderMod";
 }
 
-/// Extract embedded DepotDownloaderMod files to a directory.
-/// Returns the path to the DepotDownloaderMod executable.
-/// Uses a marker file to avoid re-extracting on every run.
 pub async fn ensure_extracted() -> Result<PathBuf, String> {
-    // Use the system temp directory + app-specific subfolder
     let base_dir = std::env::temp_dir().join("SteamManifestDownloader").join("DepotDownloaderMod");
-
     let marker_file = base_dir.join(".extracted");
-
-    // Check if already extracted (marker file exists and exe exists)
     let exe_path = base_dir.join(platform::EXE_NAME);
+
+    // Marker + exe both present → skip the write churn.
     if marker_file.exists() && exe_path.exists() {
         return Ok(exe_path);
     }
 
-    // Extract all files
     eprintln!("[EmbeddedTools] Extracting DepotDownloaderMod to {:?}", base_dir);
 
     fs::create_dir_all(&base_dir)
@@ -59,7 +49,6 @@ pub async fn ensure_extracted() -> Result<PathBuf, String> {
             .map_err(|e| format!("Failed to extract {}: {}", name, e))?;
     }
 
-    // On Linux, set executable permissions
     #[cfg(target_os = "linux")]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -71,7 +60,6 @@ pub async fn ensure_extracted() -> Result<PathBuf, String> {
             .map_err(|e| format!("Failed to set executable permission: {}", e))?;
     }
 
-    // Write marker file
     fs::write(&marker_file, "extracted")
         .await
         .map_err(|e| format!("Failed to write marker file: {}", e))?;

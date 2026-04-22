@@ -24,7 +24,6 @@ pub struct Settings {
     pub dd_extra_args: Vec<String>,
     #[serde(default = "default_auto_update")]
     pub auto_update: bool,
-    // Advanced settings
     #[serde(default = "default_max_retries")]
     pub max_retries: u32,
     #[serde(default = "default_notification_sound")]
@@ -33,7 +32,6 @@ pub struct Settings {
     pub download_speed_limit: String,
     #[serde(default)]
     pub proxy: String,
-    // Telemetry
     #[serde(default)]
     pub telemetry_consent: TelemetryConsent,
     #[serde(default)]
@@ -41,7 +39,6 @@ pub struct Settings {
 }
 
 fn default_download_location() -> String {
-    // Default: ~/Documents/SteamDownloads
     if let Some(home) = dirs_next_home() {
         let docs = PathBuf::from(&home).join("Documents").join("SteamDownloads");
         return docs.to_string_lossy().to_string();
@@ -96,27 +93,21 @@ impl Default for Settings {
     }
 }
 
-/// Get the settings file path within the app data directory.
 fn settings_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("settings.json")
 }
 
-/// Load settings from `{app_data_dir}/settings.json`.
-/// Returns default settings if the file doesn't exist or can't be parsed.
 pub async fn load_settings(app_data_dir: &Path) -> Settings {
     let path = settings_path(app_data_dir);
-
     match fs::read_to_string(&path).await {
         Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
         Err(_) => Settings::default(),
     }
 }
 
-/// Save settings to `{app_data_dir}/settings.json`.
 pub async fn save_settings(app_data_dir: &Path, settings: &Settings) -> Result<(), String> {
     let path = settings_path(app_data_dir);
 
-    // Ensure directory exists
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .await
