@@ -3,9 +3,8 @@ use crate::services::AppState;
 use crate::services::multi_repo_search;
 use crate::services::steam_store_api;
 
-/// Search the Internet Archive for an App ID.
-/// Returns `{ repos: [...] }`. The repo list currently has at most one entry
-/// (Internet Archive) but is kept as an array for UI symmetry.
+// Returns `{ repos: [...] }` — array shape preserved for the UI even though IA
+// is currently the only source.
 #[command]
 pub async fn search_repos(
     state: tauri::State<'_, AppState>,
@@ -20,8 +19,6 @@ pub async fn search_repos(
     serde_json::to_value(&result).map_err(|e| format!("Failed to serialize search result: {}", e))
 }
 
-/// Get manifest file listing for an App ID from the Internet Archive.
-/// Returns manifests list with depot keys.
 #[command]
 pub async fn get_repo_manifests(
     state: tauri::State<'_, AppState>,
@@ -42,7 +39,6 @@ pub async fn get_repo_manifests(
     serde_json::to_value(&result).map_err(|e| format!("Failed to serialize manifests: {}", e))
 }
 
-/// Get Steam Store app info (name, header image, etc.).
 #[command]
 pub async fn get_steam_app_info(
     state: tauri::State<'_, AppState>,
@@ -62,8 +58,6 @@ pub async fn get_steam_app_info(
     }
 }
 
-/// Search Steam Store for games by name.
-/// Returns a list of matching games with appId, name, and image.
 #[command]
 pub async fn search_steam_games(
     state: tauri::State<'_, AppState>,

@@ -17,14 +17,7 @@ fn depot_block_pattern() -> &'static Regex {
     })
 }
 
-/// Parse a Key.vdf file content into a depot-key map.
-///
-/// # Arguments
-/// * `vdf_content` - The VDF file content as string
-/// * `repo` - Optional repo name to handle special decryption (sean-who uses XOR)
-///
-/// # Returns
-/// HashMap of depot_id (String) -> depot_key (hex String)
+// `repo` only matters for sean-who, whose keys are XOR-obfuscated with SEAN_WHO_XOR_KEY.
 pub fn parse_key_vdf(vdf_content: &str, repo: Option<&str>) -> HashMap<String, String> {
     let mut result = HashMap::new();
 
@@ -44,8 +37,6 @@ pub fn parse_key_vdf(vdf_content: &str, repo: Option<&str>) -> HashMap<String, S
     result
 }
 
-/// XOR decrypt a hex-encoded key using a repeating XOR key.
-/// The hex string is first converted to bytes, XOR'd, then converted back to hex.
 pub fn xor_decrypt_hex(hex_string: &str, xor_key: &[u8]) -> String {
     let bytes = match hex_decode(hex_string) {
         Some(b) => b,

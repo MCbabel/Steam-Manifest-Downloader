@@ -38,9 +38,6 @@ pub struct RepoManifests {
     pub depot_keys: HashMap<String, String>,
 }
 
-/// Search Internet Archive for an App ID.
-/// Returns a SearchResult with a single RepoResult if the app exists, or an empty
-/// list if it does not.
 pub async fn search_repos(
     client: &Client,
     app_id: &str,
@@ -66,8 +63,6 @@ pub async fn search_repos(
     Ok(SearchResult { repos: found })
 }
 
-/// Get the manifest file listing from the Internet Archive for an app.
-/// Downloads and parses the .lua file and optional key.vdf to build the manifest list.
 pub async fn get_repo_manifests(
     client: &Client,
     app_id: &str,

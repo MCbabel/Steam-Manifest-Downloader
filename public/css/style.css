@@ -1,9 +1,4 @@
-/* ============================================
-   Steam Manifest Downloader — Modern Glassmorphism
-   Matching website (smd.mcbabel.de) design system
-   ============================================ */
-
-/* --- Local Inter Font (bundled, no external CDN) --- */
+/* Local Inter Font (bundled, no external CDN) */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -21,7 +16,7 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* --- Dark Theme (Default) --- */
+/* Dark Theme (Default) */
 :root {
   --bg-primary: #0d1117;
   --bg-secondary: #161b22;
@@ -53,7 +48,7 @@
   --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
 }
 
-/* --- Light Theme --- */
+/* Light Theme */
 [data-theme="light"] {
   --bg-primary: #f6f8fa;
   --bg-secondary: #ffffff;
@@ -125,7 +120,7 @@
   display: none;
 }
 
-/* --- Reset & Base --- */
+/* Reset & Base */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -158,7 +153,7 @@ body {
   overflow: hidden;
 }
 
-/* ============ Custom Title Bar ============ */
+/* Custom Title Bar */
 .title-bar {
   display: flex;
   justify-content: space-between;
@@ -226,7 +221,7 @@ body {
   color: white;
 }
 
-/* ============ Scroll Wrapper + Background Glow ============ */
+/* Scroll Wrapper + Background Glow */
 .scroll-wrapper {
   flex: 1;
   overflow-y: auto;
@@ -269,7 +264,7 @@ body {
   background: rgba(88, 166, 255, 0.25);
 }
 
-/* ============ App Container ============ */
+/* App Container */
 .app {
   max-width: 800px;
   margin: 0 auto;
@@ -279,7 +274,7 @@ body {
   z-index: 1;
 }
 
-/* ============ Header ============ */
+/* Header */
 .header {
   text-align: center;
   margin-bottom: 2rem;
@@ -306,7 +301,7 @@ body {
   font-size: 0.95rem;
 }
 
-/* ============ Gradient Text Utility ============ */
+/* Gradient Text Utility */
 .gradient-text {
   background: var(--gradient);
   -webkit-background-clip: text;
@@ -318,7 +313,7 @@ body {
   color: var(--accent);
 }
 
-/* ============ Step Indicator ============ */
+/* Step Indicator */
 .steps {
   display: flex;
   align-items: center;
@@ -387,7 +382,7 @@ body {
   background: var(--border);
 }
 
-/* ============ Card (Glassmorphism) ============ */
+/* Card (Glassmorphism) */
 .card {
   background: var(--bg-card);
   backdrop-filter: blur(16px);
@@ -408,7 +403,7 @@ body {
   border-top: 1px solid var(--border);
 }
 
-/* ============ Sections / Steps ============ */
+/* Sections / Steps */
 .step {
   display: none;
 }
@@ -421,7 +416,7 @@ body {
   display: none !important;
 }
 
-/* ============ Drop Zone ============ */
+/* Drop Zone */
 .drop-zone {
   border: 2px dashed var(--border);
   border-radius: var(--radius);
@@ -482,7 +477,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ============ File Info ============ */
+/* File Info */
 .file-info {
   display: flex;
   align-items: center;
@@ -523,7 +518,7 @@ body {
   color: var(--error);
 }
 
-/* ============ Loading ============ */
+/* Loading */
 .loading {
   display: flex;
   align-items: center;
@@ -543,7 +538,7 @@ body {
   animation: spin 0.8s linear infinite;
 }
 
-/* ============ Error Message ============ */
+/* Error Message */
 .error-message {
   background: var(--error-bg);
   border: 1px solid var(--error);
@@ -554,7 +549,7 @@ body {
   margin-top: 1rem;
 }
 
-/* ============ Settings Sections ============ */
+/* Settings Sections */
 .settings-section {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
@@ -591,7 +586,7 @@ body {
   text-decoration: underline;
 }
 
-/* ============ Custom Manifest Input ============ */
+/* Custom Manifest Input */
 .depot-item__custom-manifest {
   display: flex;
   align-items: center;
@@ -627,7 +622,7 @@ body {
   white-space: nowrap;
 }
 
-/* ============ DepotDownloader Path ============ */
+/* DepotDownloader Path */
 .depot-downloader-path {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
@@ -695,7 +690,7 @@ body {
   margin-top: 0.35rem;
 }
 
-/* ============ Game Info Banner ============ */
+/* Game Info Banner */
 .game-info-banner {
   display: flex;
   gap: 1.25rem;
@@ -752,7 +747,7 @@ body {
   }
 }
 
-/* ============ Select Header ============ */
+/* Select Header */
 .select-header {
   display: flex;
   justify-content: space-between;
@@ -775,7 +770,7 @@ body {
   gap: 0.5rem;
 }
 
-/* ============ Depot List ============ */
+/* Depot List */
 .depot-list {
   display: flex;
   flex-direction: column;
@@ -875,7 +870,7 @@ body {
   white-space: nowrap;
 }
 
-/* ============ Buttons ============ */
+/* Buttons */
 .btn {
   padding: 0.6rem 1.25rem;
   border-radius: var(--radius-sm);
@@ -944,7 +939,7 @@ body {
   height: 16px;
 }
 
-/* ============ Progress ============ */
+/* Progress */
 .progress-header h2 {
   font-size: 1.25rem;
   margin-bottom: 1rem;
@@ -992,7 +987,7 @@ body {
   margin-bottom: 1.5rem;
 }
 
-/* ============ Depot Progress List ============ */
+/* Depot Progress List */
 .depot-progress-list {
   display: flex;
   flex-direction: column;
@@ -1048,7 +1043,7 @@ body {
   font-family: var(--font-mono);
 }
 
-/* ============ Terminal ============ */
+/* Terminal */
 .terminal {
   background: #0d1117;
   border: 1px solid rgba(88, 166, 255, 0.08);
@@ -1123,7 +1118,7 @@ body {
   color: var(--success);
 }
 
-/* ============ Completion ============ */
+/* Completion */
 .completion-message {
   padding: 1.25rem;
   border-radius: var(--radius-sm);
@@ -1144,7 +1139,7 @@ body {
   color: var(--error);
 }
 
-/* ============ Step 4: Shortcut Creation ============ */
+/* Step 4: Shortcut Creation */
 .shortcut-header {
   font-size: 1.15rem;
   font-weight: 600;
@@ -1235,7 +1230,7 @@ body {
   font-family: var(--font);
 }
 
-/* ============ Animations ============ */
+/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -1256,7 +1251,7 @@ body {
   100% { background-position: 0% 50%; }
 }
 
-/* ============ Danger Button ============ */
+/* Danger Button */
 .btn--danger {
   background: var(--error);
   border-color: var(--error);
@@ -1270,7 +1265,7 @@ body {
   box-shadow: 0 4px 16px rgba(248, 81, 73, 0.3);
 }
 
-/* ============ Modal (Glass) ============ */
+/* Modal (Glass) */
 .modal {
   position: absolute;
   inset: 0;
@@ -1347,7 +1342,7 @@ body {
   justify-content: center;
 }
 
-/* ============ Depot Search/Filter ============ */
+/* Depot Search/Filter */
 .depot-filters {
   display: flex;
   gap: 1rem;
@@ -1395,7 +1390,7 @@ body {
   accent-color: var(--accent);
 }
 
-/* ============ Disk Space Info ============ */
+/* Disk Space Info */
 .disk-space-info {
   display: flex;
   align-items: center;
@@ -1423,7 +1418,7 @@ body {
   font-weight: 600;
 }
 
-/* ============ Per-Depot Manifest Upload ============ */
+/* Per-Depot Manifest Upload */
 .depot-item__manifest-upload {
   display: flex;
   align-items: center;
@@ -1456,7 +1451,7 @@ body {
   font-style: italic;
 }
 
-/* ============ Depot Download Progress Bar ============ */
+/* Depot Download Progress Bar */
 .depot-download-progress {
   display: flex;
   align-items: center;
@@ -1503,7 +1498,7 @@ body {
   text-align: right;
 }
 
-/* ============ Download Speed / ETA Info ============ */
+/* Download Speed / ETA Info */
 .download-speed-info {
   display: flex;
   align-items: center;
@@ -1526,7 +1521,7 @@ body {
   opacity: 0.5;
 }
 
-/* ============ Card Footer Helpers ============ */
+/* Card Footer Helpers */
 .card__footer-right {
   display: flex;
   gap: 0.5rem;
@@ -1539,7 +1534,7 @@ body {
   align-items: center;
 }
 
-/* ============ Header Actions ============ */
+/* Header Actions */
 .header__actions {
   display: flex;
   justify-content: center;
@@ -1559,7 +1554,7 @@ body {
   line-height: 1;
 }
 
-/* ============ Tab Bar ============ */
+/* Tab Bar */
 .tab-bar {
   display: flex;
   border-bottom: 2px solid var(--border);
@@ -1596,7 +1591,7 @@ body {
   border-bottom-color: var(--accent);
 }
 
-/* ============ Tab Content ============ */
+/* Tab Content */
 .tab-content {
   display: none;
 }
@@ -1606,7 +1601,7 @@ body {
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ============ Search Input ============ */
+/* Search Input */
 .search-input-row {
   display: flex;
   gap: 0.75rem;
@@ -1642,7 +1637,7 @@ body {
   color: var(--text-muted);
 }
 
-/* ============ Search Input Wrapper (for autocomplete positioning) ============ */
+/* Search Input Wrapper (for autocomplete positioning) */
 .search-input-wrapper {
   position: relative;
   flex: 1;
@@ -1652,7 +1647,7 @@ body {
   width: 100%;
 }
 
-/* ============ Search Autocomplete Dropdown ============ */
+/* Search Autocomplete Dropdown */
 .search-autocomplete {
   position: absolute;
   top: 100%;
@@ -1729,7 +1724,7 @@ body {
   text-align: center;
 }
 
-/* ============ Search Results ============ */
+/* Search Results */
 .search-results {
   margin-top: 1rem;
 }
@@ -1752,7 +1747,7 @@ body {
   border-radius: 3px;
 }
 
-/* ============ Repo Card ============ */
+/* Repo Card */
 .repo-card {
   display: flex;
   align-items: center;
@@ -1846,14 +1841,14 @@ body {
   color: var(--accent);
 }
 
-/* ============ Search Next Row ============ */
+/* Search Next Row */
 .search-next-row {
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
 }
 
-/* ============ Settings Modal ============ */
+/* Settings Modal */
 .settings-modal-content {
   text-align: left;
   max-height: calc(85vh - 2rem);
@@ -1906,7 +1901,7 @@ body {
   line-height: 1;
 }
 
-/* ============ Toggle Switch ============ */
+/* Toggle Switch */
 .settings-field__toggle-wrap {
   display: flex;
   align-items: center;
@@ -1964,7 +1959,7 @@ body {
   background: #fff;
 }
 
-/* ============ Advanced Settings ============ */
+/* Advanced Settings */
 .settings-advanced {
   margin-top: 16px;
   border-top: 1px solid var(--border);
@@ -2018,7 +2013,7 @@ body {
   margin-bottom: 0;
 }
 
-/* ============ Telemetry Consent Modal ============ */
+/* Telemetry Consent Modal */
 .telemetry-modal-content {
   max-width: 520px;
   text-align: left;
@@ -2073,7 +2068,7 @@ body {
   border-radius: 3px;
 }
 
-/* ============ Debug / Build Info ============ */
+/* Debug / Build Info */
 .build-info {
   display: flex;
   flex-direction: column;
@@ -2145,7 +2140,7 @@ body {
   padding: 6px 12px;
 }
 
-/* ============ Update Modal ============ */
+/* Update Modal */
 .update-modal-content {
   text-align: left;
   max-width: 480px;
@@ -2241,7 +2236,7 @@ body {
   100% { background-position: -200% 0; }
 }
 
-/* ============ Responsive ============ */
+/* Responsive */
 @media (max-width: 600px) {
   .app {
     padding: 1rem;
@@ -2270,7 +2265,7 @@ body {
   }
 }
 
-/* ============ .NET Runtime Warning Banner ============ */
+/* .NET Runtime Warning Banner */
 .dotnet-warning {
   background: linear-gradient(135deg, #f39c12, #e67e22);
   color: #1a1a2e;
@@ -2340,7 +2335,7 @@ body {
   opacity: 1;
 }
 
-/* ============ History Modal ============ */
+/* History Modal */
 .history-modal-content {
   text-align: left;
   max-width: 600px;

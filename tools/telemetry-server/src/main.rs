@@ -131,11 +131,7 @@ async fn ingest(
 }
 
 fn keypair_from_secret(secret: &[u8; 32]) -> KeyPair {
-    // X25519 derives the public key deterministically from the secret:
-    //   pubkey = scalar_mult_base(secret)
-    // dryoc exposes this through `KeyPair::from_secret_key`.
-    let secret_key = SecretKey::from(*secret);
-    KeyPair::from_secret_key(secret_key)
+    KeyPair::from_secret_key(SecretKey::from(*secret))
 }
 
 async fn shutdown_signal() {

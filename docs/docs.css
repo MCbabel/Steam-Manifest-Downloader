@@ -1,9 +1,4 @@
-/* ========================================
-   Steam Manifest Downloader — Documentation
-   Additional styles for the docs layout
-   ======================================== */
-
-/* --- Page Entrance Animations --- */
+/* Page Entrance Animations */
 @keyframes docsFadeSlideUp {
   from { opacity: 0; transform: translateY(30px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -14,7 +9,7 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
-/* --- Docs Layout --- */
+/* Docs Layout */
 .docs-layout {
   position: relative;
   z-index: 1;
@@ -25,7 +20,7 @@
   gap: 40px;
 }
 
-/* --- Sidebar --- */
+/* Sidebar */
 .docs-sidebar {
   position: sticky;
   top: 80px;
@@ -97,14 +92,14 @@
   font-size: 0.82rem;
 }
 
-/* --- Docs Content --- */
+/* Docs Content */
 .docs-content {
   flex: 1;
   min-width: 0;
   animation: docsFadeSlideUp 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both;
 }
 
-/* --- Doc Section Card --- */
+/* Doc Section Card */
 .doc-section {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -181,7 +176,7 @@
   text-decoration-color: var(--blue);
 }
 
-/* --- Section Tag inside doc --- */
+/* Section Tag inside doc */
 .doc-tag {
   display: inline-block;
   padding: 3px 12px;
@@ -196,14 +191,14 @@
   margin-bottom: 12px;
 }
 
-/* --- Dividers inside sections --- */
+/* Dividers inside sections */
 .doc-divider {
   border: none;
   border-top: 1px solid var(--border);
   margin: 28px 0;
 }
 
-/* --- Code Blocks --- */
+/* Code Blocks */
 .code-block {
   position: relative;
   background: rgba(13, 17, 23, 0.8);
@@ -279,7 +274,7 @@
 .code-cm { color: #8b949e; }
 .code-key { color: #d2a8ff; }
 
-/* --- Inline code --- */
+/* Inline code */
 .doc-section code:not([class]) {
   background: rgba(88,166,255,0.08);
   border: 1px solid rgba(88,166,255,0.12);
@@ -290,7 +285,7 @@
   color: var(--blue);
 }
 
-/* --- Info / Warning / Tip boxes --- */
+/* Info / Warning / Tip boxes */
 .doc-callout {
   display: flex;
   gap: 14px;
@@ -339,7 +334,7 @@
 
 .doc-callout.danger .doc-callout-icon { color: #f85149; }
 
-/* --- FAQ --- */
+/* FAQ */
 .faq-item {
   padding: 16px 20px;
   background: rgba(13, 17, 23, 0.4);
@@ -395,7 +390,7 @@
   color: var(--blue);
 }
 
-/* --- Mobile Sidebar Toggle --- */
+/* Mobile Sidebar Toggle */
 .docs-sidebar-toggle {
   display: none;
   position: fixed;
@@ -436,7 +431,7 @@
   opacity: 1;
 }
 
-/* --- Responsive Docs --- */
+/* Responsive Docs */
 @media (max-width: 900px) {
   .docs-layout {
     padding-top: 80px;

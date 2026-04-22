@@ -1,12 +1,6 @@
-/**
- * Steam Manifest Downloader - Frontend Application (Tauri v2)
- */
-
-// ============ Tauri API ============
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
-// ============ State ============
 const state = {
   currentStep: 1,
   mode: 'upload', // 'upload' or 'search'
@@ -21,55 +15,47 @@ const state = {
   notificationsEnabled: false,
   notificationSoundEnabled: true,
   depotManifests: {}, // depotId -> { originalName, storedPath }
-  // Search mode state
   searchRepos: [],
   selectedRepo: null,
   searchAppId: null,
   searchRepo: null,
   searchSha: null,
   searchKeyVdfKeys: null,
-  // Speed tracking
   speedTracker: {
     lastPercent: 0,
     lastTime: 0,
-    samples: [],     // Array of { percent, time } für gleitenden Durchschnitt
-    currentDepotSize: 0,  // Größe des aktuell herunterladenen Depots in Bytes
+    samples: [],
+    currentDepotSize: 0,
     currentDepotId: null,
-    depotStartTime: 0,      // Wann der aktuelle Depot-Download gestartet hat
-    staleTimer: null,        // setInterval für Elapsed-Timer wenn kein Fortschritt
-    lastUpdateTime: 0,       // Letzter Zeitpunkt mit echtem Prozent-Update
+    depotStartTime: 0,
+    staleTimer: null,
+    lastUpdateTime: 0,
   },
 };
 
-// ============ Constants ============
 const MH_APIKEY_STORAGE_KEY = 'manifestHubApiKey';
 let autoRedownloadPending = false;
 let autoSelectAllOnStep2 = false;
 let autoSelectDepotIds = null; // specific depot IDs to re-select, or null for all
 let defaultDownloadDir = '';
 
-// ============ DOM Elements ============
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
 const els = {
-  // Steps
   stepUpload: $('#step-upload'),
   stepSelect: $('#step-select'),
   stepProgress: $('#step-progress'),
-  // Tabs
   tabUpload: $('#tab-upload'),
   tabSearch: $('#tab-search'),
   tabContentUpload: $('#tab-content-upload'),
   tabContentSearch: $('#tab-content-search'),
-  // Upload
   dropZone: $('#drop-zone'),
   fileInfo: $('#file-info'),
   fileName: $('#file-name'),
   fileRemove: $('#file-remove'),
   uploadError: $('#upload-error'),
   uploadLoading: $('#upload-loading'),
-  // Search
   searchAppIdInput: $('#search-appid-input'),
   searchAutocomplete: $('#search-autocomplete'),
   btnSearch: $('#btn-search'),
@@ -84,7 +70,6 @@ const els = {
   searchGameImage: $('#search-game-image'),
   searchGameName: $('#search-game-name'),
   searchGameDescription: $('#search-game-description'),
-  // Select
   appIdDisplay: $('#app-id-display'),
   depotCount: $('#depot-count'),
   depotList: $('#depot-list'),
@@ -92,51 +77,39 @@ const els = {
   btnDeselectAll: $('#btn-deselect-all'),
   btnBack: $('#btn-back'),
   btnDownload: $('#btn-download'),
-  // Progress (depot download)
   depotProgressFill: $('#depot-progress-fill'),
   depotProgressText: $('#depot-progress-text'),
-  // Speed / ETA
   downloadSpeedInfo: $('#download-speed-info'),
   downloadSpeed: $('#download-speed'),
   downloadEta: $('#download-eta'),
-  // Progress
   progressHeader: $('#progress-header'),
   progressBarFill: $('#progress-bar-fill'),
   progressStatus: $('#progress-status'),
   depotProgressList: $('#depot-progress-list'),
   terminalOutput: $('#terminal-output'),
   completionMessage: $('#completion-message'),
-  // btnNew removed - now in Step 4
   btnCancel: $('#btn-cancel'),
-  // btnStartOver removed - now in Step 4
   mhApiKey: $('#mh-apikey'),
   downloadDirInput: $('#download-dir'),
   btnBrowseDir: $('#btn-browse-dir'),
-  // Disk Space
   diskSpaceInfo: $('#disk-space-info'),
   diskSpaceText: $('#disk-space-text'),
-  // Game Info (Step 2)
   gameInfoBanner: $('#game-info-banner'),
   gameInfoLoading: $('#game-info-loading'),
   gameHeaderImage: $('#game-header-image'),
   gameName: $('#game-name'),
   gameDescription: $('#game-description'),
-  // Modal
   cancelModal: $('#cancel-modal'),
   btnCancelYes: $('#btn-cancel-yes'),
   btnCancelNo: $('#btn-cancel-no'),
-  // Theme
   btnThemeToggle: $('#btn-theme-toggle'),
-  // Depot Filters
   depotSearch: $('#depotSearch'),
   showSelectedOnly: $('#showSelectedOnly'),
-  // Settings
   btnSettings: $('#btn-settings'),
   settingsModal: $('#settings-modal'),
   btnSettingsSave: $('#btn-settings-save'),
   btnSettingsCancel: $('#btn-settings-cancel'),
   autoUpdateToggle: $('#auto-update-toggle'),
-  // Advanced Settings
   btnToggleAdvanced: $('#btn-toggle-advanced'),
   advancedSettingsContent: $('#advanced-settings-content'),
   ddExtraArgsInput: $('#dd-extra-args-input'),
@@ -144,12 +117,10 @@ const els = {
   speedLimitInput: $('#speed-limit-input'),
   proxyInput: $('#proxy-input'),
   notificationSoundToggle: $('#notification-sound-toggle'),
-  // Telemetry
   telemetryModal: $('#telemetry-modal'),
   btnTelemetryAccept: $('#btn-telemetry-accept'),
   btnTelemetryDecline: $('#btn-telemetry-decline'),
   telemetryToggle: $('#telemetry-toggle'),
-  // Debug / Build Info
   buildInfoChannel: $('#build-info-channel'),
   buildInfoVersion: $('#build-info-version'),
   buildInfoSha: $('#build-info-sha'),
@@ -157,13 +128,11 @@ const els = {
   buildInfoProfile: $('#build-info-profile'),
   buildInfoPlatform: $('#build-info-platform'),
   btnCopyBuildInfo: $('#btn-copy-build-info'),
-  // History
   btnHistory: $('#btn-history'),
   historyModal: $('#history-modal'),
   historyList: $('#history-list'),
   btnHistoryClear: $('#btn-history-clear'),
   btnHistoryClose: $('#btn-history-close'),
-  // Update modal
   updateModal: $('#update-modal'),
   updateVersion: $('#update-version'),
   updateDate: $('#update-date'),
@@ -176,7 +145,6 @@ const els = {
   btnUpdateNow: $('#btn-update-now'),
   btnUpdateLater: $('#btn-update-later'),
   btnUpdateSkip: $('#btn-update-skip'),
-  // Step 4: Shortcuts
   stepShortcut: $('#step-shortcut'),
   step4Connector: $('#step4-connector'),
   step4Indicator: $('#step4-indicator'),
@@ -194,18 +162,15 @@ const els = {
   btnShortcutStartOver: $('#btn-shortcut-start-over'),
 };
 
-// ============ Step Navigation ============
 function goToStep(step) {
   state.currentStep = step;
 
-  // Update step sections
   [els.stepUpload, els.stepSelect, els.stepProgress, els.stepShortcut].forEach((el, i) => {
     if (!el) return;
     el.classList.toggle('active', i + 1 === step);
     el.classList.toggle('hidden', i + 1 !== step);
   });
 
-  // Update step indicators
   $$('.steps__item').forEach((el) => {
     const s = parseInt(el.dataset.step);
     el.classList.toggle('active', s === step);
@@ -213,27 +178,21 @@ function goToStep(step) {
   });
 }
 
-// ============ Tab Switching ============
 function switchTab(tabName) {
   state.mode = tabName;
 
-  // Update tab buttons
   els.tabUpload.classList.toggle('active', tabName === 'upload');
   els.tabSearch.classList.toggle('active', tabName === 'search');
 
-  // Update tab content
   els.tabContentUpload.classList.toggle('active', tabName === 'upload');
   els.tabContentSearch.classList.toggle('active', tabName === 'search');
 }
 
-// ============ File Upload (Tauri File Dialog) ============
 function initUpload() {
   const dropZone = els.dropZone;
 
-  // Click to open Tauri file dialog
   dropZone.addEventListener('click', openFileDialog);
 
-  // Drag and drop visual feedback (actual file path from Tauri drag-drop event)
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
     dropZone.classList.add('drag-over');
@@ -243,14 +202,13 @@ function initUpload() {
     dropZone.classList.remove('drag-over');
   });
 
+  // HTML5 drag-drop inside a WebView doesn't surface file paths; we rely on the
+  // 'tauri://drag-drop' event below instead of e.dataTransfer.
   dropZone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
-    // HTML5 drag events in webview don't provide full file paths
-    // Tauri drag-drop is handled via the 'tauri://drag-drop' event below
   });
 
-  // Listen for Tauri native drag-drop events (provides file paths)
   listen('tauri://drag-drop', (event) => {
     const paths = event.payload.paths || event.payload;
     if (Array.isArray(paths) && paths.length > 0) {
@@ -258,7 +216,6 @@ function initUpload() {
     }
   });
 
-  // Remove file
   els.fileRemove.addEventListener('click', (e) => {
     e.stopPropagation();
     resetUpload();
@@ -287,7 +244,6 @@ function resetUpload() {
   state.parsedData = null;
 }
 
-// ============ Per-Depot Manifest File Upload (Tauri Dialog) ============
 async function handleDepotManifestFile(depotId) {
   try {
     const { open } = window.__TAURI__.dialog;
@@ -298,7 +254,6 @@ async function handleDepotManifestFile(depotId) {
 
     const fileName = filePath.split(/[\\/]/).pop();
 
-    // Store the file path — the Rust backend will copy it during download
     state.depotManifests[depotId] = {
       originalName: fileName,
       storedPath: filePath
@@ -324,7 +279,6 @@ function removeDepotManifest(depotId) {
 }
 
 async function handleFilePath(filePath) {
-  // Validate extension
   const ext = filePath.split('.').pop().toLowerCase();
   if (ext !== 'lua' && ext !== 'st') {
     showUploadError('Please select a .lua or .st file');
@@ -333,7 +287,6 @@ async function handleFilePath(filePath) {
 
   const fileName = filePath.split(/[\\/]/).pop();
 
-  // Show file info
   els.dropZone.classList.add('hidden');
   els.fileInfo.classList.remove('hidden');
   els.fileName.textContent = fileName;
@@ -343,7 +296,6 @@ async function handleFilePath(filePath) {
   try {
     const raw = await invoke('parse_lua_file', { path: filePath });
 
-    // Normalize snake_case response to camelCase for internal use
     state.parsedData = {
       mainAppId: raw.main_app_id,
       depots: (raw.depots || []).map(d => ({
@@ -357,7 +309,6 @@ async function handleFilePath(filePath) {
     els.uploadLoading.classList.add('hidden');
     emitEvent('lua_parsed', { depot_count: state.parsedData.depots.length });
 
-    // Auto-advance to Step 2
     showSelectionStep();
   } catch (error) {
     els.uploadLoading.classList.add('hidden');
@@ -370,7 +321,6 @@ function showUploadError(message) {
   els.uploadError.classList.remove('hidden');
 }
 
-// ============ Autocomplete Search ============
 let autocompleteDebounceTimer = null;
 
 function isNumericInput(str) {
@@ -408,7 +358,6 @@ async function triggerAutocomplete(query) {
   showAutocompleteLoading();
   try {
     const results = await invoke('search_steam_games', { query });
-    // Only render if the input still matches (user may have typed more)
     const currentVal = els.searchAppIdInput.value.trim();
     if (currentVal === query || (!isNumericInput(currentVal) && currentVal.length >= 2)) {
       renderAutocompleteResults(results);
@@ -422,7 +371,6 @@ async function triggerAutocomplete(query) {
 function onSearchInput() {
   const val = els.searchAppIdInput.value.trim();
 
-  // Clear any pending debounce
   if (autocompleteDebounceTimer) {
     clearTimeout(autocompleteDebounceTimer);
     autocompleteDebounceTimer = null;
@@ -434,7 +382,6 @@ function onSearchInput() {
     return;
   }
 
-  // Need at least 2 chars for search
   if (val.length < 2) {
     hideAutocomplete();
     return;
@@ -446,7 +393,6 @@ function onSearchInput() {
   }, 400);
 }
 
-// ============ App ID Search ============
 async function performSearch() {
   hideAutocomplete();
   const appIdStr = els.searchAppIdInput.value.trim();
@@ -458,7 +404,6 @@ async function performSearch() {
     return;
   }
 
-  // Reset previous results
   els.searchError.classList.add('hidden');
   els.searchResults.classList.add('hidden');
   els.searchNextRow.classList.add('hidden');
@@ -467,13 +412,11 @@ async function performSearch() {
   state.searchRepos = [];
   state.searchAppId = appId;
 
-  // Show loading
   els.searchLoading.classList.remove('hidden');
   els.btnSearch.disabled = true;
 
   emitEvent('search_performed');
 
-  // Fetch game info in parallel
   fetchSearchGameInfo(appId);
 
   try {
@@ -539,14 +482,12 @@ async function fetchSearchGameInfo(appId) {
       els.searchGameBanner.classList.remove('hidden');
     }
   } catch (e) {
-    // Silently fail
   }
 }
 
 function renderRepoList(repos) {
   els.repoList.innerHTML = '';
 
-  // Individual repo cards
   repos.forEach((repo, index) => {
     const card = document.createElement('div');
     card.className = 'repo-card';
@@ -566,12 +507,10 @@ function renderRepoList(repos) {
     els.repoList.appendChild(card);
   });
 
-  // Auto-select the first (and likely only) repo if there's exactly one
   if (repos.length === 1) {
     selectRepo(0);
   }
 
-  // Auto-proceed for re-download from history
   if (autoRedownloadPending && repos.length > 0) {
     autoRedownloadPending = false;
     selectRepo(0);
@@ -596,16 +535,13 @@ function escapeHtml(str) {
 }
 
 function selectRepo(index) {
-  // Deselect all
   $$('.repo-card').forEach(c => c.classList.remove('selected'));
 
   state.selectedRepo = state.searchRepos[index];
 
-  // Highlight the selected card
   const card = els.repoList.querySelector(`[data-repo-index="${index}"]`);
   if (card) card.classList.add('selected');
 
-  // Show Next button
   els.searchNextRow.classList.remove('hidden');
 }
 
@@ -615,7 +551,6 @@ async function proceedFromSearch() {
   const repo = state.selectedRepo;
   const appId = state.searchAppId;
 
-  // Hide next button, show manifest loading
   els.searchNextRow.classList.add('hidden');
   els.manifestLoading.classList.remove('hidden');
   els.searchError.classList.add('hidden');
@@ -646,13 +581,11 @@ async function proceedFromSearch() {
       return;
     }
 
-    // Build parsedData for Step 2
     state.parsedData = {
       mainAppId: appId,
       depots: depots
     };
 
-    // Transition to Step 2
     showSelectionStep();
   } catch (error) {
     els.manifestLoading.classList.add('hidden');
@@ -661,7 +594,6 @@ async function proceedFromSearch() {
   }
 }
 
-// ============ Download Directory ============
 async function loadSettingsAndDefaults() {
   try {
     const settings = await invoke('get_settings');
@@ -709,16 +641,13 @@ async function browseDownloadDir() {
   }
 }
 
-// ============ "Start Over" — go back to Step 2 with preserved selections ============
 function goBackToSelect() {
-  // Clean up progress listener
   cleanupProgressListener();
   state.jobId = null;
   // Go back to Step 2 (select) — parsedData and selectedDepots are still intact
   goToStep(2);
 }
 
-// ============ Game Info ============
 async function fetchGameInfo(appId) {
   els.gameInfoBanner.classList.add('hidden');
   els.gameInfoLoading.classList.remove('hidden');
@@ -749,13 +678,11 @@ async function fetchGameInfo(appId) {
       return;
     }
   } catch (e) {
-    // Silently fail - just hide the banner
   }
 
   els.gameInfoLoading.classList.add('hidden');
 }
 
-// ============ Depot Selection ============
 function formatBytes(bytes) {
   if (!bytes || bytes <= 0) return null;
   const gb = bytes / (1024 * 1024 * 1024);
@@ -777,7 +704,6 @@ function showSelectionStep() {
   if (state.mode !== 'search' || !state.gameName) {
     fetchGameInfo(data.mainAppId);
   } else {
-    // Copy search game info to step 2 banner
     if (state.headerImage) {
       els.gameHeaderImage.src = state.headerImage;
       els.gameHeaderImage.alt = state.gameName || 'Game Cover';
@@ -789,16 +715,13 @@ function showSelectionStep() {
     }
   }
 
-  // Restore saved API key from localStorage (MH key is still local)
   const savedApiKey = localStorage.getItem(MH_APIKEY_STORAGE_KEY);
   if (savedApiKey) els.mhApiKey.value = savedApiKey;
 
-  // Restore download directory
   if (els.downloadDirInput && defaultDownloadDir) {
     els.downloadDirInput.value = els.downloadDirInput.value || defaultDownloadDir;
   }
 
-  // Render depot list
   els.depotList.innerHTML = '';
   state.selectedDepots.clear();
 
@@ -833,7 +756,6 @@ function showSelectionStep() {
       </div>
     `;
 
-    // Attach manifest upload button handler
     const manifestBtn = item.querySelector('.depot-manifest-btn');
     if (manifestBtn) {
       manifestBtn.addEventListener('click', (e) => {
@@ -851,11 +773,9 @@ function showSelectionStep() {
     els.depotList.appendChild(item);
   });
 
-  // Reset depot filters
   if (els.depotSearch) els.depotSearch.value = '';
   if (els.showSelectedOnly) els.showSelectedOnly.checked = false;
 
-  // Auto-select depots for re-download from history
   if (autoSelectAllOnStep2) {
     autoSelectAllOnStep2 = false;
     if (autoSelectDepotIds && autoSelectDepotIds.length > 0) {
@@ -907,7 +827,6 @@ function updateDownloadButton() {
   const count = state.selectedDepots.size;
   els.btnDownload.disabled = count === 0;
 
-  // Calculate total size of selected depots
   let totalBytes = 0;
   let hasSizeInfo = false;
   if (state.parsedData && state.parsedData.depots) {
@@ -930,7 +849,6 @@ function updateDownloadButton() {
   `;
 }
 
-// ============ Download Process ============
 async function startDownload() {
   const data = state.parsedData;
   const selectedDepots = data.depots.filter(d => state.selectedDepots.has(d.depotId));
@@ -939,15 +857,12 @@ async function startDownload() {
 
   emitEvent('download_started', { depot_count: selectedDepots.length });
 
-  // Request notification permission on first download
   requestNotificationPermission();
 
-  // Get and save settings
   const mhApiKey = els.mhApiKey.value.trim();
   if (mhApiKey) localStorage.setItem(MH_APIKEY_STORAGE_KEY, mhApiKey);
   saveDownloadDir();
 
-  // Collect custom manifest IDs and uploaded manifest files from inputs
   const depotsWithCustomManifests = selectedDepots.map(depot => {
     const input = document.querySelector(`.custom-manifest-input[data-depot-id="${depot.depotId}"]`);
     const customManifestId = input ? input.value.trim() : '';
@@ -969,12 +884,10 @@ async function startDownload() {
     return result;
   });
 
-  // Go to progress step
   goToStep(3);
   initProgressUI(depotsWithCustomManifests);
 
   try {
-    // Build download config
     const downloadConfig = {
       mainAppId: String(data.mainAppId),
       selectedDepots: depotsWithCustomManifests,
@@ -984,20 +897,17 @@ async function startDownload() {
       headerImage: state.headerImage || null
     };
 
-    // Add search-mode specific fields
     if (state.mode === 'search') {
       if (state.searchRepo) downloadConfig.repo = state.searchRepo;
       if (state.searchSha) downloadConfig.sha = state.searchSha;
       if (state.searchKeyVdfKeys) downloadConfig.keyVdfKeys = state.searchKeyVdfKeys;
     }
 
-    // Start download via Tauri invoke
     const result = await invoke('start_download', { config: downloadConfig });
 
     state.jobId = result.jobId;
     state.downloadDir = result.downloadDir;
 
-    // Listen for progress events (replaces WebSocket)
     connectProgressListener();
   } catch (error) {
     appendTerminalLine(`Error: ${error}`, 'error');
@@ -1006,7 +916,6 @@ async function startDownload() {
 }
 
 function initProgressUI(depots) {
-  // Reset progress
   els.progressBarFill.style.width = '0%';
   els.progressStatus.textContent = 'Initializing...';
   els.terminalOutput.innerHTML = '';
@@ -1016,14 +925,12 @@ function initProgressUI(depots) {
   els.btnCancel.disabled = false;
   els.btnCancel.innerHTML = '✕ Cancel Download';
   els.diskSpaceInfo.classList.add('hidden');
-  // Reset depot download progress bar
   if (els.depotProgressFill) els.depotProgressFill.style.width = '0%';
   if (els.depotProgressText) els.depotProgressText.textContent = '0%';
   if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
   clearInterval(state.speedTracker.staleTimer);
   state.speedTracker.staleTimer = null;
 
-  // Build depot progress items
   els.depotProgressList.innerHTML = '';
   depots.forEach((depot) => {
     const item = document.createElement('div');
@@ -1038,9 +945,7 @@ function initProgressUI(depots) {
   });
 }
 
-// ============ Tauri Progress Events (replaces WebSocket) ============
 async function connectProgressListener() {
-  // Clean up any previous listener
   if (state.unlistenProgress) {
     state.unlistenProgress();
     state.unlistenProgress = null;
@@ -1077,7 +982,6 @@ function handleProgressMessage(msg) {
     case 'depot_complete':
       updateDepotStatus(msg.depotId, 'done', 'Complete');
       updateOverallProgress(msg.current, msg.total);
-      // Reset depot progress bar for next depot
       updateDepotDownloadProgress(100);
       break;
 
@@ -1141,17 +1045,14 @@ function handleStatusUpdate(msg) {
       break;
 
     case 'running_downloader':
-      // Reset speed tracker for new depot
       state.speedTracker.samples = [];
       state.speedTracker.lastTime = 0;
       state.speedTracker.lastPercent = 0;
       state.speedTracker.depotStartTime = Date.now();
       state.speedTracker.lastUpdateTime = Date.now();
-      // Stop previous stale timer and start new one
       clearInterval(state.speedTracker.staleTimer);
       state.speedTracker.staleTimer = null;
       startStaleTimer();
-      // Set current depot size if available
       if (msg.depotId) {
         const depot = state.parsedData?.depots?.find(d => d.depotId === String(msg.depotId));
         state.speedTracker.currentDepotSize = depot?.sizeBytes || 0;
@@ -1172,7 +1073,6 @@ function handleStatusUpdate(msg) {
 
 function handleOutput(msg) {
   const cls = msg.stream === 'stderr' ? 'stderr' : 'stdout';
-  // Tauri events use 'output' field instead of 'line'
   const text = msg.output || msg.line;
   if (text) {
     appendTerminalLine(text, cls);
@@ -1199,28 +1099,22 @@ function updateSpeedAndEta(percent) {
   const now = Date.now();
   const tracker = state.speedTracker;
 
-  // Record last update time for stale detection
   tracker.lastUpdateTime = now;
 
-  // Initialize on first call
   if (tracker.lastTime === 0) {
     tracker.lastTime = now;
     tracker.lastPercent = percent;
     return;
   }
 
-  // Add sample
   tracker.samples.push({ percent, time: now });
 
-  // Keep only last 10 samples (gleitender Durchschnitt)
   if (tracker.samples.length > 10) {
     tracker.samples.shift();
   }
 
-  // Need at least 2 samples
   if (tracker.samples.length < 2) return;
 
-  // Calculate rate from oldest to newest sample
   const oldest = tracker.samples[0];
   const newest = tracker.samples[tracker.samples.length - 1];
   const timeDelta = (newest.time - oldest.time) / 1000; // seconds
@@ -1232,7 +1126,6 @@ function updateSpeedAndEta(percent) {
   const remainingPercent = 100 - percent;
   const etaSeconds = remainingPercent / percentPerSecond;
 
-  // Calculate speed in MB/s if we know the depot size
   let speedText = '';
   if (tracker.currentDepotSize > 0) {
     const bytesPerSecond = (tracker.currentDepotSize * percentDelta / 100) / timeDelta;
@@ -1242,10 +1135,8 @@ function updateSpeedAndEta(percent) {
     speedText = `↓ ${percentPerSecond.toFixed(2)}%/s`;
   }
 
-  // Format ETA
   const etaText = formatEta(etaSeconds);
 
-  // Show the info
   const infoEl = els.downloadSpeedInfo;
   if (infoEl) {
     infoEl.classList.remove('hidden');
@@ -1280,7 +1171,6 @@ function startStaleTimer() {
     const timeSinceLastUpdate = (now - state.speedTracker.lastUpdateTime) / 1000;
 
     if (timeSinceLastUpdate > 5) {
-      // Switch to elapsed time mode — show time since last progress update
       const waitingFor = (now - state.speedTracker.lastUpdateTime) / 1000;
       const infoEl = els.downloadSpeedInfo;
       if (infoEl) {
@@ -1312,7 +1202,6 @@ function handleComplete(msg) {
   emitEvent('download_completed', { success: true });
   showCompletion(true, msg.message);
 
-  // Mark remaining depots as done
   if (msg.results) {
     const results = Array.isArray(msg.results) ? msg.results : [];
     results.forEach((r) => {
@@ -1322,7 +1211,6 @@ function handleComplete(msg) {
 
   appendTerminalLine(`\n${msg.message}`, 'success');
 
-  // Browser notification + sound
   const gameName = state.gameName || 'Game';
   showBrowserNotification('Download Complete!', `${gameName} has been downloaded successfully.`, state.headerImage);
   playNotificationSound();
@@ -1360,7 +1248,6 @@ function handleCancelled(msg) {
   cleanupProgressListener();
 }
 
-// ============ UI Helpers ============
 function updateDepotStatus(depotId, status, text) {
   const item = document.getElementById(`depot-progress-${depotId}`);
   if (!item) return;
@@ -1368,7 +1255,6 @@ function updateDepotStatus(depotId, status, text) {
   const icon = item.querySelector('.depot-progress-item__icon');
   const statusEl = item.querySelector('.depot-progress-item__status');
 
-  // Remove all status classes
   icon.className = 'depot-progress-item__icon';
 
   switch (status) {
@@ -1411,7 +1297,6 @@ function showCompletion(success, message) {
   els.completionMessage.classList.add(success ? 'completion-message--success' : 'completion-message--error');
   els.completionMessage.textContent = message;
   els.btnCancel.classList.add('hidden');
-  // Show Next button on success (goes to Step 4 if shortcuts supported, otherwise acts as reset)
   if (els.btnNextStep) {
     els.btnNextStep.classList.toggle('hidden', !success);
     els.btnNextStep.textContent = state.shortcutSupported ? 'Next' : 'Start New Download';
@@ -1432,17 +1317,14 @@ function resetApp() {
   state.searchSha = null;
   state.searchKeyVdfKeys = null;
   cleanupProgressListener();
-  // Reset shortcut UI
   if (els.shortcutStatus) els.shortcutStatus.classList.add('hidden');
   if (els.shortcutDetectedSection) els.shortcutDetectedSection.classList.add('hidden');
   if (els.shortcutDetectedList) els.shortcutDetectedList.innerHTML = '';
   if (els.shortcutExePath) els.shortcutExePath.value = '';
   if (els.btnCreateShortcuts) { els.btnCreateShortcuts.disabled = false; els.btnCreateShortcuts.textContent = 'Create Shortcuts'; }
   if (els.btnNextStep) els.btnNextStep.classList.add('hidden');
-  // Reset game info banner
   els.gameInfoBanner.classList.add('hidden');
   els.gameInfoLoading.classList.add('hidden');
-  // Reset search UI
   els.searchResults.classList.add('hidden');
   els.searchNextRow.classList.add('hidden');
   els.searchError.classList.add('hidden');
@@ -1452,14 +1334,11 @@ function resetApp() {
   goToStep(1);
 }
 
-// ============ Settings Modal ============
 async function openSettings() {
-  // Load fresh settings from backend
   try {
     const settings = await invoke('get_settings');
     els.autoUpdateToggle.checked = settings.auto_update !== false;
 
-    // Advanced settings
     els.ddExtraArgsInput.value = (settings.dd_extra_args || []).join(' ');
     els.maxRetriesInput.value = settings.max_retries ?? 3;
     els.speedLimitInput.value = settings.download_speed_limit || '';
@@ -1502,7 +1381,6 @@ async function loadBuildInfo() {
   }
 }
 
-// ============ Telemetry ============
 async function initTelemetryConsent() {
   try {
     const status = await invoke('get_telemetry_status');
@@ -1582,7 +1460,6 @@ async function saveSettings() {
     const currentSettings = await invoke('get_settings');
     currentSettings.auto_update = autoUpdate;
 
-    // Advanced settings
     const argsStr = els.ddExtraArgsInput.value.trim();
     if (argsStr) {
       currentSettings.dd_extra_args = argsStr.split(/\s+/).filter(a => a.length > 0);
@@ -1616,7 +1493,6 @@ function toggleAdvancedSettings() {
   }
 }
 
-// ============ Auto-Update ============
 const SKIPPED_VERSION_KEY = 'skippedUpdateVersion';
 
 async function checkForUpdates() {
@@ -1645,22 +1521,16 @@ async function checkForUpdates() {
 
 /** Simple Markdown → HTML renderer for release notes */
 function renderMarkdown(md) {
-  // Escape HTML
   let html = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  // Headings
   html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
   html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
   html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
-  // Bold + Italic
   html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-  // Inline code
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // Unordered list items
   html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
   html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
-  // Line breaks (remaining)
   html = html.replace(/\n/g, '<br>');
   // Clean up double <br> after block elements
   html = html.replace(/<\/(h[234]|ul|li)><br>/g, '</$1>');
@@ -1745,7 +1615,6 @@ window.testUpdateModal = function() {
   });
 };
 
-// ============ Depot Search/Filter ============
 function applyDepotFilters() {
   const searchText = (els.depotSearch ? els.depotSearch.value.trim() : '');
   const showSelectedOnly = els.showSelectedOnly ? els.showSelectedOnly.checked : false;
@@ -1759,7 +1628,6 @@ function applyDepotFilters() {
   });
 }
 
-// ============ Theme Toggle ============
 function initTheme() {
   const saved = localStorage.getItem('theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
@@ -1782,7 +1650,6 @@ function updateThemeButton(theme) {
   }
 }
 
-// ============ Cancel Download ============
 function showCancelModal() {
   els.cancelModal.classList.remove('hidden');
 }
@@ -1817,7 +1684,6 @@ async function cancelDownload() {
   }
 }
 
-// ============ Disk Space ============
 function showDiskSpace(freeGB, drive) {
   els.diskSpaceInfo.classList.remove('hidden', 'disk-space-info--warning', 'disk-space-info--danger');
 
@@ -1832,7 +1698,6 @@ function showDiskSpace(freeGB, drive) {
   }
 }
 
-// ============ Browser Notifications ============
 function requestNotificationPermission() {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
@@ -1874,11 +1739,9 @@ function playNotificationSound() {
     oscillator.start(ctx.currentTime);
     oscillator.stop(ctx.currentTime + 0.5);
   } catch (e) {
-    // Audio not available
   }
 }
 
-// ============ .NET Check ============
 async function checkDotNet() {
   try {
     // Skip if user already dismissed the warning this session
@@ -1899,7 +1762,6 @@ function showDotNetWarning() {
   if (!banner) return;
   banner.classList.remove('hidden');
 
-  // Dismiss button
   const dismissBtn = document.getElementById('dotnet-warning-dismiss');
   if (dismissBtn) {
     dismissBtn.addEventListener('click', () => {
@@ -1909,7 +1771,6 @@ function showDotNetWarning() {
     });
   }
 
-  // Open link in external browser via Tauri shell
   const installLink = document.getElementById('dotnet-install-link');
   if (installLink) {
     installLink.addEventListener('click', (e) => {
@@ -1924,13 +1785,10 @@ function showDotNetWarning() {
   }
 }
 
-// ============ Event Listeners ============
 function initEvents() {
-  // Tabs
   els.tabUpload.addEventListener('click', () => switchTab('upload'));
   els.tabSearch.addEventListener('click', () => switchTab('search'));
 
-  // Search
   els.btnSearch.addEventListener('click', performSearch);
   els.searchAppIdInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -1942,13 +1800,11 @@ function initEvents() {
     }
   });
   els.searchAppIdInput.addEventListener('input', onSearchInput);
-  // Close autocomplete on click outside
   document.addEventListener('click', (e) => {
     if (!els.searchAppIdInput.contains(e.target) && !els.searchAutocomplete.contains(e.target)) {
       hideAutocomplete();
     }
   });
-  // Delegated autocomplete-item clicks so each re-render doesn't stack listeners
   els.searchAutocomplete.addEventListener('click', (e) => {
     const item = e.target.closest('.search-autocomplete__item');
     if (!item) return;
@@ -1960,59 +1816,47 @@ function initEvents() {
   });
   els.btnSearchNext.addEventListener('click', proceedFromSearch);
 
-  // Select
   els.btnSelectAll.addEventListener('click', selectAll);
   els.btnDeselectAll.addEventListener('click', deselectAll);
   els.btnBack.addEventListener('click', () => goToStep(1));
   els.btnDownload.addEventListener('click', startDownload);
-  // btnNew and btnStartOver moved to Step 4
   els.btnCancel.addEventListener('click', showCancelModal);
-  // Browse folder button
   if (els.btnBrowseDir) {
     els.btnBrowseDir.addEventListener('click', browseDownloadDir);
   }
   els.btnCancelYes.addEventListener('click', cancelDownload);
   els.btnCancelNo.addEventListener('click', hideCancelModal);
-  // Close modal on backdrop click
   els.cancelModal.querySelector('.modal__backdrop').addEventListener('click', hideCancelModal);
 
-  // History
   els.btnHistory.addEventListener('click', openHistory);
   els.btnHistoryClose.addEventListener('click', closeHistory);
   els.btnHistoryClear.addEventListener('click', clearHistory);
   els.historyModal.querySelector('.modal__backdrop').addEventListener('click', closeHistory);
 
-  // Settings
   els.btnSettings.addEventListener('click', openSettings);
   els.btnSettingsSave.addEventListener('click', saveSettings);
   els.btnSettingsCancel.addEventListener('click', closeSettings);
   els.settingsModal.querySelector('.modal__backdrop').addEventListener('click', closeSettings);
 
-  // Advanced settings toggle
   if (els.btnToggleAdvanced) {
     els.btnToggleAdvanced.addEventListener('click', toggleAdvancedSettings);
   }
 
-  // Copy build/debug info
   if (els.btnCopyBuildInfo) {
     els.btnCopyBuildInfo.addEventListener('click', copyBuildInfo);
   }
 
-  // Telemetry consent
   if (els.btnTelemetryAccept) els.btnTelemetryAccept.addEventListener('click', acceptTelemetry);
   if (els.btnTelemetryDecline) els.btnTelemetryDecline.addEventListener('click', declineTelemetry);
   if (els.telemetryToggle) els.telemetryToggle.addEventListener('change', onTelemetryToggleChanged);
 
-  // Update modal
   els.btnUpdateNow.addEventListener('click', performUpdate);
   els.btnUpdateLater.addEventListener('click', hideUpdateModal);
   els.btnUpdateSkip.addEventListener('click', skipUpdateVersion);
   els.updateModal.querySelector('.modal__backdrop').addEventListener('click', hideUpdateModal);
 
-  // Theme
   els.btnThemeToggle.addEventListener('click', toggleTheme);
 
-  // Depot Filters
   if (els.depotSearch) {
     els.depotSearch.addEventListener('input', applyDepotFilters);
   }
@@ -2020,7 +1864,6 @@ function initEvents() {
     els.showSelectedOnly.addEventListener('change', applyDepotFilters);
   }
 
-  // Step 3 → Step 4 / Reset
   if (els.btnNextStep) {
     els.btnNextStep.addEventListener('click', () => {
       if (state.shortcutSupported) {
@@ -2031,7 +1874,6 @@ function initEvents() {
     });
   }
 
-  // Step 4: Shortcuts
   if (els.btnBrowseExe) {
     els.btnBrowseExe.addEventListener('click', browseExe);
   }
@@ -2060,14 +1902,11 @@ function initEvents() {
   }
 }
 
-// ============ Tauri Integration (replaces Electron) ============
 function initTauri() {
-  // Window control buttons (custom title bar on all platforms)
   document.getElementById('btn-minimize').addEventListener('click', () => invoke('minimize_window'));
   document.getElementById('btn-maximize').addEventListener('click', () => invoke('maximize_window'));
   document.getElementById('btn-close').addEventListener('click', () => invoke('close_window'));
 
-  // ===== Manual Window Drag for Linux (WebKitGTK) =====
   // data-tauri-drag-region and -webkit-app-region:drag do NOT work
   // reliably on Linux/WebKitGTK. This manual mousedown handler ensures
   // window dragging works on all platforms by directly calling startDragging().
@@ -2077,24 +1916,21 @@ function initTauri() {
       if (e.button !== 0) return;
       if (e.target.closest('.title-bar__controls')) return;
 
-      // Don't start dragging if mouse is in the resize zone (top edge of window)
-      // This allows the window resize handle to work properly
-      const resizeThreshold = 5; // pixels from window edge
+      // Reserve the top edge for resize; without this the drag eats the resize handle.
+      const resizeThreshold = 5;
       if (e.clientY <= resizeThreshold) return;
 
-      // Fire-and-forget: startDragging() muss synchron im selben Event-Tick initiiert werden
-      // await würde auf Linux/Wayland zu spät sein (Window-Manager lehnt verspätete Drag-Anfragen ab)
+      // Fire-and-forget. Under Wayland the compositor rejects drag requests that
+      // arrive after the event tick, so we can't await here.
       window.__TAURI__.window.getCurrentWindow().startDragging();
     });
 
-    // Double-click on title bar to maximize/restore
     titleBar.addEventListener('dblclick', (e) => {
       if (e.target.closest('.title-bar__controls')) return;
       invoke('maximize_window');
     });
   }
 
-  // Close confirmation modal (during downloads)
   const closeModal = document.getElementById('close-modal');
   const btnCloseYes = document.getElementById('btn-close-yes');
   const btnCloseNo = document.getElementById('btn-close-no');
@@ -2112,22 +1948,18 @@ function initTauri() {
     invoke('close_window');
   });
 
-  // Close modal on backdrop click
   closeModal.querySelector('.modal__backdrop').addEventListener('click', () => {
     closeModal.classList.add('hidden');
   });
 
-  // Check .NET at startup
   checkDotNet();
 
-  // Check shortcut support (Windows only)
   checkShortcutSupport();
 
   // Check for updates after a short delay (non-blocking)
   setTimeout(checkForUpdates, 1500);
 }
 
-// ============ Download History ============
 async function openHistory() {
   els.historyModal.classList.remove('hidden');
   await loadHistory();
@@ -2193,14 +2025,12 @@ function renderHistory(entries) {
     `;
   }).join('');
 
-  // Attach event handlers
   els.historyList.querySelectorAll('.history-action-redownload').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       const appId = btn.dataset.appId;
       const depotIds = (btn.dataset.depotIds || '').split(',').filter(Boolean);
       closeHistory();
-      // Reset state for new search
       state.parsedData = null;
       state.selectedDepots.clear();
       state.jobId = null;
@@ -2218,7 +2048,6 @@ function renderHistory(entries) {
       els.searchGameBanner.classList.add('hidden');
       els.manifestLoading.classList.add('hidden');
       resetUpload();
-      // Set flags for auto-proceed to step 2 with previously downloaded depots
       autoRedownloadPending = true;
       autoSelectAllOnStep2 = true;
       autoSelectDepotIds = depotIds.length > 0 ? depotIds : null;
@@ -2272,7 +2101,6 @@ async function clearHistory() {
   }
 }
 
-// ============ Step 4: Shortcut Creation ============
 async function checkShortcutSupport() {
   try {
     const result = await invoke('is_shortcut_supported');
@@ -2308,12 +2136,10 @@ async function detectExecutables() {
       return;
     }
 
-    // Set the recommended exe
     const recommended = exes.find(e => e.recommended) || exes[0];
     els.shortcutExePath.value = recommended.path;
     els.btnCreateShortcuts.disabled = false;
 
-    // Show other detected exes if more than 1
     if (exes.length > 1) {
       els.shortcutDetectedSection.classList.remove('hidden');
       els.shortcutDetectedList.innerHTML = exes.map(exe => {
@@ -2325,7 +2151,6 @@ async function detectExecutables() {
         </div>`;
       }).join('');
 
-      // Click to select
       els.shortcutDetectedList.querySelectorAll('.shortcut-exe-item').forEach(item => {
         item.addEventListener('click', () => {
           els.shortcutExePath.value = item.dataset.path;
@@ -2427,7 +2252,6 @@ function formatShortcutFileSize(bytes) {
   return (bytes / 1073741824).toFixed(2) + ' GB';
 }
 
-// ============ Init ============
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initUpload();

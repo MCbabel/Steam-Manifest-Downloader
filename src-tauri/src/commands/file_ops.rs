@@ -2,10 +2,6 @@ use tauri::command;
 use crate::services::lua_parser;
 use crate::services::st_parser;
 
-/// Parse a `.lua` or `.st` file at the given path.
-/// Returns the parsed depot information as JSON, or a descriptive error when the
-/// file is missing, has an unsupported extension, or does not contain any
-/// recognisable entries.
 #[command]
 pub async fn parse_lua_file(path: String) -> Result<serde_json::Value, String> {
     let file_path = std::path::Path::new(&path);
@@ -47,8 +43,6 @@ pub async fn parse_lua_file(path: String) -> Result<serde_json::Value, String> {
         .map_err(|e| format!("Failed to serialize result: {}", e))
 }
 
-/// Parse lua content passed as a string directly (used when the frontend has
-/// already loaded the file).
 #[command]
 pub async fn parse_lua_content(
     content: String,
@@ -60,8 +54,7 @@ pub async fn parse_lua_content(
         .unwrap_or("")
         .to_lowercase();
 
-    // `.st` payloads are binary and cannot be parsed from a plain string, so we
-    // accept only lua-style content here.
+    // .st is binary; it must go through parse_lua_file with a path.
     if ext == "st" {
         return Err(
             ".st files must be parsed from disk (use parse_lua_file with a path)."
