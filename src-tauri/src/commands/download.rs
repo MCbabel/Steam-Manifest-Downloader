@@ -178,6 +178,7 @@ pub async fn start_download(
             active_jobs: active_jobs.clone(),
             http_client: http_client.clone(),
             steam_cache: steam_cache.clone(),
+            telemetry: None,
         };
 
         let result = run_download_pipeline(

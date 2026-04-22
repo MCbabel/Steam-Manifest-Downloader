@@ -2018,6 +2018,61 @@ body {
   margin-bottom: 0;
 }
 
+/* ============ Telemetry Consent Modal ============ */
+.telemetry-modal-content {
+  max-width: 520px;
+  text-align: left;
+}
+
+.telemetry-modal__lead {
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.telemetry-modal__list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.telemetry-modal__col h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.telemetry-modal__col ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.telemetry-modal__col li::before {
+  content: '•';
+  margin-right: 6px;
+  color: var(--text-muted);
+}
+
+.telemetry-modal__col code {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
 /* ============ Debug / Build Info ============ */
 .build-info {
   display: flex;

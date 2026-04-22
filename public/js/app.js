@@ -144,6 +144,11 @@ const els = {
   speedLimitInput: $('#speed-limit-input'),
   proxyInput: $('#proxy-input'),
   notificationSoundToggle: $('#notification-sound-toggle'),
+  // Telemetry
+  telemetryModal: $('#telemetry-modal'),
+  btnTelemetryAccept: $('#btn-telemetry-accept'),
+  btnTelemetryDecline: $('#btn-telemetry-decline'),
+  telemetryToggle: $('#telemetry-toggle'),
   // Debug / Build Info
   buildInfoChannel: $('#build-info-channel'),
   buildInfoVersion: $('#build-info-version'),
@@ -350,6 +355,7 @@ async function handleFilePath(filePath) {
     };
     state.mode = 'upload';
     els.uploadLoading.classList.add('hidden');
+    emitEvent('lua_parsed', { depot_count: state.parsedData.depots.length });
 
     // Auto-advance to Step 2
     showSelectionStep();
@@ -464,6 +470,8 @@ async function performSearch() {
   // Show loading
   els.searchLoading.classList.remove('hidden');
   els.btnSearch.disabled = true;
+
+  emitEvent('search_performed');
 
   // Fetch game info in parallel
   fetchSearchGameInfo(appId);
@@ -929,6 +937,8 @@ async function startDownload() {
 
   if (selectedDepots.length === 0) return;
 
+  emitEvent('download_started', { depot_count: selectedDepots.length });
+
   // Request notification permission on first download
   requestNotificationPermission();
 
@@ -1299,6 +1309,7 @@ function handleComplete(msg) {
   els.progressStatus.textContent = '✅ Complete!';
   updateDepotDownloadProgress(100);
   if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
+  emitEvent('download_completed', { success: true });
   showCompletion(true, msg.message);
 
   // Mark remaining depots as done
@@ -1330,6 +1341,7 @@ function handleError(msg) {
     clearInterval(state.speedTracker.staleTimer);
     state.speedTracker.staleTimer = null;
     if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
+    emitEvent('download_completed', { success: false });
     showCompletion(false, msg.message);
     showBrowserNotification('Download Failed!', `Error: ${msg.message}`);
     playNotificationSound();
@@ -1453,10 +1465,12 @@ async function openSettings() {
     els.speedLimitInput.value = settings.download_speed_limit || '';
     els.proxyInput.value = settings.proxy || '';
     els.notificationSoundToggle.checked = settings.notification_sound !== false;
+    els.telemetryToggle.checked = settings.telemetry_consent === 'accepted';
   } catch (e) {
     els.autoUpdateToggle.checked = true;
   }
   loadBuildInfo();
+  emitEvent('settings_opened');
   els.settingsModal.classList.remove('hidden');
 }
 
@@ -1486,6 +1500,53 @@ async function loadBuildInfo() {
   } catch (e) {
     console.error('Failed to load build info:', e);
   }
+}
+
+// ============ Telemetry ============
+async function initTelemetryConsent() {
+  try {
+    const status = await invoke('get_telemetry_status');
+    if (status.consent === 'pending') {
+      els.telemetryModal.classList.remove('hidden');
+    } else if (status.consent === 'accepted') {
+      invoke('emit_telemetry_event', { kind: 'app_start' }).catch(() => {});
+    }
+  } catch (e) {
+    console.error('Failed to load telemetry status:', e);
+  }
+}
+
+async function acceptTelemetry() {
+  try {
+    await invoke('set_telemetry_consent', { accept: true });
+    invoke('emit_telemetry_event', { kind: 'app_start' }).catch(() => {});
+  } catch (e) {
+    console.error('Failed to accept telemetry:', e);
+  }
+  els.telemetryModal.classList.add('hidden');
+}
+
+async function declineTelemetry() {
+  try {
+    await invoke('set_telemetry_consent', { accept: false });
+  } catch (e) {
+    console.error('Failed to decline telemetry:', e);
+  }
+  els.telemetryModal.classList.add('hidden');
+}
+
+async function onTelemetryToggleChanged() {
+  const accept = els.telemetryToggle.checked;
+  try {
+    await invoke('set_telemetry_consent', { accept });
+  } catch (e) {
+    console.error('Failed to update telemetry consent:', e);
+    els.telemetryToggle.checked = !accept;
+  }
+}
+
+function emitEvent(kind, props) {
+  invoke('emit_telemetry_event', { kind, props: props ?? null }).catch(() => {});
 }
 
 async function copyBuildInfo() {
@@ -1564,6 +1625,8 @@ async function checkForUpdates() {
     if (!enabled) return;
 
     const result = await invoke('check_for_updates');
+
+    emitEvent('update_checked', { available: !!result.available });
 
     if (result.error) {
       console.error('[AutoUpdate] Error:', result.error);
@@ -1650,6 +1713,7 @@ async function performUpdate() {
   els.updateProgressFill.style.width = '100%';
   els.updateProgressFill.classList.add('progress-bar__fill--indeterminate');
 
+  emitEvent('update_installed');
   try {
     await invoke('install_update', { installerUrl: pendingUpdateInfo.installerUrl });
     // App will exit — this line may not be reached
@@ -1708,6 +1772,7 @@ function toggleTheme() {
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
   updateThemeButton(next);
+  emitEvent('theme_toggled', { to: next });
 }
 
 function updateThemeButton(theme) {
@@ -1932,6 +1997,11 @@ function initEvents() {
   if (els.btnCopyBuildInfo) {
     els.btnCopyBuildInfo.addEventListener('click', copyBuildInfo);
   }
+
+  // Telemetry consent
+  if (els.btnTelemetryAccept) els.btnTelemetryAccept.addEventListener('click', acceptTelemetry);
+  if (els.btnTelemetryDecline) els.btnTelemetryDecline.addEventListener('click', declineTelemetry);
+  if (els.telemetryToggle) els.telemetryToggle.addEventListener('change', onTelemetryToggleChanged);
 
   // Update modal
   els.btnUpdateNow.addEventListener('click', performUpdate);
@@ -2321,6 +2391,7 @@ async function createShortcuts() {
     }
 
     const allGood = (!createDesktop || result.desktop) && (!createStartMenu || result.startMenu);
+    if (allGood) emitEvent('shortcut_created', { desktop: !!result.desktop, start_menu: !!result.startMenu });
     showShortcutStatus(allGood, messages.join('. ') + '.');
 
     if (allGood) {
@@ -2363,4 +2434,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initEvents();
   loadSettingsAndDefaults();
   initTauri();
+  initTelemetryConsent();
 });

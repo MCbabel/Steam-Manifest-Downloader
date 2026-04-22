@@ -2,6 +2,20 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TelemetryConsent {
+    Pending,
+    Accepted,
+    Declined,
+}
+
+impl Default for TelemetryConsent {
+    fn default() -> Self {
+        TelemetryConsent::Pending
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     #[serde(default = "default_download_location")]
@@ -19,6 +33,11 @@ pub struct Settings {
     pub download_speed_limit: String,
     #[serde(default)]
     pub proxy: String,
+    // Telemetry
+    #[serde(default)]
+    pub telemetry_consent: TelemetryConsent,
+    #[serde(default)]
+    pub installation_id: String,
 }
 
 fn default_download_location() -> String {
@@ -71,6 +90,8 @@ impl Default for Settings {
             notification_sound: default_notification_sound(),
             download_speed_limit: String::new(),
             proxy: String::new(),
+            telemetry_consent: TelemetryConsent::Pending,
+            installation_id: String::new(),
         }
     }
 }

@@ -7,6 +7,7 @@ mod window;
 mod updater;
 mod history;
 mod shortcuts;
+mod telemetry;
 
 pub use file_ops::*;
 pub use search::*;
@@ -17,3 +18,4 @@ pub use window::*;
 pub use updater::*;
 pub use history::*;
 pub use shortcuts::*;
+pub use telemetry::*;
