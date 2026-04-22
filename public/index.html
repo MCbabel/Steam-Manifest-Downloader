@@ -413,6 +413,42 @@
 
 
 
+  <!-- Telemetry Consent Modal (first-run only) -->
+  <div id="telemetry-modal" class="modal hidden">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content telemetry-modal-content">
+      <h3 class="modal__title">📊 Help improve the app?</h3>
+      <p class="telemetry-modal__lead">
+        We'd like to collect <strong>anonymous</strong> usage statistics so we know which features to invest in.
+      </p>
+      <div class="telemetry-modal__list">
+        <div class="telemetry-modal__col">
+          <h4>✅ We collect</h4>
+          <ul>
+            <li>App version, OS, architecture</li>
+            <li>Which features get used (counters only)</li>
+            <li>A random install ID (not tied to you)</li>
+          </ul>
+        </div>
+        <div class="telemetry-modal__col">
+          <h4>🚫 We never collect</h4>
+          <ul>
+            <li>Game IDs, depot IDs, file names</li>
+            <li>Contents of <code>.lua</code> / <code>.st</code> files</li>
+            <li>IP addresses, account info</li>
+          </ul>
+        </div>
+      </div>
+      <p class="dd-path__hint">
+        Events are end-to-end encrypted with a public key embedded in the app — only the maintainer's server can decrypt them. You can change your choice anytime in Settings → Advanced Settings.
+      </p>
+      <div class="modal__actions">
+        <button id="btn-telemetry-decline" class="btn btn--outline">No thanks</button>
+        <button id="btn-telemetry-accept" class="btn btn--primary">Yes, help out</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Modal -->
   <div id="settings-modal" class="modal hidden">
     <div class="modal__backdrop"></div>
@@ -477,6 +513,19 @@
               <span class="settings-field__toggle-text">Play a sound when downloads complete</span>
             </div>
             <p class="dd-path__hint">Uses a system notification sound to alert you when all downloads finish.</p>
+          </div>
+
+          <!-- Anonymous Telemetry -->
+          <div class="settings-field">
+            <label class="settings-field__label">Anonymous Usage Statistics</label>
+            <div class="settings-field__toggle-wrap">
+              <label class="toggle-switch">
+                <input type="checkbox" id="telemetry-toggle">
+                <span class="toggle-switch__slider"></span>
+              </label>
+              <span class="settings-field__toggle-text">Send anonymous usage events to help improve the app</span>
+            </div>
+            <p class="dd-path__hint">End-to-end encrypted. No game IDs, file contents, or account info are ever sent. <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/blob/main/PRIVACY.md" target="_blank" rel="noopener">Privacy details</a>.</p>
           </div>
 
           <!-- Debug / Build Info -->

@@ -10,6 +10,7 @@ pub mod steam_store_api;
 pub mod settings;
 pub mod embedded_tools;
 pub mod history;
+pub mod telemetry;
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -22,6 +23,7 @@ pub struct AppState {
     pub active_jobs: Arc<Mutex<HashMap<String, JobInfo>>>,
     pub http_client: reqwest::Client,
     pub steam_cache: Arc<Mutex<HashMap<String, serde_json::Value>>>,
+    pub telemetry: Option<telemetry::Telemetry>,
 }
 
 pub struct JobInfo {
@@ -39,6 +41,7 @@ impl AppState {
             active_jobs: Arc::new(Mutex::new(HashMap::new())),
             http_client: reqwest::Client::new(),
             steam_cache: Arc::new(Mutex::new(HashMap::new())),
+            telemetry: None,
         }
     }
 

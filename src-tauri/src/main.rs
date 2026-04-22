@@ -14,9 +14,19 @@ fn main() {
             // Initialize app data directory
             let app_data = app.path().app_data_dir().expect("Failed to get app data dir");
             std::fs::create_dir_all(&app_data).ok();
-            
-            // Initialize services state
-            let state = services::AppState::new(app.handle().clone());
+
+            let app_version = app.config().version.clone().unwrap_or_default();
+            let channel = option_env!("SMD_BUILD_CHANNEL").unwrap_or("dev-local").to_string();
+
+            let telemetry = services::telemetry::Telemetry::new(
+                app_data.clone(),
+                app_version,
+                channel,
+            );
+            telemetry.clone().spawn_background_flush();
+
+            let mut state = services::AppState::new(app.handle().clone());
+            state.telemetry = Some(telemetry);
             app.manage(state);
 
             Ok(())
@@ -58,6 +68,10 @@ fn main() {
             commands::is_shortcut_supported,
             commands::detect_executables,
             commands::create_shortcuts,
+            // Telemetry
+            commands::get_telemetry_status,
+            commands::set_telemetry_consent,
+            commands::emit_telemetry_event,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
