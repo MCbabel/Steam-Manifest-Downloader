@@ -81,6 +81,20 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 
 ### 🐧 Linux
 
+#### Arch / CachyOS / Manjaro — AUR
+
+The cleanest path on Arch-based distros: an official AUR package handled by `pacman`.
+
+```bash
+yay -S steam-manifest-downloader
+# or
+paru -S steam-manifest-downloader
+```
+
+Source: [aur.archlinux.org/packages/steam-manifest-downloader](https://aur.archlinux.org/packages/steam-manifest-downloader). Updates flow through your package manager (`yay -Syu`), and the in-app updater detects this and points you back at it instead of fetching an AppImage.
+
+#### Other distros — AppImage
+
 Download the latest `.AppImage` from [**Releases**](../../releases).
 
 Tauri apps on Linux don't bundle their own browser engine — they render the UI through the system **WebKitGTK**. Install the runtime for your distro:
