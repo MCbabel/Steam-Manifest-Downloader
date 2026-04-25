@@ -2218,6 +2218,33 @@ body {
   margin-bottom: 1rem;
 }
 
+.update-modal__system-hint {
+  margin: 0.75rem 0 1rem;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.update-modal__system-hint p {
+  margin: 0 0 8px;
+}
+
+.update-modal__system-hint pre {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  background: rgba(13, 17, 23, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .update-modal__progress-text {
   font-size: 0.85rem;
   color: var(--text-secondary);
