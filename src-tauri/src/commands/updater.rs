@@ -5,6 +5,35 @@ use crate::services::settings as settings_service;
 const GITHUB_REPO: &str = "MCbabel/Steam-Manifest-Downloader";
 const USER_AGENT: &str = "SteamManifestDownloader";
 
+fn detect_install_method() -> &'static str {
+    #[cfg(target_os = "windows")]
+    {
+        "self"
+    }
+    #[cfg(target_os = "linux")]
+    {
+        match std::env::current_exe() {
+            Ok(path) => {
+                let s = path.to_string_lossy();
+                if s.starts_with("/usr/")
+                    || s.starts_with("/opt/")
+                    || s.starts_with("/app/")
+                    || s.starts_with("/snap/")
+                {
+                    "system"
+                } else {
+                    "self"
+                }
+            }
+            Err(_) => "self",
+        }
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    {
+        "self"
+    }
+}
+
 #[command]
 pub async fn check_for_updates(app: AppHandle) -> Result<serde_json::Value, String> {
     let current_version = app.config().version.clone().unwrap_or_default();
@@ -57,6 +86,7 @@ pub async fn check_for_updates(app: AppHandle) -> Result<serde_json::Value, Stri
         "body": release["body"].as_str(),
         "installerUrl": installer_url,
         "releaseUrl": release["html_url"].as_str(),
+        "installMethod": detect_install_method(),
     }))
 }
 

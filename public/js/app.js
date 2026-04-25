@@ -1555,7 +1555,29 @@ function showUpdateModal(info) {
   els.updateProgressWrap.classList.add('hidden');
   els.updateActions.style.display = '';
   els.btnUpdateNow.disabled = false;
+
+  const systemManaged = info.installMethod === 'system';
+  const systemHint = document.getElementById('update-system-hint');
+  if (systemHint) systemHint.classList.toggle('hidden', !systemManaged);
+  els.btnUpdateNow.classList.toggle('hidden', systemManaged);
+  els.btnUpdateSkip.classList.toggle('hidden', systemManaged);
+
   els.updateModal.classList.remove('hidden');
+}
+
+async function copyUpdateCommand() {
+  const cmd = 'yay -Syu steam-manifest-downloader';
+  try {
+    await navigator.clipboard.writeText(cmd);
+    const btn = document.getElementById('btn-update-copy-cmd');
+    if (btn) {
+      const original = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = original; }, 1500);
+    }
+  } catch (e) {
+    console.error('Clipboard write failed:', e);
+  }
 }
 
 function hideUpdateModal() {
@@ -1854,6 +1876,8 @@ function initEvents() {
   els.btnUpdateLater.addEventListener('click', hideUpdateModal);
   els.btnUpdateSkip.addEventListener('click', skipUpdateVersion);
   els.updateModal.querySelector('.modal__backdrop').addEventListener('click', hideUpdateModal);
+  const btnCopyCmd = document.getElementById('btn-update-copy-cmd');
+  if (btnCopyCmd) btnCopyCmd.addEventListener('click', copyUpdateCommand);
 
   els.btnThemeToggle.addEventListener('click', toggleTheme);
 
