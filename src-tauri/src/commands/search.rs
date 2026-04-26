@@ -1,17 +1,25 @@
-use tauri::command;
+use std::path::PathBuf;
+use tauri::{command, AppHandle, Manager};
 use crate::services::AppState;
 use crate::services::multi_repo_search;
+use crate::services::settings as settings_service;
 use crate::services::steam_store_api;
 
-// Returns `{ repos: [...] }` — array shape preserved for the UI even though IA
-// is currently the only source.
+async fn load_sources(app: &AppHandle) -> Vec<String> {
+    let dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    settings_service::load_settings(&dir).await.depot_sources
+}
+
 #[command]
 pub async fn search_repos(
+    app: AppHandle,
     state: tauri::State<'_, AppState>,
     app_id: String,
 ) -> Result<serde_json::Value, String> {
+    let sources = load_sources(&app).await;
     let result = multi_repo_search::search_repos(
         &state.http_client,
+        &sources,
         &app_id,
     )
     .await?;
@@ -21,15 +29,18 @@ pub async fn search_repos(
 
 #[command]
 pub async fn get_repo_manifests(
+    app: AppHandle,
     state: tauri::State<'_, AppState>,
     app_id: String,
     repo: String,
     sha: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let effective_sha = sha.unwrap_or_default();
+    let sources = load_sources(&app).await;
 
     let result = multi_repo_search::get_repo_manifests(
         &state.http_client,
+        &sources,
         &app_id,
         &repo,
         &effective_sha,

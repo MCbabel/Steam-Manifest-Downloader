@@ -2,39 +2,98 @@ use reqwest::Client;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-const IA_BASE_URL: &str = "https://ia800607.us.archive.org/view_archive.php";
-
-struct ArchiveSource {
-    archive_path: &'static str,
-    prefix: &'static str,
+#[derive(Debug, Clone)]
+enum Backend {
+    ArchiveOrg { base: String },
+    GitHub { raw_base: String },
+    Generic { base: String },
 }
 
-// Order = priority: branches.zip is checked first, fallback to NEW-depot-keys.
-const ARCHIVES: &[ArchiveSource] = &[
-    ArchiveSource {
-        archive_path: "/33/items/manifest-hub-repo/branches.zip",
-        prefix: "branches",
-    },
-    ArchiveSource {
-        archive_path: "/33/items/manifest-hub-repo/NEW-depot-keys.zip",
-        prefix: "NEW-depot-keys",
-    },
-];
+fn parse_backend(url: &str) -> Result<Backend, String> {
+    let trimmed = url.trim();
+    if trimmed.is_empty() {
+        return Err("empty source URL".into());
+    }
 
-fn build_url(source: &ArchiveSource, app_id: &str, filename: &str) -> String {
-    let file_path = format!("{}/{}/{}", source.prefix, app_id, filename);
-    let encoded_path = file_path.replace("/", "%2F");
-    format!(
-        "{}?archive={}&file={}",
-        IA_BASE_URL, source.archive_path, encoded_path
-    )
+    if trimmed.contains("archive.org/view_archive.php") {
+        return Ok(Backend::ArchiveOrg {
+            base: trimmed.trim_end_matches('&').trim_end_matches('?').to_string(),
+        });
+    }
+
+    if let Some(stripped) = trimmed
+        .strip_prefix("https://github.com/")
+        .or_else(|| trimmed.strip_prefix("http://github.com/"))
+    {
+        let path = stripped.trim_end_matches('/');
+        let parts: Vec<&str> = path.split('/').collect();
+        if parts.len() < 2 {
+            return Err("GitHub URL needs <user>/<repo>".into());
+        }
+        let user = parts[0];
+        let repo = parts[1];
+        let branch = if parts.len() >= 4 && parts[2] == "tree" {
+            parts[3]
+        } else {
+            "main"
+        };
+        return Ok(Backend::GitHub {
+            raw_base: format!("https://raw.githubusercontent.com/{}/{}/{}", user, repo, branch),
+        });
+    }
+
+    if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+        return Ok(Backend::Generic {
+            base: trimmed.trim_end_matches('/').to_string(),
+        });
+    }
+
+    Err(format!("unsupported source URL: {}", trimmed))
 }
 
-pub async fn check_app_exists(client: &Client, app_id: &str) -> Result<bool, String> {
+fn build_url(backend: &Backend, app_id: &str, filename: &str) -> String {
+    match backend {
+        Backend::ArchiveOrg { base } => {
+            let file_path = format!("branches/{}/{}", app_id, filename);
+            let encoded = file_path.replace('/', "%2F");
+            let sep = if base.contains('?') { '&' } else { '?' };
+            format!("{}{}file={}", base, sep, encoded)
+        }
+        Backend::GitHub { raw_base } => {
+            format!("{}/branches/{}/{}", raw_base, app_id, filename)
+        }
+        Backend::Generic { base } => {
+            format!("{}/branches/{}/{}", base, app_id, filename)
+        }
+    }
+}
+
+fn parse_sources(sources: &[String]) -> Vec<Backend> {
+    sources
+        .iter()
+        .filter_map(|s| match parse_backend(s) {
+            Ok(b) => Some(b),
+            Err(e) => {
+                eprintln!("[DepotSources] skipping invalid source '{}': {}", s, e);
+                None
+            }
+        })
+        .collect()
+}
+
+pub async fn check_app_exists(
+    client: &Client,
+    sources: &[String],
+    app_id: &str,
+) -> Result<bool, String> {
+    let backends = parse_sources(sources);
+    if backends.is_empty() {
+        return Ok(false);
+    }
     let lua_filename = format!("{}.lua", app_id);
 
-    for source in ARCHIVES {
-        let url = build_url(source, app_id, &lua_filename);
+    for backend in &backends {
+        let url = build_url(backend, app_id, &lua_filename);
         match client
             .head(&url)
             .header("User-Agent", "SteamManifestDownloader")
@@ -51,13 +110,18 @@ pub async fn check_app_exists(client: &Client, app_id: &str) -> Result<bool, Str
 
 pub async fn download_text_file(
     client: &Client,
+    sources: &[String],
     app_id: &str,
     filename: &str,
 ) -> Result<String, String> {
+    let backends = parse_sources(sources);
+    if backends.is_empty() {
+        return Err("no manifest sources configured".into());
+    }
     let mut last_status = String::new();
 
-    for source in ARCHIVES {
-        let url = build_url(source, app_id, filename);
+    for backend in &backends {
+        let url = build_url(backend, app_id, filename);
         match client
             .get(&url)
             .header("User-Agent", "SteamManifestDownloader")
@@ -84,13 +148,15 @@ pub async fn download_text_file(
 
 async fn download_text_file_from_all(
     client: &Client,
+    sources: &[String],
     app_id: &str,
     filename: &str,
 ) -> Vec<String> {
+    let backends = parse_sources(sources);
     let mut results = Vec::new();
 
-    for source in ARCHIVES {
-        let url = build_url(source, app_id, filename);
+    for backend in &backends {
+        let url = build_url(backend, app_id, filename);
         if let Ok(resp) = client
             .get(&url)
             .header("User-Agent", "SteamManifestDownloader")
@@ -110,16 +176,21 @@ async fn download_text_file_from_all(
 
 pub async fn download_manifest_file(
     client: &Client,
+    sources: &[String],
     app_id: &str,
     depot_id: &str,
     manifest_id: &str,
     output_dir: &Path,
 ) -> Result<PathBuf, String> {
+    let backends = parse_sources(sources);
+    if backends.is_empty() {
+        return Err("no manifest sources configured".into());
+    }
     let filename = format!("{}_{}.manifest", depot_id, manifest_id);
-    let mut last_error = String::from("No archives available");
+    let mut last_error = String::from("no source returned the file");
 
-    for source in ARCHIVES {
-        let url = build_url(source, app_id, &filename);
+    for backend in &backends {
+        let url = build_url(backend, app_id, &filename);
         match client
             .get(&url)
             .header("User-Agent", "SteamManifestDownloader")
@@ -155,7 +226,6 @@ pub async fn download_manifest_file(
     Err(format!("Manifest not found: {} ({})", filename, last_error))
 }
 
-// Returns (depot_id, manifest_gid) → size.
 fn extract_depot_sizes(json: &serde_json::Value) -> HashMap<(String, String), u64> {
     let mut sizes = HashMap::new();
 
@@ -165,7 +235,6 @@ fn extract_depot_sizes(json: &serde_json::Value) -> HashMap<(String, String), u6
     };
 
     for (depot_id, depot_value) in depot_obj {
-        // "depot" also contains non-depot keys like "depotdeltapatches" / "baselanguages".
         let manifests = match depot_value.get("manifests").and_then(|v| v.as_object()) {
             Some(m) => m,
             None => continue,
@@ -183,7 +252,7 @@ fn extract_depot_sizes(json: &serde_json::Value) -> HashMap<(String, String), u6
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(0);
 
-            // size == 7 is a placeholder meaning "unknown"; drop it.
+            // size == 7 is the upstream placeholder for "unknown"
             if size > 100 {
                 sizes.insert((depot_id.clone(), gid), size);
             }
@@ -195,32 +264,29 @@ fn extract_depot_sizes(json: &serde_json::Value) -> HashMap<(String, String), u6
 
 pub async fn get_app_data(
     client: &Client,
+    sources: &[String],
     app_id: &str,
 ) -> Result<AppArchiveData, String> {
     let lua_filename = format!("{}.lua", app_id);
-    let lua_content = download_text_file(client, app_id, &lua_filename).await?;
+    let lua_content = download_text_file(client, sources, app_id, &lua_filename).await?;
 
     let lua_result = crate::services::lua_parser::parse_lua_file(&lua_content)
-        .map_err(|e| format!("Failed to parse {}.lua from Internet Archive: {}", app_id, e))?;
+        .map_err(|e| format!("Failed to parse {}.lua: {}", app_id, e))?;
 
-    // key.vdf values differ between archives; merge all of them so more depots get keys.
     let mut depot_keys = HashMap::new();
-    for vdf_content in download_text_file_from_all(client, app_id, "key.vdf").await {
-        let vdf_keys =
-            crate::services::vdf_parser::parse_key_vdf(&vdf_content, Some("InternetArchive"));
+    for vdf_content in download_text_file_from_all(client, sources, app_id, "key.vdf").await {
+        let vdf_keys = crate::services::vdf_parser::parse_key_vdf(&vdf_content, None);
         depot_keys.extend(vdf_keys);
     }
 
-    let depot_sizes = match download_text_file(client, app_id, &format!("{}.json", app_id)).await {
-        Ok(json_content) => {
-            match serde_json::from_str::<serde_json::Value>(&json_content) {
-                Ok(json) => extract_depot_sizes(&json),
-                Err(e) => {
-                    eprintln!("[InternetArchive] Failed to parse {}.json: {}", app_id, e);
-                    HashMap::new()
-                }
+    let depot_sizes = match download_text_file(client, sources, app_id, &format!("{}.json", app_id)).await {
+        Ok(json_content) => match serde_json::from_str::<serde_json::Value>(&json_content) {
+            Ok(json) => extract_depot_sizes(&json),
+            Err(e) => {
+                eprintln!("[DepotSources] failed to parse {}.json: {}", app_id, e);
+                HashMap::new()
             }
-        }
+        },
         Err(_) => HashMap::new(),
     };
 

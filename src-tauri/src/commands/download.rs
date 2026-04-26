@@ -9,7 +9,8 @@ use uuid::Uuid;
 
 use crate::services::{AppState, JobInfo};
 use crate::services::depot_runner::{self, DepotRunConfig, ProgressEvent, emit_progress};
-use crate::services::internet_archive;
+use crate::services::depot_sources;
+use crate::services::settings as settings_service;
 use crate::services::manifest_hub_api;
 use crate::services::steam_store_api;
 use crate::services::lua_parser::DepotInfo;
@@ -263,6 +264,9 @@ async fn run_download_pipeline(
 ) -> Result<(), String> {
     let _started_at = chrono::Utc::now();
     let work_dir = base_dir.join(folder_name);
+    let depot_sources_list = settings_service::load_settings(app_data_dir)
+        .await
+        .depot_sources;
 
     tokio::fs::create_dir_all(&work_dir)
         .await
@@ -294,23 +298,33 @@ async fn run_download_pipeline(
             return Ok(());
         }
 
-        match internet_archive::check_app_exists(&state.http_client, &config.app_id).await {
+        if depot_sources_list.is_empty() {
+            let mut event = ProgressEvent::new("error", job_id);
+            event.message = Some(
+                "No manifest sources configured. Add one in Settings → Advanced Settings → Manifest Sources."
+                    .to_string(),
+            );
+            emit_progress(app, &event);
+            return Ok(());
+        }
+
+        match depot_sources::check_app_exists(&state.http_client, &depot_sources_list, &config.app_id).await {
             Ok(true) => {
                 let mut event = ProgressEvent::new("status", job_id);
                 event.step = Some("branch_found".to_string());
                 event.app_id = Some(config.app_id.clone());
-                event.last_updated = Some("Source: Internet Archive".to_string());
+                event.last_updated = Some("Source: configured manifest source".to_string());
                 emit_progress(app, &event);
             }
             Ok(false) => {
                 let mut event = ProgressEvent::new("error", job_id);
-                event.message = Some(format!("App {} not found in Internet Archive", config.app_id));
+                event.message = Some(format!("App {} not found in any configured manifest source", config.app_id));
                 emit_progress(app, &event);
                 return Ok(());
             }
             Err(e) => {
                 let mut event = ProgressEvent::new("error", job_id);
-                event.message = Some(format!("Internet Archive check failed: {}", e));
+                event.message = Some(format!("Manifest source lookup failed: {}", e));
                 emit_progress(app, &event);
                 return Ok(());
             }
@@ -373,8 +387,9 @@ async fn run_download_pipeline(
         event.manifest_id = Some(depot.manifest_id.clone());
         emit_progress(app, &event);
 
-        match internet_archive::download_manifest_file(
+        match depot_sources::download_manifest_file(
             &state.http_client,
+            &depot_sources_list,
             &config.app_id,
             &depot.depot_id,
             &depot.manifest_id,
@@ -496,8 +511,9 @@ async fn run_download_pipeline(
         event.step = Some("downloading_keyvdf".to_string());
         emit_progress(app, &event);
 
-        match internet_archive::download_text_file(
+        match depot_sources::download_text_file(
             &state.http_client,
+            &depot_sources_list,
             &config.app_id,
             "key.vdf",
         )
@@ -506,7 +522,7 @@ async fn run_download_pipeline(
             Ok(vdf_content) => {
                 let vdf_keys = crate::services::vdf_parser::parse_key_vdf(
                     &vdf_content,
-                    Some("InternetArchive"),
+                    None,
                 );
                 for depot in &mut depot_infos {
                     if depot.depot_key.is_none() {
