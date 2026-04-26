@@ -24,7 +24,8 @@ data/
 plans/
 
 # ---- Screenshots ----
-screenshots/
+/screenshots/
+!assets/screenshots/
 
 # ---- OS generated files ----
 .DS_Store
