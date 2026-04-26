@@ -7,10 +7,17 @@
   <summary>Download Steam game depots and manifests via a modern GUI</summary>
   <description>
     <p>
-      Steam Manifest Downloader is a desktop tool that downloads Steam game depots and
-      manifests through a modern Tauri-based GUI. Drop a .lua file, search for an App
-      ID, select the depots you want, and the app handles manifest fetching, depot keys
-      and the actual download in one step.
+      Steam Manifest Downloader is a desktop GUI for downloading Steam game depots and
+      manifests that the user already legitimately owns. The application is not affiliated
+      with or endorsed by Valve Corporation, does not include or distribute Steam keys or
+      licenses, and does not bypass any DRM or copy protection. It is intended for archival,
+      backup and similar legitimate use cases involving content the user has the right to
+      access.
+    </p>
+    <p>
+      Drop a .lua / .st file or search by App ID, pick the depots you want, and the app
+      handles manifest fetching, depot key generation and the actual download in one step.
+      Built with Tauri v2, a Rust backend, and a vanilla JavaScript frontend.
     </p>
     <p>Features:</p>
     <ul>
