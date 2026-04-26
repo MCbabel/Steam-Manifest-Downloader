@@ -127,6 +127,22 @@
         </div>
 
         <div id="tab-content-search" class="tab-content">
+          <div id="sources-empty-state" class="sources-empty hidden">
+            <h3 class="sources-empty__title">No depot source configured</h3>
+            <p class="sources-empty__lead">
+              The app does not ship with any depot sources. Paste a URL pointing at a folder
+              that follows the layout <code>branches/&lt;appid&gt;/&lt;files&gt;</code> (containing
+              <code>.lua</code>, <code>.manifest</code> and optional <code>key.vdf</code> files).
+              GitHub repos and <code>archive.org/view_archive.php</code> URLs are auto-detected;
+              any plain HTTPS base URL also works.
+            </p>
+            <div class="sources-empty__row">
+              <input type="text" id="sources-empty-input" class="search-input" placeholder="https://github.com/user/repo  or  https://archive.org/view_archive.php?archive=…" autocomplete="off">
+              <button id="btn-sources-empty-add" class="btn btn--primary">Add Source</button>
+            </div>
+            <p id="sources-empty-error" class="error-message hidden"></p>
+          </div>
+
           <div id="search-game-banner" class="game-info-banner hidden">
             <img id="search-game-image" class="game-info-banner__image" src="" alt="Game Cover">
             <div class="game-info-banner__details">
@@ -135,7 +151,7 @@
             </div>
           </div>
 
-          <div class="search-input-row">
+          <div id="search-input-block" class="search-input-row hidden">
             <div class="search-input-wrapper">
               <input type="text" id="search-appid-input" class="search-input" placeholder="Search by name or App ID..." autocomplete="off">
               <div id="search-autocomplete" class="search-autocomplete hidden"></div>
@@ -471,6 +487,17 @@
             <label for="proxy-input" class="settings-field__label">HTTP Proxy</label>
             <input type="text" id="proxy-input" class="dd-path__input" placeholder="No proxy">
             <p class="dd-path__hint">Optional proxy URL (e.g., http://proxy:8080 or socks5://proxy:1080)</p>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-field__label">Depot Sources</label>
+            <p class="dd-path__hint">URLs pointing at a folder that follows the <code>branches/&lt;appid&gt;/&lt;files&gt;</code> layout (depot keys, manifests, key.vdf). Sources are queried in the order shown when searching by App ID.</p>
+            <ul id="sources-list" class="sources-list"></ul>
+            <div class="sources-add-row">
+              <input type="text" id="sources-add-input" class="dd-path__input" placeholder="https://github.com/user/repo or https://archive.org/view_archive.php?archive=…">
+              <button type="button" id="btn-sources-add" class="btn btn--outline">Add</button>
+            </div>
+            <p id="sources-add-error" class="error-message hidden"></p>
           </div>
 
           <div class="settings-field">

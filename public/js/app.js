@@ -59,6 +59,15 @@ const els = {
   searchAppIdInput: $('#search-appid-input'),
   searchAutocomplete: $('#search-autocomplete'),
   btnSearch: $('#btn-search'),
+  searchInputBlock: $('#search-input-block'),
+  sourcesEmpty: $('#sources-empty-state'),
+  sourcesEmptyInput: $('#sources-empty-input'),
+  btnSourcesEmptyAdd: $('#btn-sources-empty-add'),
+  sourcesEmptyError: $('#sources-empty-error'),
+  sourcesList: $('#sources-list'),
+  sourcesAddInput: $('#sources-add-input'),
+  btnSourcesAdd: $('#btn-sources-add'),
+  sourcesAddError: $('#sources-add-error'),
   searchError: $('#search-error'),
   searchLoading: $('#search-loading'),
   searchResults: $('#search-results'),
@@ -391,6 +400,73 @@ function onSearchInput() {
   autocompleteDebounceTimer = setTimeout(() => {
     triggerAutocomplete(val);
   }, 400);
+}
+
+async function loadDepotSources() {
+  try {
+    const settings = await invoke('get_settings');
+    return Array.isArray(settings.depot_sources) ? settings.depot_sources : [];
+  } catch {
+    return [];
+  }
+}
+
+async function saveDepotSources(sources) {
+  const settings = await invoke('get_settings');
+  settings.depot_sources = sources;
+  await invoke('save_settings', { settings });
+}
+
+function validateSourceUrl(raw) {
+  const url = (raw || '').trim();
+  if (!url) return 'URL is empty';
+  if (!/^https?:\/\//i.test(url)) return 'Must start with http:// or https://';
+  return null;
+}
+
+async function refreshSourcesUI() {
+  const sources = await loadDepotSources();
+  const empty = sources.length === 0;
+  if (els.sourcesEmpty) els.sourcesEmpty.classList.toggle('hidden', !empty);
+  if (els.searchInputBlock) els.searchInputBlock.classList.toggle('hidden', empty);
+  if (els.sourcesList) {
+    els.sourcesList.innerHTML = sources
+      .map((s, i) => `<li><span>${escapeHtml(s)}</span><button data-source-idx="${i}">Remove</button></li>`)
+      .join('');
+  }
+}
+
+async function addDepotSource(rawUrl, errorEl) {
+  if (errorEl) errorEl.classList.add('hidden');
+  const err = validateSourceUrl(rawUrl);
+  if (err) {
+    if (errorEl) {
+      errorEl.textContent = err;
+      errorEl.classList.remove('hidden');
+    }
+    return false;
+  }
+  const url = rawUrl.trim();
+  const sources = await loadDepotSources();
+  if (sources.includes(url)) {
+    if (errorEl) {
+      errorEl.textContent = 'Source already added';
+      errorEl.classList.remove('hidden');
+    }
+    return false;
+  }
+  sources.push(url);
+  await saveDepotSources(sources);
+  await refreshSourcesUI();
+  return true;
+}
+
+async function removeDepotSource(index) {
+  const sources = await loadDepotSources();
+  if (index < 0 || index >= sources.length) return;
+  sources.splice(index, 1);
+  await saveDepotSources(sources);
+  await refreshSourcesUI();
 }
 
 async function performSearch() {
@@ -1349,6 +1425,7 @@ async function openSettings() {
     els.autoUpdateToggle.checked = true;
   }
   loadBuildInfo();
+  refreshSourcesUI();
   emitEvent('settings_opened');
   els.settingsModal.classList.remove('hidden');
 }
@@ -1826,7 +1903,28 @@ function showDotNetWarning() {
 
 function initEvents() {
   els.tabUpload.addEventListener('click', () => switchTab('upload'));
-  els.tabSearch.addEventListener('click', () => switchTab('search'));
+  els.tabSearch.addEventListener('click', () => { switchTab('search'); refreshSourcesUI(); });
+
+  if (els.btnSourcesEmptyAdd) {
+    els.btnSourcesEmptyAdd.addEventListener('click', async () => {
+      const ok = await addDepotSource(els.sourcesEmptyInput.value, els.sourcesEmptyError);
+      if (ok) els.sourcesEmptyInput.value = '';
+    });
+  }
+  if (els.btnSourcesAdd) {
+    els.btnSourcesAdd.addEventListener('click', async () => {
+      const ok = await addDepotSource(els.sourcesAddInput.value, els.sourcesAddError);
+      if (ok) els.sourcesAddInput.value = '';
+    });
+  }
+  if (els.sourcesList) {
+    els.sourcesList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-source-idx]');
+      if (!btn) return;
+      const idx = parseInt(btn.dataset.sourceIdx, 10);
+      if (Number.isInteger(idx)) await removeDepotSource(idx);
+    });
+  }
 
   els.btnSearch.addEventListener('click', performSearch);
   els.searchAppIdInput.addEventListener('keydown', (e) => {
@@ -2300,4 +2398,5 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSettingsAndDefaults();
   initTauri();
   initTelemetryConsent();
+  refreshSourcesUI();
 });
