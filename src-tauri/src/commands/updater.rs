@@ -12,14 +12,17 @@ fn detect_install_method() -> &'static str {
     }
     #[cfg(target_os = "linux")]
     {
+        if std::env::var_os("FLATPAK_ID").is_some() {
+            return "flatpak";
+        }
         match std::env::current_exe() {
             Ok(path) => {
                 let s = path.to_string_lossy();
-                if s.starts_with("/usr/")
-                    || s.starts_with("/opt/")
-                    || s.starts_with("/app/")
-                    || s.starts_with("/snap/")
-                {
+                if s.starts_with("/app/") {
+                    "flatpak"
+                } else if s.starts_with("/snap/") {
+                    "snap"
+                } else if s.starts_with("/usr/") || s.starts_with("/opt/") {
                     "system"
                 } else {
                     "self"
