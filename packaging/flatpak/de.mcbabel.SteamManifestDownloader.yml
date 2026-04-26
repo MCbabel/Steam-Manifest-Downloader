@@ -29,9 +29,11 @@ modules:
     build-commands:
       - cd src-tauri && cargo build --release --frozen --offline
       - install -Dm755 src-tauri/target/release/steam-manifest-downloader -t /app/bin/
+      - install -Dm644 assets/icon.svg /app/share/icons/hicolor/scalable/apps/de.mcbabel.SteamManifestDownloader.svg
       - install -Dm644 assets/icon.png /app/share/icons/hicolor/256x256/apps/de.mcbabel.SteamManifestDownloader.png
       - install -Dm644 de.mcbabel.SteamManifestDownloader.desktop -t /app/share/applications/
       - install -Dm644 de.mcbabel.SteamManifestDownloader.metainfo.xml -t /app/share/metainfo/
+      - install -Dm644 LICENSE -t /app/share/licenses/de.mcbabel.SteamManifestDownloader/
     sources:
       - type: archive
         url: https://github.com/MCbabel/Steam-Manifest-Downloader/archive/refs/tags/v1.3.0.tar.gz
