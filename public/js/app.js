@@ -1556,17 +1556,34 @@ function showUpdateModal(info) {
   els.updateActions.style.display = '';
   els.btnUpdateNow.disabled = false;
 
-  const systemManaged = info.installMethod === 'system';
+  const externallyManaged = info.installMethod && info.installMethod !== 'self';
   const systemHint = document.getElementById('update-system-hint');
-  if (systemHint) systemHint.classList.toggle('hidden', !systemManaged);
-  els.btnUpdateNow.classList.toggle('hidden', systemManaged);
-  els.btnUpdateSkip.classList.toggle('hidden', systemManaged);
+  if (systemHint) {
+    systemHint.classList.toggle('hidden', !externallyManaged);
+    if (externallyManaged) {
+      const cmdEl = document.getElementById('update-system-cmd');
+      if (cmdEl) cmdEl.textContent = updateCommandFor(info.installMethod);
+    }
+  }
+  els.btnUpdateNow.classList.toggle('hidden', externallyManaged);
+  els.btnUpdateSkip.classList.toggle('hidden', externallyManaged);
 
   els.updateModal.classList.remove('hidden');
 }
 
+function updateCommandFor(method) {
+  switch (method) {
+    case 'flatpak': return 'flatpak update de.mcbabel.SteamManifestDownloader';
+    case 'snap':    return 'sudo snap refresh steam-manifest-downloader';
+    case 'system':
+    default:        return 'yay -Syu steam-manifest-downloader';
+  }
+}
+
 async function copyUpdateCommand() {
-  const cmd = 'yay -Syu steam-manifest-downloader';
+  const cmdEl = document.getElementById('update-system-cmd');
+  const cmd = cmdEl ? cmdEl.textContent : '';
+  if (!cmd) return;
   try {
     await navigator.clipboard.writeText(cmd);
     const btn = document.getElementById('btn-update-copy-cmd');

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>de.mcbabel.SteamManifestDownloader</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <name>Steam Manifest Downloader</name>
+  <summary>Download Steam game depots and manifests via a modern GUI</summary>
+  <description>
+    <p>
+      Steam Manifest Downloader is a desktop tool that downloads Steam game depots and
+      manifests through a modern Tauri-based GUI. Drop a .lua file, search for an App
+      ID, select the depots you want, and the app handles manifest fetching, depot keys
+      and the actual download in one step.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Drag and drop .lua / .st parsing</li>
+      <li>Search by App ID via Internet Archive</li>
+      <li>Automatic depot key generation</li>
+      <li>Real-time progress with download speed and ETA</li>
+      <li>Steam Store integration for game names and cover art</li>
+      <li>Dark and light themes, download history</li>
+      <li>Embedded DepotDownloaderMod, no .NET runtime needed on Linux</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">de.mcbabel.SteamManifestDownloader.desktop</launchable>
+  <url type="homepage">https://smd.mcbabel.de</url>
+  <url type="bugtracker">https://github.com/MCbabel/Steam-Manifest-Downloader/issues</url>
+  <url type="vcs-browser">https://github.com/MCbabel/Steam-Manifest-Downloader</url>
+  <developer id="de.mcbabel">
+    <name>MCbabel</name>
+  </developer>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/MCbabel/Steam-Manifest-Downloader/main/assets/screenshots/main-large.png</image>
+      <caption>Step 1 — drop a .lua / .st file or search by App ID</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/MCbabel/Steam-Manifest-Downloader/main/assets/screenshots/main.png</image>
+      <caption>Native window size (900 × 700)</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.3.0" date="2026-04-07">
+      <description>
+        <ul>
+          <li>Game name search with autocomplete via Steam Store</li>
+          <li>Depot size display and total size in the download button</li>
+          <li>Real-time download speed and ETA</li>
+          <li>Advanced settings panel: extra args, retries, speed limit, proxy</li>
+          <li>Migrated manifest source from GitHub to Internet Archive</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#bcd5ff</color>
+    <color type="primary" scheme_preference="dark">#1f3a72</color>
+  </branding>
+</component>
