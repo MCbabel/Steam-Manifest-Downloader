@@ -13,7 +13,6 @@
   <meta name="twitter:title" content="Steam Manifest Downloader" />
   <meta name="twitter:description" content="A sleek desktop app for downloading Steam game depots using manifest data. Built with Tauri v2 and Rust." />
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
 </head>
 <body>
@@ -145,8 +144,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg>
           </div>
           <div class="feature-text">
-            <h3>Multi-Repo Search</h3>
-            <p>Search across multiple manifest repositories simultaneously.</p>
+            <h3>Configurable Depot Sources</h3>
+            <p>Plug in any depot source — GitHub, archive.org or a plain HTTPS folder — and the app queries them in order.</p>
           </div>
         </div>
         <div class="feature-card reveal">
@@ -214,11 +213,11 @@
         </div>
         <div class="feature-card reveal">
           <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 17l6-6-6-6"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
           <div class="feature-text">
-            <h3>Batch Script Export</h3>
-            <p>Export download configurations as reusable batch scripts.</p>
+            <h3>Download History</h3>
+            <p>Re-download any past job in two clicks — selections, depots and target folder are preserved.</p>
           </div>
         </div>
       </div>
@@ -278,23 +277,23 @@
       <div class="tech-scroll reveal">
         <div class="tech-track">
           <div class="tech-badge">
-            <i class="fa-brands fa-rust" style="color:#DEA584;font-size:1.4rem;"></i>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#DEA584" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             <span>Rust</span>
           </div>
           <div class="tech-badge">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="15" cy="9" r="5.5" stroke="#24C8DB" stroke-width="1.5"/><circle cx="9" cy="15" r="5.5" stroke="#24C8DB" stroke-width="1.5"/><circle cx="15" cy="9" r="2" fill="#24C8DB"/><circle cx="9" cy="15" r="2" fill="#24C8DB"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="15" cy="9" r="5.5" stroke="#24C8DB" stroke-width="1.5"/><circle cx="9" cy="15" r="5.5" stroke="#24C8DB" stroke-width="1.5"/><circle cx="15" cy="9" r="2" fill="#24C8DB"/><circle cx="9" cy="15" r="2" fill="#24C8DB"/></svg>
             <span>Tauri v2</span>
           </div>
           <div class="tech-badge">
-            <i class="fa-brands fa-html5" style="color:#E44D26;font-size:1.4rem;"></i>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E44D26" stroke-width="2" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
             <span>HTML / CSS / JS</span>
           </div>
           <div class="tech-badge">
-            <i class="fa-solid fa-globe" style="color:#58a6ff;font-size:1.4rem;"></i>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
             <span>reqwest</span>
           </div>
           <div class="tech-badge">
-            <i class="fa-brands fa-steam" style="color:#3fb950;font-size:1.4rem;"></i>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="1.8" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span>DepotDownloader</span>
           </div>
         </div>
