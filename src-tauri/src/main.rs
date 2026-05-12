@@ -54,6 +54,7 @@ fn main() {
             commands::minimize_window,
             commands::maximize_window,
             commands::close_window,
+            commands::restart_app,
             // Updater
             commands::check_for_updates,
             commands::install_update,

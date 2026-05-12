@@ -439,8 +439,8 @@ async function saveDepotSources(sources) {
 
 function validateSourceUrl(raw) {
   const url = (raw || '').trim();
-  if (!url) return 'URL is empty';
-  if (!/^https?:\/\//i.test(url)) return 'Must start with http:// or https://';
+  if (!url) return i18n.t('errors.sourceEmpty');
+  if (!/^https?:\/\//i.test(url)) return i18n.t('errors.sourceProtocol');
   return null;
 }
 
@@ -450,8 +450,12 @@ async function refreshSourcesUI() {
   if (els.sourcesEmpty) els.sourcesEmpty.classList.toggle('hidden', !empty);
   if (els.searchInputBlock) els.searchInputBlock.classList.toggle('hidden', empty);
   if (els.sourcesList) {
+    const removeLabel = escapeHtml(i18n.t('settings.removeSource'));
     els.sourcesList.innerHTML = sources
-      .map((s, i) => `<li><span>${escapeHtml(s)}</span><button data-source-idx="${i}">Remove</button></li>`)
+      .map((s, i) => {
+        const safe = escapeHtml(s);
+        return `<li><span title="${safe}">${safe}</span><button data-source-idx="${i}">${removeLabel}</button></li>`;
+      })
       .join('');
   }
 }
@@ -1570,6 +1574,11 @@ async function saveSettings() {
 
     await invoke('save_settings', { settings: currentSettings });
     state.notificationSoundEnabled = currentSettings.notification_sound;
+
+    if (els.btnSettingsSave && els.btnSettingsSave.dataset.languageRestart === '1') {
+      await invoke('restart_app');
+      return;
+    }
   } catch (e) {
     console.error('Failed to save settings:', e);
   }
@@ -2496,7 +2505,121 @@ function setupModalA11y() {
   });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+const LANGUAGE_FLAGS = {
+  en: `<svg viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice">
+    <rect width="60" height="30" fill="#012169"/>
+    <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/>
+    <path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="2.5"/>
+    <path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/>
+    <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/>
+  </svg>`,
+  de: `<svg viewBox="0 0 5 3" preserveAspectRatio="none">
+    <rect width="5" height="1" y="0" fill="#000"/>
+    <rect width="5" height="1" y="1" fill="#DD0000"/>
+    <rect width="5" height="1" y="2" fill="#FFCE00"/>
+  </svg>`,
+};
+
+function renderLanguageCards(container, activeCode, onSelect) {
+  if (!container) return;
+  container.innerHTML = '';
+  for (const locale of i18n.getAvailableLocales()) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'language-card' + (locale.code === activeCode ? ' is-active' : '');
+    card.setAttribute('data-lang', locale.code);
+    card.setAttribute('aria-label', locale.label);
+    card.innerHTML = `
+      <span class="language-card__flag" aria-hidden="true">${LANGUAGE_FLAGS[locale.code] || ''}</span>
+      <span class="language-card__label">${escapeHtml(locale.label)}</span>
+    `;
+    card.addEventListener('click', () => onSelect(locale.code));
+    container.appendChild(card);
+  }
+}
+
+async function initI18n() {
+  let settings = null;
+  try {
+    settings = await invoke('get_settings');
+  } catch (e) {
+    console.error('Failed to read settings during i18n init:', e);
+  }
+  const stored = settings && settings.language ? settings.language : '';
+  const code = stored || i18n.detectBrowserLocale();
+  try {
+    await i18n.loadLocale(code);
+  } catch (e) {
+    console.error('Failed to load locale, falling back to en:', e);
+    await i18n.loadLocale(i18n.FALLBACK);
+  }
+  i18n.applyTranslations(document);
+  return { settings, hasStored: !!stored };
+}
+
+async function showLanguagePickerIfNeeded(initSettings, hasStored) {
+  if (hasStored) return;
+  const picker = document.getElementById('language-picker');
+  const cards = document.getElementById('language-picker-cards');
+  if (!picker || !cards) return;
+
+  renderLanguageCards(cards, i18n.getCurrentLocale(), async (code) => {
+    try {
+      const fresh = await invoke('get_settings');
+      fresh.language = code;
+      await invoke('save_settings', { settings: fresh });
+    } catch (e) {
+      console.error('Failed to save language choice:', e);
+    }
+    if (code !== i18n.getCurrentLocale()) {
+      try { await i18n.loadLocale(code); } catch {}
+      i18n.applyTranslations(document);
+    }
+    picker.classList.add('hidden');
+  });
+
+  picker.classList.remove('hidden');
+}
+
+function bindSettingsLanguageCards() {
+  const cards = document.getElementById('settings-language-cards');
+  if (!cards) return;
+
+  let pendingCode = i18n.getCurrentLocale();
+  const initial = i18n.getCurrentLocale();
+
+  const updateSaveLabel = () => {
+    if (!els.btnSettingsSave) return;
+    if (pendingCode !== initial) {
+      els.btnSettingsSave.textContent = i18n.t('settings.languageRestartButton');
+      els.btnSettingsSave.dataset.languageRestart = '1';
+    } else {
+      els.btnSettingsSave.textContent = i18n.t('settings.save');
+      delete els.btnSettingsSave.dataset.languageRestart;
+    }
+  };
+
+  const render = () => {
+    renderLanguageCards(cards, pendingCode, async (code) => {
+      pendingCode = code;
+      try {
+        const fresh = await invoke('get_settings');
+        fresh.language = code;
+        await invoke('save_settings', { settings: fresh });
+      } catch (e) {
+        console.error('Failed to save language:', e);
+      }
+      render();
+      updateSaveLabel();
+    });
+  };
+
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const { settings: initSettings, hasStored } = await initI18n();
+
   initTheme();
   initUpload();
   initEvents();
@@ -2505,4 +2628,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTelemetryConsent();
   refreshSourcesUI();
   setupModalA11y();
+
+  bindSettingsLanguageCards();
+  await showLanguagePickerIfNeeded(initSettings, hasStored);
 });

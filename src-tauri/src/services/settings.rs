@@ -38,6 +38,8 @@ pub struct Settings {
     pub installation_id: String,
     #[serde(default, alias = "manifest_sources")]
     pub depot_sources: Vec<String>,
+    #[serde(default)]
+    pub language: String,
 }
 
 fn default_download_location() -> String {
@@ -92,6 +94,7 @@ impl Default for Settings {
             telemetry_consent: TelemetryConsent::Pending,
             installation_id: String::new(),
             depot_sources: Vec::new(),
+            language: String::new(),
         }
     }
 }
