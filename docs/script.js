@@ -28,16 +28,13 @@
 
   // Navbar scroll effect
   const nav = document.getElementById('nav');
-  let lastScroll = 0;
 
   function handleNavScroll() {
-    const scrollY = window.scrollY;
-    if (scrollY > 50) {
+    if (window.scrollY > 50) {
       nav.classList.add('scrolled');
     } else {
       nav.classList.remove('scrolled');
     }
-    lastScroll = scrollY;
   }
 
   window.addEventListener('scroll', handleNavScroll, { passive: true });

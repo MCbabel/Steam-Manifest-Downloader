@@ -16,14 +16,14 @@
       <span class="title-bar__text">Steam Manifest Downloader</span>
     </div>
     <div class="title-bar__controls">
-      <button class="title-bar__btn title-bar__btn--minimize" id="btn-minimize" title="Minimize">
-        <svg width="12" height="12" viewBox="0 0 12 12"><rect y="5" width="12" height="2" fill="currentColor"/></svg>
+      <button class="title-bar__btn title-bar__btn--minimize" id="btn-minimize" title="Minimize" aria-label="Minimize window">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect y="5" width="12" height="2" fill="currentColor"/></svg>
       </button>
-      <button class="title-bar__btn title-bar__btn--maximize" id="btn-maximize" title="Maximize">
-        <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      <button class="title-bar__btn title-bar__btn--maximize" id="btn-maximize" title="Maximize" aria-label="Maximize window">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="1" y="1" width="10" height="10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
       </button>
-      <button class="title-bar__btn title-bar__btn--close" id="btn-close" title="Close">
-        <svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5"/></svg>
+      <button class="title-bar__btn title-bar__btn--close" id="btn-close" title="Close" aria-label="Close window">
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 1L11 11M11 1L1 11" stroke="currentColor" stroke-width="1.5"/></svg>
       </button>
     </div>
   </div>
@@ -32,7 +32,7 @@
   <div class="app">
     <header class="header">
       <h1 class="header__title">
-        <svg class="header__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg class="header__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/>
           <line x1="12" y1="15" x2="12" y2="3"/>
@@ -41,16 +41,21 @@
       </h1>
       <p class="header__subtitle">Upload a .lua/.st file, select manifests, and download automatically</p>
       <div class="header__actions">
-        <button id="btn-history" class="btn btn--outline header__history-btn" title="Download History">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button id="btn-history" class="btn btn--outline header__history-btn" title="Download History" aria-label="Download History">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
         </button>
-        <button id="btn-settings" class="btn btn--outline header__settings-btn" title="Settings">
-          ⚙️
+        <button id="btn-settings" class="btn btn--outline header__settings-btn" title="Settings" aria-label="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
         </button>
-        <button id="btn-theme-toggle" class="btn btn--outline header__theme-btn" title="Toggle Theme">
-          🌙
+        <button id="btn-theme-toggle" class="btn btn--outline header__theme-btn" title="Toggle Theme" aria-label="Toggle theme">
+          <svg id="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
         </button>
 
       </div>
@@ -58,7 +63,13 @@
 
     <div id="dotnet-warning" class="dotnet-warning hidden">
       <div class="dotnet-warning__content">
-        <span class="dotnet-warning__icon">⚠️</span>
+        <span class="dotnet-warning__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </span>
         <span class="dotnet-warning__text">
           <strong>.NET 9 Runtime</strong> is required but not installed. DepotDownloader will not work without it.
         </span>
@@ -68,11 +79,11 @@
            target="_blank" rel="noopener">
           Download .NET 9
         </a>
-        <button id="dotnet-warning-dismiss" class="dotnet-warning__dismiss" title="Dismiss">&times;</button>
+        <button id="dotnet-warning-dismiss" class="dotnet-warning__dismiss" title="Dismiss" aria-label="Dismiss .NET runtime warning">&times;</button>
       </div>
     </div>
 
-    <div class="steps">
+    <div class="steps" role="progressbar" aria-label="Download workflow progress" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1" id="steps-indicator">
       <div class="steps__item active" data-step="1">
         <div class="steps__number">1</div>
         <div class="steps__label">Upload</div>
@@ -97,8 +108,19 @@
     <section id="step-upload" class="step active">
       <div class="card">
         <div class="tab-bar">
-          <button class="tab-bar__tab active" data-tab="upload" id="tab-upload">📁 Upload File</button>
-          <button class="tab-bar__tab" data-tab="search" id="tab-search">🔍 Search by App ID</button>
+          <button class="tab-bar__tab active" data-tab="upload" id="tab-upload">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            Upload File
+          </button>
+          <button class="tab-bar__tab" data-tab="search" id="tab-search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Search by App ID
+          </button>
         </div>
 
         <div id="tab-content-upload" class="tab-content active">
@@ -226,12 +248,21 @@
         <div id="depot-list" class="depot-list"></div>
 
         <div class="settings-section">
-          <label for="download-dir" class="settings-section__label">📁 Download Location</label>
+          <label for="download-dir" class="settings-section__label">
+            <svg class="label-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            Download Location
+          </label>
           <div class="dd-path__input-wrap dd-path__input-wrap--with-btn">
             <input type="text" id="download-dir" class="dd-path__input"
               placeholder="Loading default path..."
               value="">
-            <button type="button" id="btn-browse-dir" class="btn btn--small btn--outline dd-path__browse-btn" title="Browse for folder">📂</button>
+            <button type="button" id="btn-browse-dir" class="btn btn--small btn--outline dd-path__browse-btn" title="Browse for folder" aria-label="Browse for folder">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 14l1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
           </div>
           <p class="dd-path__hint">Default: Documents/SteamDownloads — Game files will be saved in a subfolder here</p>
         </div>
@@ -267,7 +298,13 @@
     <section id="step-progress" class="step hidden">
       <div class="card">
         <div id="disk-space-info" class="disk-space-info hidden">
-          💾 <span id="disk-space-text">Checking disk space...</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="22" y1="12" x2="2" y2="12"/>
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+            <line x1="6" y1="16" x2="6.01" y2="16"/>
+            <line x1="10" y1="16" x2="10.01" y2="16"/>
+          </svg>
+          <span id="disk-space-text">Checking disk space...</span>
         </div>
         <div id="progress-header" class="progress-header">
           <h2>Downloading...</h2>
@@ -306,7 +343,11 @@
         <div class="card__footer">
           <div class="card__footer-left">
             <button id="btn-cancel" class="btn btn--danger">
-              ✕ Cancel Download
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              Cancel Download
             </button>
           </div>
           <button id="btn-next-step" class="btn btn--primary hidden">
@@ -375,31 +416,43 @@
   </div>
   </div>
 
-  <div id="cancel-modal" class="modal hidden">
+  <div id="cancel-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__content">
-      <div class="modal__icon">⚠️</div>
-      <h3 class="modal__title">Cancel Download?</h3>
+      <div class="modal__icon modal__icon--warning" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h3 class="modal__title" id="cancel-modal-title">Cancel Download?</h3>
       <p class="modal__text">
         Are you sure you want to cancel? All downloaded files for this App ID will be <strong>permanently deleted</strong>.
       </p>
       <div class="modal__actions">
-        <button id="btn-cancel-no" class="btn btn--outline">No, Continue</button>
+        <button id="btn-cancel-no" class="btn btn--outline" data-modal-cancel>No, Continue</button>
         <button id="btn-cancel-yes" class="btn btn--danger">Yes, Cancel &amp; Delete</button>
       </div>
     </div>
   </div>
 
-  <div id="close-modal" class="modal hidden">
+  <div id="close-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="close-modal-title" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__content">
-      <div class="modal__icon">⚠️</div>
-      <h3 class="modal__title">Close Application?</h3>
+      <div class="modal__icon modal__icon--warning" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h3 class="modal__title" id="close-modal-title">Close Application?</h3>
       <p class="modal__text">
         A download is in progress! Closing will cancel it and you may <strong>lose progress</strong>. Close anyway?
       </p>
       <div class="modal__actions">
-        <button id="btn-close-no" class="btn btn--outline">No, Keep Running</button>
+        <button id="btn-close-no" class="btn btn--outline" data-modal-cancel>No, Keep Running</button>
         <button id="btn-close-yes" class="btn btn--danger">Yes, Close</button>
       </div>
     </div>
@@ -407,24 +460,45 @@
 
 
 
-  <div id="telemetry-modal" class="modal hidden">
+  <div id="telemetry-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="telemetry-modal-title" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__content telemetry-modal-content">
-      <h3 class="modal__title">📊 Help improve the app?</h3>
+      <h3 class="modal__title" id="telemetry-modal-title">
+        <svg class="modal__title-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 3v18h18"/>
+          <path d="M7 16V9"/>
+          <path d="M12 16V5"/>
+          <path d="M17 16v-4"/>
+        </svg>
+        Help improve the app?
+      </h3>
       <p class="telemetry-modal__lead">
         We'd like to collect <strong>anonymous</strong> usage statistics so we know which features to invest in.
       </p>
       <div class="telemetry-modal__list">
-        <div class="telemetry-modal__col">
-          <h4>✅ We collect</h4>
+        <div class="telemetry-modal__col telemetry-modal__col--collect">
+          <h4>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            We collect
+          </h4>
           <ul>
             <li>App version, OS, architecture</li>
             <li>Which features get used (counters only)</li>
             <li>A random install ID (not tied to you)</li>
           </ul>
         </div>
-        <div class="telemetry-modal__col">
-          <h4>🚫 We never collect</h4>
+        <div class="telemetry-modal__col telemetry-modal__col--never">
+          <h4>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19.69 14a6.9 6.9 0 0 0 .31-2V5l-8-3-3.16 1.18"/>
+              <path d="M4.73 4.73 4 5v7c0 6 8 10 8 10a20.29 20.29 0 0 0 5.62-4.38"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+            We never collect
+          </h4>
           <ul>
             <li>Game IDs, depot IDs, file names</li>
             <li>Contents of <code>.lua</code> / <code>.st</code> files</li>
@@ -436,16 +510,22 @@
         Events are end-to-end encrypted with a public key embedded in the app — only the maintainer's server can decrypt them. You can change your choice anytime in Settings → Advanced Settings.
       </p>
       <div class="modal__actions">
-        <button id="btn-telemetry-decline" class="btn btn--outline">No thanks</button>
+        <button id="btn-telemetry-decline" class="btn btn--outline" data-modal-cancel>No thanks</button>
         <button id="btn-telemetry-accept" class="btn btn--primary">Yes, help out</button>
       </div>
     </div>
   </div>
 
-  <div id="settings-modal" class="modal hidden">
+  <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__content settings-modal-content">
-      <h3 class="modal__title">⚙️ Settings</h3>
+      <h3 class="modal__title" id="settings-modal-title">
+        <svg class="modal__title-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        Settings
+      </h3>
       <div class="settings-field">
         <label class="settings-field__label">Auto-Update</label>
         <div class="settings-field__toggle-wrap">
@@ -560,17 +640,23 @@
       </div>
 
       <div class="modal__actions">
-        <button id="btn-settings-cancel" class="btn btn--outline">Cancel</button>
+        <button id="btn-settings-cancel" class="btn btn--outline" data-modal-cancel>Cancel</button>
         <button id="btn-settings-save" class="btn btn--primary">Save</button>
       </div>
     </div>
   </div>
 
-  <div id="update-modal" class="modal hidden">
+  <div id="update-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="update-modal-title" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__content update-modal-content">
-      <div class="modal__icon">🔄</div>
-      <h3 class="modal__title">Update Available</h3>
+      <div class="modal__icon modal__icon--accent" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </div>
+      <h3 class="modal__title" id="update-modal-title">Update Available</h3>
       <div class="update-modal__info">
         <div class="update-modal__version">
           <span class="update-modal__label">New version:</span>
@@ -595,25 +681,25 @@
       </div>
       <div id="update-actions" class="modal__actions">
         <button id="btn-update-skip" class="btn btn--outline btn--small">Skip This Version</button>
-        <button id="btn-update-later" class="btn btn--outline">Later</button>
+        <button id="btn-update-later" class="btn btn--outline" data-modal-cancel>Later</button>
         <button id="btn-update-now" class="btn btn--primary">Update Now</button>
       </div>
     </div>
   </div>
 
-  <div id="history-modal" class="modal hidden">
+  <div id="history-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="history-modal-title" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__content history-modal-content">
-      <h3 class="modal__title">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -3px; margin-right: 6px;">
+      <h3 class="modal__title" id="history-modal-title">
+        <svg class="modal__title-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
         Download History
       </h3>
       <div id="history-list" class="history-list"></div>
       <div class="modal__actions">
-        <button id="btn-history-clear" class="btn btn--outline btn--small" style="margin-right:auto">Clear All</button>
-        <button id="btn-history-close" class="btn btn--primary">Close</button>
+        <button id="btn-history-clear" class="btn btn--outline btn--small btn--push-end">Clear All</button>
+        <button id="btn-history-close" class="btn btn--primary" data-modal-cancel>Close</button>
       </div>
     </div>
   </div>

@@ -33,6 +33,19 @@ const state = {
   },
 };
 
+const SVG_BASE = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+const ICONS = {
+  upload: `<svg class="btn-icon" ${SVG_BASE}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+  folderOpen: `<svg class="btn-icon" ${SVG_BASE}><path d="M6 14l1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg>`,
+  refresh: `<svg class="btn-icon" ${SVG_BASE}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
+  trash: `<svg class="btn-icon" ${SVG_BASE}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>`,
+  x: `<svg class="btn-icon" ${SVG_BASE}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  check: `<svg class="btn-icon" ${SVG_BASE}><polyline points="20 6 9 17 4 12"/></svg>`,
+  checkCircle: `<svg class="btn-icon" ${SVG_BASE}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+  sun: `<svg class="theme-icon theme-icon--sun" id="theme-icon" width="16" height="16" ${SVG_BASE}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
+  moon: `<svg class="theme-icon theme-icon--moon" id="theme-icon" width="16" height="16" ${SVG_BASE}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+};
+
 const MH_APIKEY_STORAGE_KEY = 'manifestHubApiKey';
 let autoRedownloadPending = false;
 let autoSelectAllOnStep2 = false;
@@ -185,6 +198,13 @@ function goToStep(step) {
     el.classList.toggle('active', s === step);
     el.classList.toggle('completed', s < step);
   });
+
+  const stepsIndicator = document.getElementById('steps-indicator');
+  if (stepsIndicator) {
+    const visibleMax = document.getElementById('step4-indicator')?.classList.contains('hidden') === false ? 4 : 3;
+    stepsIndicator.setAttribute('aria-valuemax', String(visibleMax));
+    stepsIndicator.setAttribute('aria-valuenow', String(Math.min(step, visibleMax)));
+  }
 }
 
 function switchTab(tabName) {
@@ -270,8 +290,8 @@ async function handleDepotManifestFile(depotId) {
 
     const statusEl = document.querySelector(`.depot-manifest-status[data-depot-id="${depotId}"]`);
     const btnEl = document.querySelector(`.depot-manifest-btn[data-depot-id="${depotId}"]`);
-    if (statusEl) statusEl.innerHTML = `<span class="manifest-uploaded">✓ ${escapeHtml(fileName)}</span>`;
-    if (btnEl) btnEl.textContent = '📁 Replace';
+    if (statusEl) statusEl.innerHTML = `<span class="manifest-uploaded">${ICONS.check} ${escapeHtml(fileName)}</span>`;
+    if (btnEl) btnEl.innerHTML = `${ICONS.upload} Replace`;
   } catch (error) {
     console.error('Failed to select manifest file:', error);
     alert('Failed to select manifest file: ' + error);
@@ -284,7 +304,7 @@ function removeDepotManifest(depotId) {
   const statusEl = document.querySelector(`.depot-manifest-status[data-depot-id="${depotId}"]`);
   const btnEl = document.querySelector(`.depot-manifest-btn[data-depot-id="${depotId}"]`);
   if (statusEl) statusEl.innerHTML = '';
-  if (btnEl) btnEl.textContent = '📁 Upload .manifest';
+  if (btnEl) btnEl.innerHTML = `${ICONS.upload} Upload .manifest`;
 }
 
 async function handleFilePath(filePath) {
@@ -825,7 +845,7 @@ function showSelectionStep() {
         </div>
         <div class="depot-item__manifest-upload">
           <button type="button" class="btn btn--small btn--outline depot-manifest-btn" data-depot-id="${safeDepotId}">
-            📁 Upload .manifest
+            ${ICONS.upload} Upload .manifest
           </button>
           <span class="depot-manifest-status" data-depot-id="${safeDepotId}"></span>
         </div>
@@ -999,7 +1019,7 @@ function initProgressUI(depots) {
   if (els.btnNextStep) els.btnNextStep.classList.add('hidden');
   els.btnCancel.classList.remove('hidden');
   els.btnCancel.disabled = false;
-  els.btnCancel.innerHTML = '✕ Cancel Download';
+  els.btnCancel.innerHTML = `${ICONS.x} Cancel Download`;
   els.diskSpaceInfo.classList.add('hidden');
   if (els.depotProgressFill) els.depotProgressFill.style.width = '0%';
   if (els.depotProgressText) els.depotProgressText.textContent = '0%';
@@ -1272,7 +1292,7 @@ function handleComplete(msg) {
   clearInterval(state.speedTracker.staleTimer);
   state.speedTracker.staleTimer = null;
   els.progressBarFill.style.width = '100%';
-  els.progressStatus.textContent = '✅ Complete!';
+  els.progressStatus.innerHTML = `<span class="status-success">${ICONS.checkCircle} Complete!</span>`;
   updateDepotDownloadProgress(100);
   if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
   emitEvent('download_completed', { success: true });
@@ -1761,8 +1781,9 @@ function toggleTheme() {
 
 function updateThemeButton(theme) {
   if (els.btnThemeToggle) {
-    els.btnThemeToggle.textContent = theme === 'dark' ? '🌙' : '☀️';
+    els.btnThemeToggle.innerHTML = theme === 'dark' ? ICONS.moon : ICONS.sun;
     els.btnThemeToggle.title = theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+    els.btnThemeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
   }
 }
 
@@ -2156,9 +2177,9 @@ function renderHistory(entries) {
           <div class="history-entry__depots">${entry.depots_downloaded}/${entry.depot_count} depots downloaded</div>
         </div>
         <div class="history-entry__actions">
-          <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" data-depot-ids="${escapeHtml((entry.depot_ids || []).join(','))}" title="Re-download">🔄</button>
-          <button class="btn btn--small btn--outline history-action-folder" data-path="${escapeHtml(entry.download_dir)}" title="Open Folder"${entry.status === 'cancelled' ? ' disabled' : ''}>📂</button>
-          <button class="btn btn--small btn--outline history-action-remove" data-entry-id="${escapeHtml(entry.id)}" title="Remove">🗑</button>
+          <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" data-depot-ids="${escapeHtml((entry.depot_ids || []).join(','))}" title="Re-download" aria-label="Re-download">${ICONS.refresh}</button>
+          <button class="btn btn--small btn--outline history-action-folder" data-path="${escapeHtml(entry.download_dir)}" title="Open Folder" aria-label="Open download folder"${entry.status === 'cancelled' ? ' disabled' : ''}>${ICONS.folderOpen}</button>
+          <button class="btn btn--small btn--outline history-action-remove" data-entry-id="${escapeHtml(entry.id)}" title="Remove" aria-label="Remove entry">${ICONS.trash}</button>
         </div>
       </div>
     `;
@@ -2391,6 +2412,90 @@ function formatShortcutFileSize(bytes) {
   return (bytes / 1073741824).toFixed(2) + ' GB';
 }
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+const modalFocusReturn = new WeakMap();
+
+function getFocusable(modal) {
+  return Array.from(modal.querySelectorAll(FOCUSABLE_SELECTOR))
+    .filter((el) => el.offsetParent !== null || el === document.activeElement);
+}
+
+function topmostVisibleDialog() {
+  const dialogs = document.querySelectorAll('[role="dialog"]');
+  for (let i = dialogs.length - 1; i >= 0; i--) {
+    if (!dialogs[i].classList.contains('hidden')) return dialogs[i];
+  }
+  return null;
+}
+
+function setupModalA11y() {
+  document.querySelectorAll('[role="dialog"]').forEach((modal) => {
+    modal.setAttribute('aria-hidden', modal.classList.contains('hidden') ? 'true' : 'false');
+
+    const observer = new MutationObserver(() => {
+      const isHidden = modal.classList.contains('hidden');
+      modal.setAttribute('aria-hidden', isHidden ? 'true' : 'false');
+
+      if (!isHidden) {
+        modalFocusReturn.set(modal, document.activeElement);
+        const focusables = getFocusable(modal);
+        if (focusables.length > 0) {
+          requestAnimationFrame(() => focusables[0].focus());
+        }
+      } else {
+        const returnTo = modalFocusReturn.get(modal);
+        if (returnTo && typeof returnTo.focus === 'function') {
+          returnTo.focus();
+        }
+        modalFocusReturn.delete(modal);
+      }
+    });
+
+    observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const modal = topmostVisibleDialog();
+    if (!modal) return;
+
+    if (e.key === 'Escape') {
+      const cancelBtn = modal.querySelector('[data-modal-cancel]')
+        || modal.querySelector('.btn--outline')
+        || modal.querySelector('button');
+      if (cancelBtn) {
+        e.preventDefault();
+        cancelBtn.click();
+      }
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      const focusables = getFocusable(modal);
+      if (focusables.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initUpload();
@@ -2399,4 +2504,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initTauri();
   initTelemetryConsent();
   refreshSourcesUI();
+  setupModalA11y();
 });
