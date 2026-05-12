@@ -1,0 +1,188 @@
+{
+  "appName": "Steam Manifest Downloader",
+  "common": {
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "close": "Schließen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "optional": "Optional",
+    "loading": "Lädt..."
+  },
+  "languagePicker": {
+    "title": "Sprache auswählen",
+    "subtitle": "Du kannst sie jederzeit in den Einstellungen ändern."
+  },
+  "titleBar": {
+    "minimize": "Fenster minimieren",
+    "maximize": "Fenster maximieren",
+    "close": "Fenster schließen"
+  },
+  "header": {
+    "subtitle": "Lade eine .lua/.st-Datei hoch, wähle Manifests aus und lade automatisch herunter",
+    "history": "Download-Verlauf",
+    "settings": "Einstellungen",
+    "themeToggle": "Theme wechseln"
+  },
+  "dotnetWarning": {
+    "text": "<strong>.NET 9 Runtime</strong> ist erforderlich, aber nicht installiert. Ohne sie funktioniert DepotDownloader nicht.",
+    "download": ".NET 9 herunterladen",
+    "dismiss": ".NET-Hinweis ausblenden"
+  },
+  "steps": {
+    "upload": "Hochladen",
+    "select": "Auswählen",
+    "download": "Herunterladen",
+    "shortcut": "Verknüpfung"
+  },
+  "tabs": {
+    "upload": "Datei hochladen",
+    "search": "Per App-ID suchen"
+  },
+  "upload": {
+    "dropText": "Lege deine <strong>.lua</strong>- oder <strong>.st</strong>-Datei hier ab",
+    "dropHint": "oder klicke zum Durchsuchen",
+    "removeFile": "Datei entfernen",
+    "parsing": "Datei wird gelesen..."
+  },
+  "search": {
+    "noSourceTitle": "Keine Depot-Quelle konfiguriert",
+    "noSourceLead": "Die App liefert keine Depot-Quellen mit. Füge eine URL ein, die auf einen Ordner zeigt, der dem Layout <code>branches/&lt;appid&gt;/&lt;files&gt;</code> folgt (mit <code>.lua</code>-, <code>.manifest</code>- und optional <code>key.vdf</code>-Dateien). GitHub-Repos und <code>archive.org/view_archive.php</code>-URLs werden automatisch erkannt; jede einfache HTTPS-Basis-URL funktioniert ebenfalls.",
+    "sourcePlaceholder": "https://github.com/user/repo  oder  https://archive.org/view_archive.php?archive=…",
+    "addSource": "Quelle hinzufügen",
+    "inputPlaceholder": "Nach Name oder App-ID suchen...",
+    "submit": "Suchen",
+    "loading": "Suche läuft...",
+    "next": "Weiter",
+    "manifestLoading": "Manifests werden geladen..."
+  },
+  "select": {
+    "gameInfoLoading": "Spielinfos werden geladen...",
+    "appIdLabel": "App-ID:",
+    "selectAll": "Alle auswählen",
+    "deselectAll": "Auswahl aufheben",
+    "depotSearchPlaceholder": "Nach Depot-ID suchen...",
+    "showSelectedOnly": "Nur Ausgewählte anzeigen",
+    "downloadLocation": "Download-Ordner",
+    "downloadLocationPlaceholder": "Standardpfad wird geladen...",
+    "browseFolder": "Ordner auswählen",
+    "downloadLocationHint": "Standard: Dokumente/SteamDownloads — Spieldateien werden in einem Unterordner hier abgelegt",
+    "manifestHubLabel": "ManifestHub API-Schlüssel",
+    "manifestHubPlaceholder": "ManifestHub API-Schlüssel eingeben...",
+    "manifestHubHint": "Benötigt für eigene Manifest-IDs. Schlüssel hier holen: <a href=\"https://manifesthub1.filegear-sg.me/\" target=\"_blank\" class=\"link\">manifesthub1.filegear-sg.me</a>",
+    "downloadSelected": "Auswahl herunterladen"
+  },
+  "progress": {
+    "diskSpaceLoading": "Speicherplatz wird geprüft...",
+    "downloading": "Wird heruntergeladen...",
+    "cancel": "Download abbrechen",
+    "terminalTitle": "Ausgabe",
+    "next": "Weiter"
+  },
+  "shortcut": {
+    "title": "Verknüpfungen erstellen",
+    "description": "Erstelle Desktop- oder Startmenü-Verknüpfungen, um das Spiel zu starten.",
+    "exeLabel": "Spiel-Programmdatei",
+    "exePlaceholder": "Programmdatei wird gesucht...",
+    "browse": "Durchsuchen",
+    "exeHint": "Automatisch erkannte Spiel-Programmdatei. Klicke „Durchsuchen“ oder wähle eine unten erkannte Datei aus.",
+    "otherDetected": "Weitere erkannte Programmdateien",
+    "desktopShortcut": "Desktop-Verknüpfung",
+    "startMenuShortcut": "Startmenü-Verknüpfung",
+    "startOver": "Neu beginnen",
+    "startNewDownload": "Neuen Download starten",
+    "createShortcuts": "Verknüpfungen erstellen"
+  },
+  "modals": {
+    "cancel": {
+      "title": "Download abbrechen?",
+      "body": "Bist du sicher? Alle bereits heruntergeladenen Dateien für diese App-ID werden <strong>endgültig gelöscht</strong>.",
+      "yes": "Ja, abbrechen & löschen",
+      "no": "Nein, fortfahren"
+    },
+    "close": {
+      "title": "App schließen?",
+      "body": "Es läuft gerade ein Download! Beim Schließen wird er abgebrochen und du könntest <strong>Fortschritt verlieren</strong>. Trotzdem schließen?",
+      "yes": "Ja, schließen",
+      "no": "Nein, weiterlaufen lassen"
+    },
+    "telemetry": {
+      "title": "Hilf mit, die App zu verbessern",
+      "lead": "Wir würden gern <strong>anonyme</strong> Nutzungsstatistiken erheben, damit wir wissen, welche Features wir ausbauen sollen.",
+      "collectTitle": "Wir erheben",
+      "collectItem1": "App-Version, Betriebssystem, Architektur",
+      "collectItem2": "Welche Features genutzt werden (nur Zähler)",
+      "collectItem3": "Eine zufällige Installations-ID (nicht an dich gebunden)",
+      "neverTitle": "Wir erheben niemals",
+      "neverItem1": "Spiel-IDs, Depot-IDs, Dateinamen",
+      "neverItem2": "Inhalte von <code>.lua</code>- / <code>.st</code>-Dateien",
+      "neverItem3": "IP-Adressen, Account-Infos",
+      "hint": "Events sind Ende-zu-Ende verschlüsselt mit einem in der App eingebetteten öffentlichen Schlüssel — nur der Server des Maintainers kann sie entschlüsseln. Du kannst deine Auswahl jederzeit in den Einstellungen → Erweiterte Einstellungen ändern.",
+      "decline": "Nein danke",
+      "accept": "Ja, gerne helfen"
+    },
+    "update": {
+      "title": "Update verfügbar",
+      "newVersion": "Neue Version:",
+      "released": "Veröffentlicht:",
+      "systemText": "Diese Version wurde über deinen Paketmanager installiert. Update via:",
+      "copyCmd": "Befehl kopieren",
+      "downloading": "Update wird heruntergeladen...",
+      "skip": "Diese Version überspringen",
+      "later": "Später",
+      "now": "Jetzt aktualisieren"
+    },
+    "history": {
+      "title": "Download-Verlauf",
+      "clear": "Alle löschen",
+      "close": "Schließen"
+    }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "autoUpdate": "Auto-Update",
+    "autoUpdateToggle": "Beim Start automatisch nach Updates suchen",
+    "autoUpdateHint": "Wenn aktiviert, prüft die App auf GitHub auf neue Versionen und bietet die Installation an.",
+    "language": "Sprache",
+    "languageHint": "Eine Sprachänderung erfordert einen Neustart der App.",
+    "languageRestartButton": "Jetzt neu starten",
+    "advanced": "Erweiterte Einstellungen",
+    "ddExtraArgs": "DepotDownloader Zusatzargumente",
+    "ddExtraArgsHint": "Zusätzliche Kommandozeilen-Argumente für DepotDownloaderMod",
+    "maxRetries": "Maximale Wiederholungen bei Fehler",
+    "maxRetriesHint": "Anzahl der Wiederholungsversuche bei fehlgeschlagenem Depot-Download",
+    "speedLimit": "Download-Geschwindigkeitslimit (MB/s)",
+    "speedLimitPlaceholder": "Unbegrenzt",
+    "speedLimitHint": "Leer lassen für unbegrenzt. Wird als DDM-Argument übergeben.",
+    "proxy": "HTTP-Proxy",
+    "proxyPlaceholder": "Kein Proxy",
+    "proxyHint": "Optionale Proxy-URL (z.B. http://proxy:8080 oder socks5://proxy:1080)",
+    "depotSources": "Depot-Quellen",
+    "depotSourcesHint": "URLs, die auf einen Ordner im Layout <code>branches/&lt;appid&gt;/&lt;files&gt;</code> zeigen (Depot-Keys, Manifests, key.vdf). Quellen werden in der angezeigten Reihenfolge abgefragt.",
+    "depotSourcePlaceholder": "Quell-URL einfügen…",
+    "add": "Hinzufügen",
+    "removeSource": "Entfernen",
+    "notificationSound": "Benachrichtigungston",
+    "notificationSoundToggle": "Ton abspielen, wenn Downloads fertig sind",
+    "notificationSoundHint": "Verwendet einen System-Benachrichtigungston, sobald alle Downloads abgeschlossen sind.",
+    "telemetry": "Anonyme Nutzungsstatistiken",
+    "telemetryToggle": "Anonyme Nutzungs-Events senden, um die App zu verbessern",
+    "telemetryHint": "Ende-zu-Ende verschlüsselt. Keine Spiel-IDs, Dateiinhalte oder Account-Infos werden je übertragen. <a href=\"https://github.com/MCbabel/Steam-Manifest-Downloader/blob/main/PRIVACY.md\" target=\"_blank\" rel=\"noopener\">Details zum Datenschutz</a>.",
+    "debugInfo": "Debug-Info",
+    "debugInfoChannel": "Channel",
+    "debugInfoVersion": "Version",
+    "debugInfoCommit": "Commit",
+    "debugInfoBuildDate": "Build-Datum",
+    "debugInfoProfile": "Profil",
+    "debugInfoPlatform": "Plattform",
+    "copyDebugInfo": "Debug-Info kopieren",
+    "debugInfoHint": "Füge das in Bug-Reports ein, damit der Maintainer weiß, welchen Build du nutzt.",
+    "cancel": "Abbrechen",
+    "save": "Speichern"
+  },
+  "errors": {
+    "noManifests": "Für diese App-ID wurden in keiner konfigurierten Depot-Quelle Manifests gefunden. Füge weitere Quellen in den Einstellungen hinzu oder aktiviere sie.",
+    "sourceEmpty": "URL ist leer",
+    "sourceProtocol": "Muss mit http:// oder https:// beginnen"
+  }
+}

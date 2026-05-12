@@ -1411,6 +1411,74 @@ button:disabled,
   color: var(--success);
 }
 
+/* Language picker / chooser */
+.language-picker-content {
+  max-width: 460px;
+}
+
+.language-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.language-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 0.5rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all var(--transition);
+  user-select: none;
+}
+
+.language-card:hover:not(.is-active) {
+  background: var(--bg-secondary);
+  border-color: var(--text-muted);
+}
+
+.language-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.language-card.is-active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.language-card__flag {
+  width: 48px;
+  height: 32px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.language-card__flag svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.language-card__label {
+  display: block;
+  line-height: 1.2;
+}
+
 .modal__title {
   font-size: 1.25rem;
   font-weight: 700;
@@ -2086,7 +2154,7 @@ button:disabled,
   bottom: 2px;
   background: var(--text-secondary);
   border-radius: 50%;
-  transition: transform 0.2s, background 0.2s;
+  transition: left 0.2s, background 0.2s;
 }
 
 .toggle-switch input:checked + .toggle-switch__slider {
@@ -2095,7 +2163,7 @@ button:disabled,
 }
 
 .toggle-switch input:checked + .toggle-switch__slider::before {
-  transform: translateX(20px);
+  left: 22px;
   background: #fff;
 }
 
@@ -2282,14 +2350,22 @@ button:disabled,
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.02);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.sources-list li > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: 0.78rem;
-  color: var(--text-secondary);
-  overflow-wrap: anywhere;
 }
 
 .sources-list li button {
@@ -2298,7 +2374,7 @@ button:disabled,
   border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 4px;
-  padding: 2px 8px;
+  padding: 3px 10px;
   font-size: 0.75rem;
   cursor: pointer;
   transition: color 0.15s, border-color 0.15s;

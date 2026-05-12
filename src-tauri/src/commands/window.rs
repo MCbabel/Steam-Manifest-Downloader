@@ -28,3 +28,28 @@ pub async fn close_window(window: tauri::Window) -> Result<(), String> {
     }
     window.destroy().map_err(|e| e.to_string())
 }
+
+#[command]
+pub async fn restart_app(app: tauri::AppHandle) {
+    if let Some(state) = app.try_state::<AppState>() {
+        if let Some(telemetry) = state.telemetry.clone() {
+            tokio::time::timeout(std::time::Duration::from_secs(3), telemetry.flush())
+                .await
+                .ok();
+        }
+    }
+    #[cfg(debug_assertions)]
+    {
+        // In dev (cargo tauri dev) the HMR watcher on 127.0.0.1 is owned by the
+        // cargo-tauri-dev orchestrator. app.restart() spawns the binary outside
+        // that orchestrator, so the new process can't reach the watcher and
+        // pops up a "connection refused" error window. Just exit cleanly here
+        // and re-run cargo tauri dev manually.
+        let _ = app;
+        std::process::exit(0);
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        app.restart();
+    }
+}
