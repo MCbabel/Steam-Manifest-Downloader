@@ -533,7 +533,7 @@ async function performSearch() {
     state.searchRepos = repos;
 
     if (repos.length === 0) {
-      showSearchError('No manifests found for this App ID on the Internet Archive.');
+      showSearchError('No manifests found for this App ID in any configured depot source. Add or enable more sources in Settings.');
       return;
     }
 
@@ -672,7 +672,7 @@ async function proceedFromSearch() {
     els.manifestLoading.classList.add('hidden');
 
     if (depots.length === 0) {
-      showSearchError('No manifests found for this App ID on the Internet Archive.');
+      showSearchError('No manifests found for this App ID in any configured depot source. Add or enable more sources in Settings.');
       els.searchNextRow.classList.remove('hidden');
       return;
     }

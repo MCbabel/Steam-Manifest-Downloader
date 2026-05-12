@@ -160,6 +160,50 @@ body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+.terminal,
+.terminal__body,
+.terminal__line,
+pre,
+code,
+.selectable,
+[data-selectable] {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"],
+input[type="button"],
+input[type="submit"] {
+  cursor: pointer;
+}
+
+button,
+a,
+.btn,
+[role="button"],
+.depot-item,
+.repo-card,
+.history-entry,
+.tab-bar__tab,
+label[for] {
+  cursor: pointer;
+}
+
+button:disabled,
+.btn:disabled,
+[disabled] {
+  cursor: not-allowed;
 }
 
 /* App shell – renders the visible rounded window on all platforms */
