@@ -1,9 +1,4 @@
-/* ========================================
-   Steam Manifest Downloader — Landing Page
-   Pure CSS, no frameworks
-   ======================================== */
-
-/* --- Custom Properties --- */
+/* Custom Properties */
 :root {
   --bg: #0d1117;
   --bg-card: rgba(22, 27, 34, 0.7);
@@ -24,7 +19,7 @@
   --max-width: 1140px;
 }
 
-/* --- Reset & Base --- */
+/* Reset & Base */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -61,7 +56,7 @@ a:hover {
   padding: 0 24px;
 }
 
-/* --- Reveal Animations --- */
+/* Reveal Animations */
 .reveal {
   opacity: 0;
   transform: translateY(30px);
@@ -85,7 +80,7 @@ a:hover {
 .features-grid .reveal:nth-child(9) { transition-delay: 0.56s; }
 .features-grid .reveal:nth-child(10) { transition-delay: 0.63s; }
 
-/* --- Navigation --- */
+/* Navigation */
 .nav {
   position: fixed;
   top: 0;
@@ -156,7 +151,7 @@ a:hover {
 
 .nav-github:hover { color: var(--text); }
 
-/* --- Page-wide Background --- */
+/* Page-wide Background */
 .page-bg {
   position: fixed;
   inset: 0;
@@ -192,7 +187,7 @@ a:hover {
   -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 30%, black 30%, transparent 80%);
 }
 
-/* --- Hero Section --- */
+/* Hero Section */
 .hero {
   position: relative;
   z-index: 1;
@@ -298,7 +293,7 @@ a:hover {
   margin-bottom: 60px;
 }
 
-/* --- Buttons --- */
+/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -346,7 +341,7 @@ a:hover {
   border-radius: 14px;
 }
 
-/* --- Hero Mockup --- */
+/* Hero Mockup */
 .hero-mockup {
   perspective: 1000px;
 }
@@ -451,7 +446,7 @@ a:hover {
   color: var(--green);
 }
 
-/* --- Section Shared --- */
+/* Section Shared */
 section {
   position: relative;
   z-index: 1;
@@ -491,7 +486,7 @@ section {
   line-height: 1.7;
 }
 
-/* --- Features --- */
+/* Features */
 .features {
   position: relative;
 }
@@ -566,7 +561,7 @@ section {
   line-height: 1.6;
 }
 
-/* --- How It Works --- */
+/* How It Works */
 .how-it-works {
   position: relative;
 }
@@ -632,7 +627,7 @@ section {
   line-height: 1.6;
 }
 
-/* --- Tech Stack --- */
+/* Tech Stack */
 .tech-scroll {
   overflow: hidden;
   mask-image: linear-gradient(90deg, transparent, black 15%, black 85%, transparent);
@@ -668,7 +663,7 @@ section {
   box-shadow: 0 4px 20px rgba(88,166,255,0.1);
 }
 
-/* --- Download --- */
+/* Download */
 .download {
   padding: 100px 0 120px;
 }
@@ -729,7 +724,7 @@ section {
   font-size: 0.85rem;
 }
 
-/* --- Footer --- */
+/* Footer */
 .footer {
   position: relative;
   z-index: 1;
@@ -793,7 +788,7 @@ section {
   font-size: 0.85rem;
 }
 
-/* --- Responsive --- */
+/* Responsive */
 @media (max-width: 768px) {
   .nav-inner {
     display: flex;
@@ -897,7 +892,7 @@ section {
    Mobile Hamburger Menu & Overlay
    ======================================== */
 
-/* --- Hamburger Button (hidden on desktop) --- */
+/* Hamburger Button (hidden on desktop) */
 .nav-hamburger {
   display: none;
   background: none;
@@ -914,7 +909,7 @@ section {
   color: var(--blue);
 }
 
-/* --- Mobile Menu Overlay (hidden by default) --- */
+/* Mobile Menu Overlay (hidden by default) */
 .mobile-menu {
   position: fixed;
   inset: 0;
@@ -983,7 +978,7 @@ section {
   color: var(--text);
 }
 
-/* --- Ensure mobile menu is ALWAYS hidden on desktop --- */
+/* Ensure mobile menu is ALWAYS hidden on desktop */
 @media (min-width: 769px) {
   .mobile-menu {
     display: none !important;

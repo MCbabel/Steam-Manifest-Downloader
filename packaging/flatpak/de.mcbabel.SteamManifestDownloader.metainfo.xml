@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>de.mcbabel.SteamManifestDownloader</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <name>Steam Manifest Downloader</name>
+  <summary>Download Steam game depots and manifests via a modern GUI</summary>
+  <description>
+    <p>
+      Steam Manifest Downloader is a desktop GUI for downloading Steam game depots and
+      manifests that the user already legitimately owns. The application is not affiliated
+      with or endorsed by Valve Corporation, does not include or distribute Steam keys or
+      licenses, and does not bypass any DRM or copy protection. It is intended for archival,
+      backup and similar legitimate use cases involving content the user has the right to
+      access.
+    </p>
+    <p>
+      Drop a .lua / .st file or search by App ID, pick the depots you want, and the app
+      handles manifest fetching, depot key generation and the actual download in one step.
+      Built with Tauri v2, a Rust backend, and a vanilla JavaScript frontend.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Drag and drop .lua / .st parsing</li>
+      <li>Search by App ID via Internet Archive</li>
+      <li>Automatic depot key generation</li>
+      <li>Real-time progress with download speed and ETA</li>
+      <li>Steam Store integration for game names and cover art</li>
+      <li>Dark and light themes, download history</li>
+      <li>Embedded DepotDownloaderMod, no .NET runtime needed on Linux</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">de.mcbabel.SteamManifestDownloader.desktop</launchable>
+  <url type="homepage">https://smd.mcbabel.de</url>
+  <url type="bugtracker">https://github.com/MCbabel/Steam-Manifest-Downloader/issues</url>
+  <url type="vcs-browser">https://github.com/MCbabel/Steam-Manifest-Downloader</url>
+  <developer id="de.mcbabel">
+    <name>MCbabel</name>
+  </developer>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/MCbabel/Steam-Manifest-Downloader/main/assets/screenshots/main-large.png</image>
+      <caption>Step 1 — drop a .lua / .st file or search by App ID</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/MCbabel/Steam-Manifest-Downloader/main/assets/screenshots/main.png</image>
+      <caption>Native window size (900 × 700)</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.4.0" date="2026-05-12">
+      <description>
+        <ul>
+          <li>German and English UI with a first-launch language picker</li>
+          <li>Opt-in anonymous telemetry (off by default, end-to-end encrypted)</li>
+          <li>Step 4: create desktop and start menu shortcuts after downloading (Windows)</li>
+          <li>Download history with re-download and open-folder shortcuts</li>
+          <li>User-configurable depot sources — paste any GitHub or archive.org URL</li>
+          <li>Flatpak packaging and per-install-method updater hints</li>
+          <li>Accessibility pass: aria-labels, dialog roles, focus trap, progressbar steps</li>
+          <li>Emoji icons replaced by consistent inline stroke SVGs</li>
+          <li>Light-mode hover and glow fixes; native-feeling text selection</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.3.0" date="2026-04-07">
+      <description>
+        <ul>
+          <li>Game name search with autocomplete via Steam Store</li>
+          <li>Depot size display and total size in the download button</li>
+          <li>Real-time download speed and ETA</li>
+          <li>Advanced settings panel: extra args, retries, speed limit, proxy</li>
+          <li>Migrated manifest source from GitHub to Internet Archive</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+  <branding>
+    <color type="primary" scheme_preference="light">#bcd5ff</color>
+    <color type="primary" scheme_preference="dark">#1f3a72</color>
+  </branding>
+</component>

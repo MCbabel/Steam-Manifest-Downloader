@@ -1,85 +1,55 @@
-use tauri::command;
+use std::path::PathBuf;
+use tauri::{command, AppHandle, Manager};
 use crate::services::AppState;
 use crate::services::multi_repo_search;
-use crate::services::alternative_sources;
+use crate::services::settings as settings_service;
 use crate::services::steam_store_api;
 
-/// Search all known repos for an App ID.
-/// Returns { repos: [...], githubRateLimited: bool }
+async fn load_sources(app: &AppHandle) -> Vec<String> {
+    let dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    settings_service::load_settings(&dir).await.depot_sources
+}
+
 #[command]
 pub async fn search_repos(
+    app: AppHandle,
     state: tauri::State<'_, AppState>,
     app_id: String,
-    github_token: Option<String>,
 ) -> Result<serde_json::Value, String> {
+    let sources = load_sources(&app).await;
     let result = multi_repo_search::search_repos(
         &state.http_client,
+        &sources,
         &app_id,
-        github_token.as_deref(),
     )
     .await?;
 
     serde_json::to_value(&result).map_err(|e| format!("Failed to serialize search result: {}", e))
 }
 
-/// Get manifest file listing from a repo / Internet Archive.
-/// Returns manifests list with depot keys.
 #[command]
 pub async fn get_repo_manifests(
+    app: AppHandle,
     state: tauri::State<'_, AppState>,
     app_id: String,
     repo: String,
     sha: Option<String>,
-    github_token: Option<String>,
 ) -> Result<serde_json::Value, String> {
     let effective_sha = sha.unwrap_or_default();
+    let sources = load_sources(&app).await;
 
     let result = multi_repo_search::get_repo_manifests(
         &state.http_client,
+        &sources,
         &app_id,
         &repo,
         &effective_sha,
-        github_token.as_deref(),
     )
     .await?;
 
     serde_json::to_value(&result).map_err(|e| format!("Failed to serialize manifests: {}", e))
 }
 
-/// Search alternative sources (kernelos or printedwaste).
-#[command]
-pub async fn search_alternative(
-    state: tauri::State<'_, AppState>,
-    app_id: String,
-    source: String,
-) -> Result<serde_json::Value, String> {
-    match source.to_lowercase().as_str() {
-        "printedwaste" => {
-            let result = alternative_sources::download_from_printed_waste(
-                &state.http_client,
-                &app_id,
-            )
-            .await?;
-            serde_json::to_value(&result)
-                .map_err(|e| format!("Failed to serialize PrintedWaste result: {}", e))
-        }
-        "kernelos" => {
-            // Use a temp directory for KernelOS extraction
-            let temp_dir = std::env::temp_dir().join("steam_manifest_downloader");
-            let result = alternative_sources::download_from_kernel_os(
-                &state.http_client,
-                &app_id,
-                &temp_dir,
-            )
-            .await?;
-            serde_json::to_value(&result)
-                .map_err(|e| format!("Failed to serialize KernelOS result: {}", e))
-        }
-        _ => Err(format!("Unknown alternative source: {}. Use 'kernelos' or 'printedwaste'.", source)),
-    }
-}
-
-/// Get Steam Store app info (name, header image, etc.).
 #[command]
 pub async fn get_steam_app_info(
     state: tauri::State<'_, AppState>,
@@ -99,8 +69,6 @@ pub async fn get_steam_app_info(
     }
 }
 
-/// Search Steam Store for games by name.
-/// Returns a list of matching games with appId, name, and image.
 #[command]
 pub async fn search_steam_games(
     state: tauri::State<'_, AppState>,

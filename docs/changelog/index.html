@@ -206,7 +206,6 @@
   </style>
 </head>
 <body>
-  <!-- Page-wide Background -->
   <div class="page-bg" aria-hidden="true">
     <div class="hero-gradient"></div>
     <div class="hero-grid"></div>
@@ -215,7 +214,6 @@
     <div class="hero-orb hero-orb-3"></div>
   </div>
 
-  <!-- Navigation -->
   <nav class="nav" id="nav">
     <div class="nav-inner">
       <a href="../" class="nav-logo">
@@ -238,7 +236,6 @@
     </div>
   </nav>
 
-  <!-- Mobile Menu Overlay -->
   <div class="mobile-menu" id="mobileMenu">
     <button class="mobile-menu-close" id="mobileMenuClose" aria-label="Close menu">&times;</button>
     <a href="../">Home</a>
@@ -254,7 +251,6 @@
     </a>
   </div>
 
-  <!-- Changelog Content -->
   <section class="changelog-section">
     <div class="changelog-header">
       <span class="section-tag">Version History</span>
@@ -262,7 +258,75 @@
       <p>Track all changes and updates</p>
     </div>
 
-    <!-- v1.3.0 -->
+    <div class="changelog-entry">
+      <div class="changelog-entry-header">
+        <span class="changelog-version">v1.4.0</span>
+        <span class="changelog-date">May 12, 2026</span>
+      </div>
+      <ul class="changelog-changes">
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Multi-language UI — English and German with a first-launch language picker (flag cards) and an in-app switcher in Settings that restarts the app on apply</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Opt-in anonymous telemetry with end-to-end encrypted transport — disabled by default, can be reviewed and toggled in Settings, no game IDs or file contents are ever sent</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Step 4: shortcut creation — generate desktop and start menu shortcuts for downloaded games automatically (Windows)</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Download history with re-download and open-folder actions per entry, plus a one-click clear</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>User-configurable depot sources — paste any GitHub repo or archive.org URL, or any HTTPS folder following the <code>branches/&lt;appid&gt;/</code> layout</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Flatpak packaging and a per-install-method updater (binary auto-update vs. package-manager hint)</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Debug info panel in Settings — channel, version, commit, build date, profile, platform — with one-click copy for bug reports</span>
+        </li>
+        <li>
+          <span class="badge badge-changed">Changed</span>
+          <span>All UI icons are now consistent inline Lucide-style stroke SVGs (gear, moon/sun, alert-triangle, folder, search, etc.) — same look on every OS, theme-aware, no emoji rendering drift</span>
+        </li>
+        <li>
+          <span class="badge badge-changed">Changed</span>
+          <span>Accessibility pass — aria-label on icon-only buttons, role="dialog" + aria-modal on all six modals, Tab/Esc focus trap, role="progressbar" on the workflow stepper</span>
+        </li>
+        <li>
+          <span class="badge badge-changed">Changed</span>
+          <span>Text selection disabled app-wide so the desktop app no longer feels like a webpage; opt-in only on inputs, terminal output and code blocks</span>
+        </li>
+        <li>
+          <span class="badge badge-changed">Changed</span>
+          <span>Light-mode buttons no longer disappear on hover (CSS specificity fix) and the hover glow is themed via shadow tokens</span>
+        </li>
+        <li>
+          <span class="badge badge-removed">Removed</span>
+          <span>Hardcoded Internet Archive source — replaced by the user-configured sources list (legacy <code>archive.org/view_archive.php</code> URLs still work, you just paste them yourself)</span>
+        </li>
+        <li>
+          <span class="badge badge-removed">Removed</span>
+          <span>GitHub personal access token field — no longer needed since GitHub is just one of many configurable sources</span>
+        </li>
+        <li>
+          <span class="badge badge-removed">Removed</span>
+          <span>Alternative sources (kernelos, printedwaste) — replaced by the user-configured sources model</span>
+        </li>
+        <li>
+          <span class="badge badge-fixed">Fixed</span>
+          <span>Docs site dropped FontAwesome, fixed outdated marketing copy, and the obsolete GitHub rate-limit FAQ</span>
+        </li>
+      </ul>
+    </div>
+
     <div class="changelog-entry">
       <div class="changelog-entry-header">
         <span class="changelog-version">v1.3.0</span>
@@ -316,7 +380,6 @@
       </ul>
     </div>
 
-    <!-- v1.2.0 -->
     <div class="changelog-entry">
       <div class="changelog-entry-header">
         <span class="changelog-version">v1.2.0</span>
@@ -374,7 +437,6 @@
       </ul>
     </div>
 
-    <!-- v1.1.0 -->
     <div class="changelog-entry">
       <div class="changelog-entry-header">
         <span class="changelog-version">v1.1.0</span>
@@ -404,7 +466,6 @@
       </ul>
     </div>
 
-    <!-- v1.0.0 -->
     <div class="changelog-entry">
       <div class="changelog-entry-header">
         <span class="changelog-version">v1.0.0</span>
@@ -471,7 +532,6 @@
     </div>
   </section>
 
-  <!-- Footer -->
   <footer class="footer">
     <div class="container">
       <div class="footer-inner">

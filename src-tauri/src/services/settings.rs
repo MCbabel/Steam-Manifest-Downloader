@@ -2,17 +2,28 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TelemetryConsent {
+    Pending,
+    Accepted,
+    Declined,
+}
+
+impl Default for TelemetryConsent {
+    fn default() -> Self {
+        TelemetryConsent::Pending
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     #[serde(default = "default_download_location")]
     pub download_location: String,
-    #[serde(default)]
-    pub github_token: String,
     #[serde(default = "default_dd_extra_args")]
     pub dd_extra_args: Vec<String>,
     #[serde(default = "default_auto_update")]
     pub auto_update: bool,
-    // Advanced settings
     #[serde(default = "default_max_retries")]
     pub max_retries: u32,
     #[serde(default = "default_notification_sound")]
@@ -21,10 +32,17 @@ pub struct Settings {
     pub download_speed_limit: String,
     #[serde(default)]
     pub proxy: String,
+    #[serde(default)]
+    pub telemetry_consent: TelemetryConsent,
+    #[serde(default)]
+    pub installation_id: String,
+    #[serde(default, alias = "manifest_sources")]
+    pub depot_sources: Vec<String>,
+    #[serde(default)]
+    pub language: String,
 }
 
 fn default_download_location() -> String {
-    // Default: ~/Documents/SteamDownloads
     if let Some(home) = dirs_next_home() {
         let docs = PathBuf::from(&home).join("Documents").join("SteamDownloads");
         return docs.to_string_lossy().to_string();
@@ -67,38 +85,35 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             download_location: default_download_location(),
-            github_token: String::new(),
             dd_extra_args: default_dd_extra_args(),
             auto_update: default_auto_update(),
             max_retries: default_max_retries(),
             notification_sound: default_notification_sound(),
             download_speed_limit: String::new(),
             proxy: String::new(),
+            telemetry_consent: TelemetryConsent::Pending,
+            installation_id: String::new(),
+            depot_sources: Vec::new(),
+            language: String::new(),
         }
     }
 }
 
-/// Get the settings file path within the app data directory.
 fn settings_path(app_data_dir: &Path) -> PathBuf {
     app_data_dir.join("settings.json")
 }
 
-/// Load settings from `{app_data_dir}/settings.json`.
-/// Returns default settings if the file doesn't exist or can't be parsed.
 pub async fn load_settings(app_data_dir: &Path) -> Settings {
     let path = settings_path(app_data_dir);
-
     match fs::read_to_string(&path).await {
         Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
         Err(_) => Settings::default(),
     }
 }
 
-/// Save settings to `{app_data_dir}/settings.json`.
 pub async fn save_settings(app_data_dir: &Path, settings: &Settings) -> Result<(), String> {
     let path = settings_path(app_data_dir);
 
-    // Ensure directory exists
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .await
