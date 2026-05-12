@@ -48,6 +48,21 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="1.4.0" date="2026-05-12">
+      <description>
+        <ul>
+          <li>German and English UI with a first-launch language picker</li>
+          <li>Opt-in anonymous telemetry (off by default, end-to-end encrypted)</li>
+          <li>Step 4: create desktop and start menu shortcuts after downloading (Windows)</li>
+          <li>Download history with re-download and open-folder shortcuts</li>
+          <li>User-configurable depot sources — paste any GitHub or archive.org URL</li>
+          <li>Flatpak packaging and per-install-method updater hints</li>
+          <li>Accessibility pass: aria-labels, dialog roles, focus trap, progressbar steps</li>
+          <li>Emoji icons replaced by consistent inline stroke SVGs</li>
+          <li>Light-mode hover and glow fixes; native-feeling text selection</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.3.0" date="2026-04-07">
       <description>
         <ul>
