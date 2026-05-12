@@ -41,6 +41,10 @@
   --error-bg: rgba(248, 81, 73, 0.1);
   --warning: #d29922;
   --warning-bg: rgba(210, 153, 34, 0.1);
+  --shadow-accent: rgba(88, 166, 255, 0.25);
+  --shadow-accent-strong: rgba(88, 166, 255, 0.35);
+  --shadow-error: rgba(248, 81, 73, 0.2);
+  --shadow-error-strong: rgba(248, 81, 73, 0.3);
   --radius: 12px;
   --radius-sm: 8px;
   --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -73,6 +77,26 @@
   --error-bg: rgba(207, 34, 46, 0.06);
   --warning: #9a6700;
   --warning-bg: rgba(154, 103, 0, 0.06);
+  --shadow-accent: rgba(9, 105, 218, 0.45);
+  --shadow-accent-strong: rgba(9, 105, 218, 0.65);
+  --shadow-error: rgba(207, 34, 46, 0.4);
+  --shadow-error-strong: rgba(207, 34, 46, 0.6);
+}
+
+[data-theme="light"] .btn--primary {
+  box-shadow: 0 6px 18px var(--shadow-accent), 0 2px 6px rgba(9, 105, 218, 0.18);
+}
+
+[data-theme="light"] .btn--primary:hover {
+  box-shadow: 0 10px 28px var(--shadow-accent-strong), 0 3px 10px rgba(9, 105, 218, 0.25);
+}
+
+[data-theme="light"] .btn--danger {
+  box-shadow: 0 6px 18px var(--shadow-error), 0 2px 6px rgba(207, 34, 46, 0.18);
+}
+
+[data-theme="light"] .btn--danger:hover {
+  box-shadow: 0 10px 28px var(--shadow-error-strong), 0 3px 10px rgba(207, 34, 46, 0.25);
 }
 
 [data-theme="light"] .card {
@@ -110,10 +134,6 @@
 
 [data-theme="light"] .title-bar__text {
   color: var(--text-secondary);
-}
-
-[data-theme="light"] .btn--primary {
-  box-shadow: 0 2px 10px rgba(9, 105, 218, 0.2);
 }
 
 [data-theme="light"] .bg-glow {
@@ -736,17 +756,6 @@ body {
   overflow: hidden;
 }
 
-@media (max-width: 600px) {
-  .game-info-banner {
-    flex-direction: column;
-  }
-
-  .game-info-banner__image {
-    width: 100%;
-    max-height: 160px;
-  }
-}
-
 /* Select Header */
 .select-header {
   display: flex;
@@ -897,12 +906,15 @@ body {
   background: var(--gradient);
   border: none;
   color: white;
-  box-shadow: 0 4px 15px rgba(88, 166, 255, 0.25);
+  box-shadow: 0 4px 15px var(--shadow-accent);
 }
 
 .btn--primary:hover {
+  background: var(--gradient);
+  border-color: transparent;
   transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(88, 166, 255, 0.35);
+  box-shadow: 0 6px 25px var(--shadow-accent-strong);
+  filter: brightness(1.08);
 }
 
 .btn--primary:disabled {
@@ -985,6 +997,19 @@ body {
   font-size: 0.85rem;
   color: var(--text-secondary);
   margin-bottom: 1.5rem;
+}
+
+.status-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--success);
+  font-weight: 600;
+}
+
+.status-success svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Depot Progress List */
@@ -1256,13 +1281,15 @@ body {
   background: var(--error);
   border-color: var(--error);
   color: white;
-  box-shadow: 0 2px 10px rgba(248, 81, 73, 0.2);
+  box-shadow: 0 2px 10px var(--shadow-error);
 }
 
 .btn--danger:hover {
+  background: var(--error);
+  border-color: var(--error);
   opacity: 0.9;
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(248, 81, 73, 0.3);
+  box-shadow: 0 4px 16px var(--shadow-error-strong);
 }
 
 /* Modal (Glass) */
@@ -1309,8 +1336,35 @@ body {
 }
 
 .modal__icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 0.875rem;
+  border-radius: 999px;
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.modal__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.modal__icon--warning {
+  background: var(--warning-bg, rgba(210, 153, 34, 0.12));
+  color: var(--warning, #d29922);
+}
+
+.modal__icon--accent {
+  background: var(--accent-glow);
+  color: var(--accent);
+}
+
+.modal__icon--success {
+  background: var(--success-bg);
+  color: var(--success);
 }
 
 .modal__title {
@@ -1318,6 +1372,23 @@ body {
   font-weight: 700;
   margin-bottom: 0.75rem;
   color: var(--text-primary);
+}
+
+.modal__title-icon {
+  vertical-align: -4px;
+  margin-right: 8px;
+}
+
+.label-icon {
+  vertical-align: -3px;
+  margin-right: 6px;
+  color: var(--text-secondary);
+}
+
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .modal__text {
@@ -1340,6 +1411,10 @@ body {
 .modal__actions .btn {
   min-width: 140px;
   justify-content: center;
+}
+
+.btn--push-end {
+  margin-right: auto;
 }
 
 /* Depot Search/Filter */
@@ -1403,6 +1478,19 @@ body {
   font-size: 0.85rem;
   color: var(--text-primary);
   animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.disk-space-info > svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.disk-space-info--warning > svg {
+  color: var(--warning);
+}
+
+.disk-space-info--danger > svg {
+  color: var(--error);
 }
 
 .disk-space-info--warning {
@@ -1546,6 +1634,14 @@ body {
   font-size: 1.1rem;
   padding: 0.4rem 0.75rem;
   line-height: 1;
+}
+
+.theme-icon--sun {
+  color: #f9c74f;
+}
+
+.theme-icon--moon {
+  color: #b8c5d6;
 }
 
 .header__settings-btn {
@@ -2041,6 +2137,23 @@ body {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.telemetry-modal__col h4 svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.telemetry-modal__col--collect h4 svg {
+  color: var(--success, #56d364);
+}
+
+.telemetry-modal__col--never h4 svg {
+  color: var(--error, #f85149);
 }
 
 .telemetry-modal__col ul {
@@ -2383,6 +2496,15 @@ body {
     flex-direction: column;
     gap: 0.5rem;
   }
+
+  .game-info-banner {
+    flex-direction: column;
+  }
+
+  .game-info-banner__image {
+    width: 100%;
+    max-height: 160px;
+  }
 }
 
 /* .NET Runtime Warning Banner */
@@ -2413,8 +2535,16 @@ body {
 }
 
 .dotnet-warning__icon {
-  font-size: 1.2rem;
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
+  color: #1a1a2e;
+}
+
+.dotnet-warning__icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.25;
 }
 
 .dotnet-warning__text {
@@ -2620,7 +2750,34 @@ body {
 }
 
 .history-entry__actions .btn--small {
-  padding: 4px 6px;
+  padding: 6px;
   font-size: 0.8rem;
   min-width: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-entry__actions .btn--small svg {
+  width: 14px;
+  height: 14px;
+}
+
+.history-action-redownload {
+  color: var(--accent);
+}
+
+.history-action-redownload:hover {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+}
+
+.history-action-remove {
+  color: var(--text-secondary);
+}
+
+.history-action-remove:hover {
+  color: var(--error);
+  background: var(--error-bg);
+  border-color: var(--error);
 }
