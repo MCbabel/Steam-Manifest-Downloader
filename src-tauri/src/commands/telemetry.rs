@@ -16,7 +16,13 @@ pub async fn get_telemetry_status(app: AppHandle) -> Result<serde_json::Value, S
     let dir = app_data_dir(&app);
     let settings = settings_service::load_settings(&dir).await;
     let consent = match settings.telemetry_consent {
-        TelemetryConsent::Pending => "pending",
+        TelemetryConsent::Pending => {
+            if cfg!(debug_assertions) {
+                "declined"
+            } else {
+                "pending"
+            }
+        }
         TelemetryConsent::Accepted => "accepted",
         TelemetryConsent::Declined => "declined",
     };

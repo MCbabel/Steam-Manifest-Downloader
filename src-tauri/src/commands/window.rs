@@ -40,11 +40,6 @@ pub async fn restart_app(app: tauri::AppHandle) {
     }
     #[cfg(debug_assertions)]
     {
-        // In dev (cargo tauri dev) the HMR watcher on 127.0.0.1 is owned by the
-        // cargo-tauri-dev orchestrator. app.restart() spawns the binary outside
-        // that orchestrator, so the new process can't reach the watcher and
-        // pops up a "connection refused" error window. Just exit cleanly here
-        // and re-run cargo tauri dev manually.
         let _ = app;
         std::process::exit(0);
     }
