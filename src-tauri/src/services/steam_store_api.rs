@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-/// Game info returned by Steam Store API
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameInfo {
     pub name: Option<String>,
@@ -15,15 +14,8 @@ pub struct GameInfo {
     pub app_type: Option<String>,
 }
 
-/// Maximum cache entries before clearing
 const MAX_CACHE_SIZE: usize = 500;
 
-/// Fetch game info from Steam Store API with caching.
-///
-/// # Arguments
-/// * `client` - reqwest HTTP client
-/// * `cache` - shared cache mutex
-/// * `app_id` - Steam App ID
 pub async fn get_game_info(
     client: &reqwest::Client,
     cache: &Arc<Mutex<HashMap<String, serde_json::Value>>>,
@@ -31,7 +23,6 @@ pub async fn get_game_info(
 ) -> Result<Option<GameInfo>, String> {
     let id = app_id.to_string();
 
-    // Check cache (and clear if too large)
     {
         let mut cache_lock = cache.lock().await;
         if cache_lock.len() > MAX_CACHE_SIZE {
@@ -63,7 +54,6 @@ pub async fn get_game_info(
         .await
         .map_err(|e| format!("[SteamAPI] Failed to parse JSON for appId {}: {}", id, e))?;
 
-    // Check if data[id].success && data[id].data exists
     let app_data = match data.get(&id) {
         Some(entry) => {
             let success = entry.get("success").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -97,7 +87,6 @@ pub async fn get_game_info(
             .map(|s| s.to_string()),
     };
 
-    // Cache the result
     {
         let mut cache_lock = cache.lock().await;
         if let Ok(val) = serde_json::to_value(&info) {
@@ -108,16 +97,13 @@ pub async fn get_game_info(
     Ok(Some(info))
 }
 
-/// Sanitize a game name for use in folder names.
-/// Removes characters not allowed in Windows folder names: < > : " / \ | ? *
-/// Also trims whitespace and trailing dots/spaces.
+// Strips chars forbidden in Windows folder names and collapses whitespace.
 pub fn sanitize_game_name(name: &str) -> String {
     let cleaned: String = name
         .chars()
         .filter(|c| !matches!(c, '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*'))
         .collect();
 
-    // Collapse multiple spaces
     let mut result = String::new();
     let mut prev_space = false;
     for c in cleaned.chars() {
@@ -132,9 +118,6 @@ pub fn sanitize_game_name(name: &str) -> String {
         }
     }
 
-    // Trim and remove trailing dots/spaces
     result = result.trim().to_string();
-    result = result.trim_end_matches(|c: char| c == '.' || c == ' ').to_string();
-
-    result
+    result.trim_end_matches(|c: char| c == '.' || c == ' ').to_string()
 }

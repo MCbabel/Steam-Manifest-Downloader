@@ -1,0 +1,53 @@
+# DepotDownloaderMod is embedded as a self-contained Linux ELF in
+# src-tauri/vendor/ddm-linux/. The upstream repository
+# (github.com/SteamAutoCracks/DepotDownloaderMod) has been taken down and the
+# source is no longer publicly available. The binary was compiled by the
+# maintainer from a copy of the source while the project was still online.
+# It is GPL-2.0-or-later; the original LICENSE is shipped alongside the
+# project's own.
+id: de.mcbabel.SteamManifestDownloader
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: steam-manifest-downloader
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=xdg-download
+  - --filesystem=xdg-documents
+  - --talk-name=org.freedesktop.Notifications
+
+build-options:
+  append-path: /usr/lib/sdk/rust-stable/bin
+  env:
+    CARGO_HOME: /run/build/steam-manifest-downloader/cargo
+    NO_STRIP: '1'
+
+modules:
+  - name: steam-manifest-downloader
+    buildsystem: simple
+    build-commands:
+      - cd src-tauri && cargo build --release --frozen --offline
+      - install -Dm755 src-tauri/target/release/steam-manifest-downloader -t /app/bin/
+      - install -Dm644 assets/icon.svg /app/share/icons/hicolor/scalable/apps/de.mcbabel.SteamManifestDownloader.svg
+      - install -Dm644 assets/icon.png /app/share/icons/hicolor/256x256/apps/de.mcbabel.SteamManifestDownloader.png
+      - install -Dm644 de.mcbabel.SteamManifestDownloader.desktop -t /app/share/applications/
+      - install -Dm644 de.mcbabel.SteamManifestDownloader.metainfo.xml -t /app/share/metainfo/
+      - install -Dm644 LICENSE -t /app/share/licenses/de.mcbabel.SteamManifestDownloader/
+      - install -Dm644 src-tauri/vendor/ddm-linux/LICENSE /app/share/licenses/de.mcbabel.SteamManifestDownloader/LICENSE.DepotDownloaderMod
+    sources:
+      - type: archive
+        url: https://github.com/MCbabel/Steam-Manifest-Downloader/archive/refs/tags/v1.3.0.tar.gz
+        sha256: 5e2ad3ea9bb89b25904125ba90b10ee3bd1ecfe94b36f034e28585e3acdfc13d
+      - cargo-sources.json
+      - type: file
+        path: de.mcbabel.SteamManifestDownloader.desktop
+      - type: file
+        path: de.mcbabel.SteamManifestDownloader.metainfo.xml

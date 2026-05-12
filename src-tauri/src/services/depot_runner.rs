@@ -1,8 +1,13 @@
 use std::path::Path;
 use std::process::Stdio;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use std::time::Duration;
+use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::Command;
+use tokio::task::JoinHandle;
 use tauri::{AppHandle, Emitter};
+
+const STREAM_THROTTLE: Duration = Duration::from_millis(150);
+const STREAM_BATCH_MAX: usize = 50;
 
 #[cfg(target_os = "windows")]
 use std::sync::Arc;
@@ -11,10 +16,8 @@ use std::os::windows::process::CommandExt;
 
 use crate::services::AppState;
 
-// ---------------------------------------------------------------------------
-// Windows Job Object wrapper – ensures child process trees are killed reliably
-// Uses raw FFI to avoid version-specific windows-sys feature issues.
-// ---------------------------------------------------------------------------
+// Raw FFI so we don't pin a specific windows-sys feature set. The job object
+// guarantees the whole child-process tree is torn down on cancel.
 #[cfg(target_os = "windows")]
 pub mod win_job {
     use std::ffi::c_void;
@@ -94,7 +97,6 @@ pub mod win_job {
                     return None;
                 }
 
-                // Configure job to kill all processes when the job handle is closed
                 let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION_STRUCT = std::mem::zeroed();
                 info.basic_limit_information.limit_flags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 
@@ -141,12 +143,11 @@ pub mod win_job {
         }
     }
 
-    // SAFETY: The HANDLE is only used behind Arc and through &self methods
+    // SAFETY: HANDLE is only ever used behind Arc via &self methods.
     unsafe impl Send for JobObject {}
     unsafe impl Sync for JobObject {}
 }
 
-/// Progress event payload emitted to the frontend via "download-progress" event.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct ProgressEvent {
     #[serde(rename = "type")]
@@ -212,29 +213,68 @@ impl ProgressEvent {
     }
 }
 
-/// Emit a progress event to the frontend.
 pub fn emit_progress(app: &AppHandle, event: &ProgressEvent) {
     if let Err(e) = app.emit("download-progress", event) {
         eprintln!("[DepotRunner] Failed to emit progress event: {}", e);
     }
 }
 
-/// Depot configuration for running DepotDownloaderMod.
+fn spawn_stream_forwarder<R>(
+    reader: Option<R>,
+    stream_name: &'static str,
+    app: AppHandle,
+    job_id: String,
+    depot_id: String,
+) -> JoinHandle<()>
+where
+    R: AsyncRead + Unpin + Send + 'static,
+{
+    tokio::spawn(async move {
+        let Some(reader) = reader else { return };
+        let buf_reader = BufReader::new(reader);
+        let mut lines = buf_reader.lines();
+        let mut last_emit = tokio::time::Instant::now();
+        let mut buffer: Vec<String> = Vec::new();
+
+        let flush = |buffer: &mut Vec<String>| {
+            let combined = buffer.join("\n");
+            let mut event = ProgressEvent::new("output", &job_id);
+            event.depot_id = Some(depot_id.clone());
+            event.stream = Some(stream_name.to_string());
+            event.output = Some(combined);
+            emit_progress(&app, &event);
+            buffer.clear();
+        };
+
+        while let Ok(Some(line)) = lines.next_line().await {
+            buffer.push(line);
+
+            let now = tokio::time::Instant::now();
+            if now.duration_since(last_emit) >= STREAM_THROTTLE
+                || buffer.len() >= STREAM_BATCH_MAX
+            {
+                flush(&mut buffer);
+                last_emit = now;
+            }
+        }
+
+        if !buffer.is_empty() {
+            flush(&mut buffer);
+        }
+    })
+}
+
 #[derive(Debug, Clone)]
 pub struct DepotRunConfig {
     pub depot_id: String,
     pub manifest_id: String,
 }
 
-/// Platform-specific executable name for display purposes.
 #[cfg(target_os = "windows")]
 const DDM_DISPLAY_NAME: &str = "DepotDownloaderMod.exe";
 #[cfg(target_os = "linux")]
 const DDM_DISPLAY_NAME: &str = "DepotDownloaderMod";
 
-/// Run DepotDownloaderMod for a single depot. Streams stdout/stderr to frontend.
-///
-/// Returns Ok(true) if the process exited with code 0, Ok(false) if non-zero.
 pub async fn run_depot_downloader(
     app: &AppHandle,
     exe_path: &Path,
@@ -268,20 +308,15 @@ pub async fn run_depot_downloader(
         args.join(" ")
     );
 
-    // Emit running status
     let mut event = ProgressEvent::new("status", job_id);
     event.step = Some("running_downloader".to_string());
     event.depot_id = Some(depot.depot_id.clone());
     event.command = Some(command_display);
     emit_progress(app, &event);
 
-    // Create Windows Job Object before spawning
     #[cfg(target_os = "windows")]
     let job_object = win_job::JobObject::new().map(Arc::new);
 
-    // Spawn the process
-    // On Windows: run via exe directly (dotnet-dependent app with .exe entry point)
-    // On Linux: run the self-contained binary directly
     let mut cmd = Command::new(exe_path);
     cmd.args(&args)
         .current_dir(work_dir)
@@ -289,11 +324,10 @@ pub async fn run_depot_downloader(
         .stderr(Stdio::piped())
         .kill_on_drop(true);
 
-    // CREATE_NO_WINDOW on Windows
     #[cfg(target_os = "windows")]
-    cmd.creation_flags(0x08000000);
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
-    // Create new process group on Linux for reliable cleanup
+    // Own process group so SIGKILL reaches every descendant on cancel.
     #[cfg(target_os = "linux")]
     {
         cmd.process_group(0);
@@ -302,7 +336,6 @@ pub async fn run_depot_downloader(
     let mut child = cmd.spawn()
         .map_err(|e| format!("Failed to start DepotDownloaderMod for depot {}: {}", depot.depot_id, e))?;
 
-    // Track the PID and assign to Job Object
     if let Some(pid) = child.id() {
         #[cfg(target_os = "windows")]
         if let Some(ref jo) = job_object {
@@ -319,101 +352,30 @@ pub async fn run_depot_downloader(
         }
     }
 
-    // Stream stdout with throttling
-    let stdout = child.stdout.take();
-    let stderr = child.stderr.take();
+    let stdout_handle = spawn_stream_forwarder(
+        child.stdout.take(),
+        "stdout",
+        app.clone(),
+        job_id.to_string(),
+        depot.depot_id.clone(),
+    );
 
-    let app_stdout = app.clone();
-    let job_id_stdout = job_id.to_string();
-    let depot_id_stdout = depot.depot_id.clone();
+    let stderr_handle = spawn_stream_forwarder(
+        child.stderr.take(),
+        "stderr",
+        app.clone(),
+        job_id.to_string(),
+        depot.depot_id.clone(),
+    );
 
-    let stdout_handle = tokio::spawn(async move {
-        if let Some(stdout) = stdout {
-            let reader = BufReader::new(stdout);
-            let mut lines = reader.lines();
-            let mut last_emit = tokio::time::Instant::now();
-            let mut buffer: Vec<String> = Vec::new();
-            let throttle_interval = tokio::time::Duration::from_millis(150);
-
-            while let Ok(Some(line)) = lines.next_line().await {
-                buffer.push(line);
-
-                let now = tokio::time::Instant::now();
-                if now.duration_since(last_emit) >= throttle_interval || buffer.len() >= 50 {
-                    let combined = buffer.join("\n");
-                    let mut event = ProgressEvent::new("output", &job_id_stdout);
-                    event.depot_id = Some(depot_id_stdout.clone());
-                    event.stream = Some("stdout".to_string());
-                    event.output = Some(combined);
-                    emit_progress(&app_stdout, &event);
-                    buffer.clear();
-                    last_emit = now;
-                }
-            }
-
-            // Emit remaining buffered lines
-            if !buffer.is_empty() {
-                let combined = buffer.join("\n");
-                let mut event = ProgressEvent::new("output", &job_id_stdout);
-                event.depot_id = Some(depot_id_stdout.clone());
-                event.stream = Some("stdout".to_string());
-                event.output = Some(combined);
-                emit_progress(&app_stdout, &event);
-            }
-        }
-    });
-
-    let app_stderr = app.clone();
-    let job_id_stderr = job_id.to_string();
-    let depot_id_stderr = depot.depot_id.clone();
-
-    let stderr_handle = tokio::spawn(async move {
-        if let Some(stderr) = stderr {
-            let reader = BufReader::new(stderr);
-            let mut lines = reader.lines();
-            let mut last_emit = tokio::time::Instant::now();
-            let mut buffer: Vec<String> = Vec::new();
-            let throttle_interval = tokio::time::Duration::from_millis(150);
-
-            while let Ok(Some(line)) = lines.next_line().await {
-                buffer.push(line);
-
-                let now = tokio::time::Instant::now();
-                if now.duration_since(last_emit) >= throttle_interval || buffer.len() >= 50 {
-                    let combined = buffer.join("\n");
-                    let mut event = ProgressEvent::new("output", &job_id_stderr);
-                    event.depot_id = Some(depot_id_stderr.clone());
-                    event.stream = Some("stderr".to_string());
-                    event.output = Some(combined);
-                    emit_progress(&app_stderr, &event);
-                    buffer.clear();
-                    last_emit = now;
-                }
-            }
-
-            // Emit remaining buffered lines
-            if !buffer.is_empty() {
-                let combined = buffer.join("\n");
-                let mut event = ProgressEvent::new("output", &job_id_stderr);
-                event.depot_id = Some(depot_id_stderr.clone());
-                event.stream = Some("stderr".to_string());
-                event.output = Some(combined);
-                emit_progress(&app_stderr, &event);
-            }
-        }
-    });
-
-    // Wait for process to complete
     let status = child
         .wait()
         .await
         .map_err(|e| format!("Failed to wait for DepotDownloaderMod: {}", e))?;
 
-    // Wait for stream readers to finish
     let _ = stdout_handle.await;
     let _ = stderr_handle.await;
 
-    // Clear the PID and job object
     {
         let mut jobs = state.active_jobs.lock().await;
         if let Some(job) = jobs.get_mut(job_id) {
@@ -428,8 +390,6 @@ pub async fn run_depot_downloader(
     Ok(status.success())
 }
 
-/// Run DepotDownloaderMod for all depots sequentially.
-/// Checks for cancellation between each depot.
 pub async fn run_all_depots(
     app: &AppHandle,
     exe_path: &Path,
@@ -444,7 +404,6 @@ pub async fn run_all_depots(
     let total = depots.len();
 
     for (i, depot) in depots.iter().enumerate() {
-        // Check for cancellation
         {
             let jobs = state.active_jobs.lock().await;
             if let Some(job) = jobs.get(job_id) {
@@ -457,7 +416,6 @@ pub async fn run_all_depots(
             }
         }
 
-        // Emit progress
         let mut event = ProgressEvent::new("status", job_id);
         event.step = Some("running_downloader".to_string());
         event.depot_id = Some(depot.depot_id.clone());
@@ -482,7 +440,6 @@ pub async fn run_all_depots(
                 emit_progress(app, &event);
             }
             Err(e) => {
-                // Check if cancelled
                 {
                     let jobs = state.active_jobs.lock().await;
                     if let Some(job) = jobs.get(job_id) {
@@ -512,9 +469,6 @@ pub async fn run_all_depots(
     Ok(results)
 }
 
-/// Kill the active process for a job.
-/// On Windows: terminates via Job Object, then falls back to taskkill.
-/// On Linux: kills the entire process group via SIGKILL.
 pub async fn kill_job(state: &AppState, job_id: &str) -> bool {
     let mut pid = None;
     #[cfg(target_os = "windows")]
@@ -534,73 +488,56 @@ pub async fn kill_job(state: &AppState, job_id: &str) -> bool {
 
     let mut killed = false;
 
-    // --- Windows kill path ---
+    // Escalation order: job object → taskkill by pid → taskkill by image name.
     #[cfg(target_os = "windows")]
     {
-        // Step 1: Terminate via Job Object (kills all child processes)
         if let Some(jo) = job_object_opt {
             jo.terminate();
             killed = true;
         }
 
-        // Step 2: Kill by PID as fallback
         if !killed {
             if let Some(pid) = pid {
                 let mut cmd = std::process::Command::new("taskkill");
                 cmd.args(["/pid", &pid.to_string(), "/f", "/t"]);
-                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-                match cmd.output() {
-                    Ok(output) => {
-                        killed = output.status.success();
-                    }
-                    Err(_) => {}
+                cmd.creation_flags(0x08000000);
+                if let Ok(output) = cmd.output() {
+                    killed = output.status.success();
                 }
             }
         }
 
-        // Step 3: Fallback - kill by process name
         if !killed {
             let mut cmd = std::process::Command::new("taskkill");
             cmd.args(["/im", "DepotDownloaderMod.exe", "/f", "/t"]);
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-            match cmd.output() {
-                Ok(output) => {
-                    killed = output.status.success();
-                }
-                Err(_) => {}
+            cmd.creation_flags(0x08000000);
+            if let Ok(output) = cmd.output() {
+                killed = output.status.success();
             }
         }
     }
 
-    // --- Linux kill path ---
+    // Negative pid → whole group SIGKILL (spawn used process_group(0)).
     #[cfg(target_os = "linux")]
     {
         if let Some(child_pid) = pid {
-            // Kill entire process group (we used process_group(0) on spawn)
             unsafe {
-                let result = libc::kill(-(child_pid as i32), libc::SIGKILL);
-                killed = result == 0;
+                killed = libc::kill(-(child_pid as i32), libc::SIGKILL) == 0;
             }
 
-            // Fallback: kill by PID directly
             if !killed {
                 unsafe {
-                    let result = libc::kill(child_pid as i32, libc::SIGKILL);
-                    killed = result == 0;
+                    killed = libc::kill(child_pid as i32, libc::SIGKILL) == 0;
                 }
             }
         }
 
-        // Fallback: kill by process name
         if !killed {
-            match std::process::Command::new("killall")
+            if let Ok(output) = std::process::Command::new("killall")
                 .args(["-9", "DepotDownloaderMod"])
                 .output()
             {
-                Ok(output) => {
-                    killed = output.status.success();
-                }
-                Err(_) => {}
+                killed = output.status.success();
             }
         }
     }
@@ -608,15 +545,13 @@ pub async fn kill_job(state: &AppState, job_id: &str) -> bool {
     killed
 }
 
-/// Get the path to the DepotDownloaderMod executable.
-/// First tries embedded extraction, then falls back to external paths.
 pub async fn get_exe_path_async() -> Result<std::path::PathBuf, String> {
     #[cfg(target_os = "windows")]
     const EXE_NAME: &str = "DepotDownloaderMod.exe";
     #[cfg(target_os = "linux")]
     const EXE_NAME: &str = "DepotDownloaderMod";
 
-    // Try embedded extraction first (works for both installer and portable)
+    // Embedded extraction works for both installer and portable builds.
     match crate::services::embedded_tools::ensure_extracted().await {
         Ok(path) => {
             eprintln!("[DepotRunner] Using embedded DepotDownloaderMod: {:?}", path);
@@ -627,7 +562,6 @@ pub async fn get_exe_path_async() -> Result<std::path::PathBuf, String> {
         }
     }
 
-    // Fallback: look next to the executable
     if let Ok(exe_dir) = std::env::current_exe() {
         if let Some(parent) = exe_dir.parent() {
             let exe_path = parent.join("DepotDownloaderMod").join(EXE_NAME);
@@ -637,7 +571,6 @@ pub async fn get_exe_path_async() -> Result<std::path::PathBuf, String> {
         }
     }
 
-    // Fallback: current working directory
     let local_path = std::path::PathBuf::from("DepotDownloaderMod").join(EXE_NAME);
     if local_path.exists() {
         return Ok(local_path);

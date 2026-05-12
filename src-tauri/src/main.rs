@@ -11,12 +11,21 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            // Initialize app data directory
             let app_data = app.path().app_data_dir().expect("Failed to get app data dir");
             std::fs::create_dir_all(&app_data).ok();
-            
-            // Initialize services state
-            let state = services::AppState::new(app.handle().clone());
+
+            let app_version = app.config().version.clone().unwrap_or_default();
+            let channel = option_env!("SMD_BUILD_CHANNEL").unwrap_or("dev-local").to_string();
+
+            let telemetry = services::telemetry::Telemetry::new(
+                app_data.clone(),
+                app_version,
+                channel,
+            );
+            telemetry.clone().spawn_background_flush();
+
+            let mut state = services::AppState::new(app.handle().clone());
+            state.telemetry = Some(telemetry);
             app.manage(state);
 
             Ok(())
@@ -28,7 +37,6 @@ fn main() {
             // Search
             commands::search_repos,
             commands::get_repo_manifests,
-            commands::search_alternative,
             commands::search_steam_games,
             // Steam
             commands::get_steam_app_info,
@@ -41,14 +49,29 @@ fn main() {
             // System
             commands::check_dotnet,
             commands::get_disk_space,
+            commands::get_build_info,
             // Window
             commands::minimize_window,
             commands::maximize_window,
             commands::close_window,
+            commands::restart_app,
             // Updater
             commands::check_for_updates,
             commands::install_update,
             commands::get_auto_update_enabled,
+            // History
+            commands::get_history,
+            commands::remove_history_entry,
+            commands::clear_history,
+            commands::open_folder,
+            // Shortcuts
+            commands::is_shortcut_supported,
+            commands::detect_executables,
+            commands::create_shortcuts,
+            // Telemetry
+            commands::get_telemetry_status,
+            commands::set_telemetry_consent,
+            commands::emit_telemetry_event,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

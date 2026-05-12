@@ -2,13 +2,30 @@ use tauri::command;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+// SMD_BUILD_CHANNEL / SMD_GIT_SHA / SMD_BUILD_DATE are injected by CI
+// (dev-build.yml → "dev", release.yml → "stable"). Unset → "dev-local".
+#[command]
+pub fn get_build_info() -> serde_json::Value {
+    let channel = option_env!("SMD_BUILD_CHANNEL").unwrap_or("dev-local");
+    let git_sha = option_env!("SMD_GIT_SHA").unwrap_or("unknown");
+    let build_date = option_env!("SMD_BUILD_DATE").unwrap_or("unknown");
 
-/// Check if .NET 9 runtime is installed.
-/// On Linux, the DDM binary is self-contained so dotnet is not needed.
-/// Runs `dotnet --list-runtimes` and checks for "Microsoft.NETCore.App 9."
+    let profile = if cfg!(debug_assertions) { "debug" } else { "release" };
+
+    serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "channel": channel,
+        "gitSha": git_sha,
+        "buildDate": build_date,
+        "profile": profile,
+        "targetOs": std::env::consts::OS,
+        "targetArch": std::env::consts::ARCH,
+    })
+}
+
 #[command]
 pub async fn check_dotnet() -> Result<serde_json::Value, String> {
-    // On Linux, DDM is a self-contained binary — no dotnet needed
+    // DDM is shipped self-contained on Linux.
     #[cfg(target_os = "linux")]
     {
         return Ok(serde_json::json!({
@@ -25,13 +42,10 @@ pub async fn check_dotnet() -> Result<serde_json::Value, String> {
         match cmd.output() {
             Ok(output) => {
                 let stdout = String::from_utf8_lossy(&output.stdout);
-
-                // Look for .NET 9.x runtime
                 let mut found_version: Option<String> = None;
 
                 for line in stdout.lines() {
                     if line.contains("Microsoft.NETCore.App 9.") {
-                        // Extract version: "Microsoft.NETCore.App 9.0.1 [path]"
                         if let Some(version_part) = line.strip_prefix("Microsoft.NETCore.App ") {
                             if let Some(ver) = version_part.split_whitespace().next() {
                                 found_version = Some(ver.to_string());
@@ -46,19 +60,14 @@ pub async fn check_dotnet() -> Result<serde_json::Value, String> {
                     "version": found_version,
                 }))
             }
-            Err(_) => {
-                // dotnet command not found
-                Ok(serde_json::json!({
-                    "installed": false,
-                    "version": null,
-                }))
-            }
+            Err(_) => Ok(serde_json::json!({
+                "installed": false,
+                "version": null,
+            })),
         }
     }
 }
 
-/// Get disk space information for a given path.
-/// Uses PowerShell on Windows, statvfs on Linux.
 #[command]
 pub async fn get_disk_space(path: String) -> Result<serde_json::Value, String> {
     #[cfg(target_os = "windows")]

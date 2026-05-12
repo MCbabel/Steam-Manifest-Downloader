@@ -9,11 +9,16 @@ use uuid::Uuid;
 
 use crate::services::{AppState, JobInfo};
 use crate::services::depot_runner::{self, DepotRunConfig, ProgressEvent, emit_progress};
-use crate::services::internet_archive;
+use crate::services::depot_sources;
+use crate::services::settings as settings_service;
 use crate::services::manifest_hub_api;
 use crate::services::steam_store_api;
 use crate::services::lua_parser::DepotInfo;
 use crate::services::depot_keys_generator;
+use crate::services::history;
+
+// Keep finished jobs in the map briefly so the UI can still read final status.
+const JOB_RETENTION: std::time::Duration = std::time::Duration::from_secs(30 * 60);
 
 #[derive(Debug, Deserialize)]
 pub struct DownloadConfig {
@@ -31,6 +36,8 @@ pub struct DownloadConfig {
     pub download_location: Option<String>,
     #[serde(rename = "manifestHubApiKey")]
     pub manifest_hub_api_key: Option<String>,
+    #[serde(rename = "headerImage", default)]
+    pub header_image: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -47,17 +54,35 @@ pub struct DepotConfig {
     pub uploaded_manifest_path: Option<String>,
 }
 
-/// Start a download job. Returns { jobId, downloadDir } immediately,
-/// then runs the download pipeline asynchronously emitting progress events.
+// Trust-boundary validation: pipeline assumes all IDs parse cleanly.
+fn validate_download_ids(config: &DownloadConfig) -> Result<(), String> {
+    config
+        .app_id
+        .parse::<u64>()
+        .map_err(|_| format!("Invalid App ID '{}': expected a numeric Steam App ID", config.app_id))?;
+
+    for depot in &config.depots {
+        depot.depot_id.parse::<u64>().map_err(|_| {
+            format!(
+                "Invalid depot ID '{}': expected a numeric Steam depot ID",
+                depot.depot_id
+            )
+        })?;
+    }
+
+    Ok(())
+}
+
 #[command]
 pub async fn start_download(
     app: AppHandle,
     state: tauri::State<'_, AppState>,
     config: DownloadConfig,
 ) -> Result<serde_json::Value, String> {
+    validate_download_ids(&config)?;
+
     let job_id = Uuid::new_v4().to_string();
 
-    // Determine base download directory
     let base_dir = resolve_download_dir(config.download_location.as_deref())
         .unwrap_or_else(|| {
             let home = std::env::var("USERPROFILE")
@@ -66,15 +91,13 @@ pub async fn start_download(
             PathBuf::from(home).join("Documents").join("SteamDownloads")
         });
 
-    // Create base dir
     tokio::fs::create_dir_all(&base_dir)
         .await
         .map_err(|e| format!("Cannot create download directory: {}", e))?;
 
-    // Fetch game info for folder naming
     let mut folder_name = config.app_id.clone();
     let mut game_name = config.game_name.clone();
-    let mut header_image: Option<String> = None;
+    let mut header_image: Option<String> = config.header_image.clone();
 
     if game_name.is_none() {
         match steam_store_api::get_game_info(
@@ -92,7 +115,13 @@ pub async fn start_download(
                     }
                 }
             }
-            _ => {}
+            Ok(None) => {}
+            Err(e) => {
+                eprintln!(
+                    "[Download] Steam Store lookup failed for app {}: {}. Using App ID as folder name.",
+                    config.app_id, e
+                );
+            }
         }
     } else if let Some(ref name) = game_name {
         let sanitized = steam_store_api::sanitize_game_name(name);
@@ -103,7 +132,6 @@ pub async fn start_download(
 
     let download_dir = base_dir.join(&folder_name);
 
-    // Register job
     {
         let mut jobs = state.active_jobs.lock().await;
         jobs.insert(
@@ -124,21 +152,22 @@ pub async fn start_download(
         "folderName": folder_name,
     });
 
-    // Clone what we need for the async task
     let job_id_clone = job_id.clone();
     let app_clone = app.clone();
     let http_client = state.http_client.clone();
     let active_jobs = state.active_jobs.clone();
     let steam_cache = state.steam_cache.clone();
     let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
-
-    // Spawn the download pipeline
+    let download_dir_for_history = download_dir.to_string_lossy().to_string();
     tokio::spawn(async move {
+        let started_at = chrono::Utc::now();
+
         let state_ref = AppState {
             app_handle: app_clone.clone(),
             active_jobs: active_jobs.clone(),
             http_client: http_client.clone(),
             steam_cache: steam_cache.clone(),
+            telemetry: None,
         };
 
         let result = run_download_pipeline(
@@ -154,30 +183,66 @@ pub async fn start_download(
         )
         .await;
 
-        match result {
-            Ok(_) => {}
-            Err(e) => {
-                // Check if cancelled
-                let is_cancelled = {
-                    let jobs = active_jobs.lock().await;
-                    jobs.get(&job_id_clone)
-                        .map(|j| j.status == "cancelled")
-                        .unwrap_or(false)
-                };
+        let is_cancelled = {
+            let jobs = active_jobs.lock().await;
+            jobs.get(&job_id_clone)
+                .map(|j| j.status == "cancelled")
+                .unwrap_or(false)
+        };
 
+        match result {
+            Ok(_) => {
+                if is_cancelled {
+                    let entry = history::HistoryEntry {
+                        id: Uuid::new_v4().to_string(),
+                        app_id: config.app_id.clone(),
+                        game_name: game_name.clone(),
+                        header_image: header_image.clone(),
+                        depot_count: config.depots.len(),
+                        depots_downloaded: 0,
+                        status: "cancelled".to_string(),
+                        download_dir: download_dir_for_history.clone(),
+                        started_at: started_at.to_rfc3339(),
+                        completed_at: Some(chrono::Utc::now().to_rfc3339()),
+                        source_repo: None,
+                        depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
+                    };
+                    if let Err(err) = history::add_entry(&app_data_dir, entry).await {
+                        eprintln!("[Download] Failed to record cancelled job in history: {}", err);
+                    }
+                }
+            }
+            Err(e) => {
                 if !is_cancelled {
                     let mut event = ProgressEvent::new("error", &job_id_clone);
                     event.message = Some(format!("Unexpected error: {}", e));
                     emit_progress(&app_clone, &event);
                 }
+
+                let entry = history::HistoryEntry {
+                    id: Uuid::new_v4().to_string(),
+                    app_id: config.app_id.clone(),
+                    game_name: game_name.clone(),
+                    header_image: header_image.clone(),
+                    depot_count: config.depots.len(),
+                    depots_downloaded: 0,
+                    status: if is_cancelled { "cancelled" } else { "failed" }.to_string(),
+                    download_dir: download_dir_for_history.clone(),
+                    started_at: started_at.to_rfc3339(),
+                    completed_at: Some(chrono::Utc::now().to_rfc3339()),
+                    source_repo: None,
+                    depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
+                };
+                if let Err(err) = history::add_entry(&app_data_dir, entry).await {
+                    eprintln!("[Download] Failed to record failed job in history: {}", err);
+                }
             }
         }
 
-        // Schedule cleanup after 30 min
         let active_jobs_cleanup = active_jobs.clone();
         let job_id_cleanup = job_id_clone.clone();
         tokio::spawn(async move {
-            tokio::time::sleep(tokio::time::Duration::from_secs(30 * 60)).await;
+            tokio::time::sleep(JOB_RETENTION).await;
             let mut jobs = active_jobs_cleanup.lock().await;
             jobs.remove(&job_id_cleanup);
         });
@@ -186,7 +251,6 @@ pub async fn start_download(
     Ok(response)
 }
 
-/// The main download pipeline logic.
 async fn run_download_pipeline(
     app: &AppHandle,
     state: &AppState,
@@ -200,13 +264,14 @@ async fn run_download_pipeline(
 ) -> Result<(), String> {
     let _started_at = chrono::Utc::now();
     let work_dir = base_dir.join(folder_name);
+    let depot_sources_list = settings_service::load_settings(app_data_dir)
+        .await
+        .depot_sources;
 
-    // Create work directory
     tokio::fs::create_dir_all(&work_dir)
         .await
         .map_err(|e| format!("Failed to create download directory: {}", e))?;
 
-    // Check for disk space
     if let Some(disk_info) = get_disk_space_info(base_dir) {
         let mut event = ProgressEvent::new("status", job_id);
         event.step = Some("disk_space".to_string());
@@ -219,12 +284,10 @@ async fn run_download_pipeline(
         return Ok(());
     }
 
-    // Categorize depots
     let uploaded_depots: Vec<&DepotConfig> = config.depots.iter().filter(|d| d.uploaded_manifest_path.is_some()).collect();
     let custom_depots: Vec<&DepotConfig> = config.depots.iter().filter(|d| d.uploaded_manifest_path.is_none() && d.custom_manifest_id.is_some()).collect();
     let standard_depots: Vec<&DepotConfig> = config.depots.iter().filter(|d| d.uploaded_manifest_path.is_none() && d.custom_manifest_id.is_none()).collect();
 
-    // Step 1: Verify app exists in Internet Archive (only for standard depots)
     if !standard_depots.is_empty() {
         let mut event = ProgressEvent::new("status", job_id);
         event.step = Some("checking_branch".to_string());
@@ -235,23 +298,33 @@ async fn run_download_pipeline(
             return Ok(());
         }
 
-        match internet_archive::check_app_exists(&state.http_client, &config.app_id).await {
+        if depot_sources_list.is_empty() {
+            let mut event = ProgressEvent::new("error", job_id);
+            event.message = Some(
+                "No manifest sources configured. Add one in Settings → Advanced Settings → Manifest Sources."
+                    .to_string(),
+            );
+            emit_progress(app, &event);
+            return Ok(());
+        }
+
+        match depot_sources::check_app_exists(&state.http_client, &depot_sources_list, &config.app_id).await {
             Ok(true) => {
                 let mut event = ProgressEvent::new("status", job_id);
                 event.step = Some("branch_found".to_string());
                 event.app_id = Some(config.app_id.clone());
-                event.last_updated = Some("Source: Internet Archive".to_string());
+                event.last_updated = Some("Source: configured manifest source".to_string());
                 emit_progress(app, &event);
             }
             Ok(false) => {
                 let mut event = ProgressEvent::new("error", job_id);
-                event.message = Some(format!("App {} not found in Internet Archive", config.app_id));
+                event.message = Some(format!("App {} not found in any configured manifest source", config.app_id));
                 emit_progress(app, &event);
                 return Ok(());
             }
             Err(e) => {
                 let mut event = ProgressEvent::new("error", job_id);
-                event.message = Some(format!("Internet Archive check failed: {}", e));
+                event.message = Some(format!("Manifest source lookup failed: {}", e));
                 emit_progress(app, &event);
                 return Ok(());
             }
@@ -262,16 +335,14 @@ async fn run_download_pipeline(
         return Ok(());
     }
 
-    // Step 2: Download manifest files
     let total_manifests = config.depots.len();
     let mut event = ProgressEvent::new("status", job_id);
     event.step = Some("downloading_manifests".to_string());
     event.total = Some(total_manifests);
     emit_progress(app, &event);
 
-    let mut manifest_results: Vec<(String, bool)> = Vec::new(); // (depot_id, success)
+    let mut manifest_results: Vec<(String, bool)> = Vec::new();
 
-    // Handle uploaded manifests - copy to work dir
     for depot in &uploaded_depots {
         if let Some(ref uploaded_path) = depot.uploaded_manifest_path {
             let manifest_id = depot.custom_manifest_id.as_deref().unwrap_or(&depot.manifest_id);
@@ -280,8 +351,12 @@ async fn run_download_pipeline(
 
             match tokio::fs::copy(uploaded_path, &dest_path).await {
                 Ok(_) => {
-                    // Clean up temp file
-                    let _ = tokio::fs::remove_file(uploaded_path).await;
+                    if let Err(err) = tokio::fs::remove_file(uploaded_path).await {
+                        eprintln!(
+                            "[Download] Failed to remove temp upload '{}': {}",
+                            uploaded_path, err
+                        );
+                    }
                     let mut event = ProgressEvent::new("status", job_id);
                     event.step = Some("downloading_manifest".to_string());
                     event.depot_id = Some(depot.depot_id.clone());
@@ -301,7 +376,6 @@ async fn run_download_pipeline(
         }
     }
 
-    // Download standard manifests from Internet Archive
     for depot in &standard_depots {
         if check_cancelled(state, job_id).await {
             return Ok(());
@@ -313,8 +387,9 @@ async fn run_download_pipeline(
         event.manifest_id = Some(depot.manifest_id.clone());
         emit_progress(app, &event);
 
-        match internet_archive::download_manifest_file(
+        match depot_sources::download_manifest_file(
             &state.http_client,
+            &depot_sources_list,
             &config.app_id,
             &depot.depot_id,
             &depot.manifest_id,
@@ -334,7 +409,6 @@ async fn run_download_pipeline(
         }
     }
 
-    // Download custom manifests from ManifestHub API
     for depot in &custom_depots {
         if check_cancelled(state, job_id).await {
             return Ok(());
@@ -376,17 +450,34 @@ async fn run_download_pipeline(
         return Ok(());
     }
 
-    // Check if all manifests failed
     let success_count = manifest_results.iter().filter(|(_, s)| *s).count();
     if success_count == 0 && !manifest_results.is_empty() {
         let error_msg = "All manifest downloads failed".to_string();
         let mut event = ProgressEvent::new("error", job_id);
         event.message = Some(error_msg.clone());
         emit_progress(app, &event);
+
+        let entry = history::HistoryEntry {
+            id: uuid::Uuid::new_v4().to_string(),
+            app_id: config.app_id.clone(),
+            game_name: _game_name.map(|s| s.to_string()),
+            header_image: _header_image.map(|s| s.to_string()),
+            depot_count: config.depots.len(),
+            depots_downloaded: 0,
+            status: "failed".to_string(),
+            download_dir: work_dir.to_string_lossy().to_string(),
+            started_at: _started_at.to_rfc3339(),
+            completed_at: Some(chrono::Utc::now().to_rfc3339()),
+            source_repo: None,
+            depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
+        };
+        if let Err(err) = history::add_entry(app_data_dir, entry).await {
+            eprintln!("[Download] Failed to record failed download in history: {}", err);
+        }
+
         return Ok(());
     }
 
-    // Step 3: Generate depot keys
     if check_cancelled(state, job_id).await {
         return Ok(());
     }
@@ -395,14 +486,12 @@ async fn run_download_pipeline(
     event.step = Some("generating_keys".to_string());
     emit_progress(app, &event);
 
-    // Collect depot keys from config
     let mut depot_infos: Vec<DepotInfo> = config
         .depots
         .iter()
         .map(|d| {
             let mut key = d.depot_key.clone();
 
-            // Merge keyVdfKeys if available
             if key.is_none() {
                 if let Some(ref kvk) = config.key_vdf_keys {
                     key = kvk.get(&d.depot_id).cloned();
@@ -410,21 +499,21 @@ async fn run_download_pipeline(
             }
 
             DepotInfo {
-                depot_id: d.depot_id.parse().unwrap_or(0),
+                depot_id: d.depot_id.parse().expect("depot IDs are validated at entry"),
                 depot_key: key,
                 manifest_id: Some(d.custom_manifest_id.as_deref().unwrap_or(&d.manifest_id).to_string()),
             }
         })
         .collect();
 
-    // If some depots lack keys, try downloading key.vdf from Internet Archive
     if depot_infos.iter().any(|d| d.depot_key.is_none()) {
         let mut event = ProgressEvent::new("status", job_id);
         event.step = Some("downloading_keyvdf".to_string());
         emit_progress(app, &event);
 
-        match internet_archive::download_text_file(
+        match depot_sources::download_text_file(
             &state.http_client,
+            &depot_sources_list,
             &config.app_id,
             "key.vdf",
         )
@@ -433,7 +522,7 @@ async fn run_download_pipeline(
             Ok(vdf_content) => {
                 let vdf_keys = crate::services::vdf_parser::parse_key_vdf(
                     &vdf_content,
-                    Some("InternetArchive"),
+                    None,
                 );
                 for depot in &mut depot_infos {
                     if depot.depot_key.is_none() {
@@ -449,9 +538,8 @@ async fn run_download_pipeline(
         }
     }
 
-    // Generate steam.keys file
     let keys_result = depot_keys_generator::generate_depot_keys(
-        config.app_id.parse().unwrap_or(0),
+        config.app_id.parse().expect("app_id is validated at entry"),
         &depot_infos,
         Some(folder_name),
         base_dir,
@@ -463,14 +551,12 @@ async fn run_download_pipeline(
     event.depot_count = Some(keys_result.depot_count);
     emit_progress(app, &event);
 
-    // Step 4: Run DepotDownloaderMod
     if check_cancelled(state, job_id).await {
         return Ok(());
     }
 
     let exe_path = depot_runner::get_exe_path_async().await?;
 
-    // Filter to only depots with successful manifests
     let successful_depot_ids: Vec<String> = manifest_results
         .iter()
         .filter(|(_, s)| *s)
@@ -492,7 +578,6 @@ async fn run_download_pipeline(
     event.total = Some(run_depots.len());
     emit_progress(app, &event);
 
-    // Load settings for extra args
     let settings = crate::services::settings::load_settings(app_data_dir).await;
     let extra_args = if settings.dd_extra_args.is_empty() {
         vec![
@@ -520,7 +605,6 @@ async fn run_download_pipeline(
         return Ok(());
     }
 
-    // Complete
     let dl_success_count = download_results.iter().filter(|r| r["success"].as_bool().unwrap_or(false)).count();
     let mut event = ProgressEvent::new("complete", job_id);
     event.message = Some(format!(
@@ -531,7 +615,31 @@ async fn run_download_pipeline(
     event.results = Some(serde_json::Value::Array(download_results));
     emit_progress(app, &event);
 
-    // Mark job as complete
+    let status = if dl_success_count == run_depots.len() {
+        "complete"
+    } else if dl_success_count > 0 {
+        "partial"
+    } else {
+        "failed"
+    };
+    let entry = history::HistoryEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        app_id: config.app_id.clone(),
+        game_name: _game_name.map(|s| s.to_string()),
+        header_image: _header_image.map(|s| s.to_string()),
+        depot_count: run_depots.len(),
+        depots_downloaded: dl_success_count,
+        status: status.to_string(),
+        download_dir: work_dir.to_string_lossy().to_string(),
+        started_at: _started_at.to_rfc3339(),
+        completed_at: Some(chrono::Utc::now().to_rfc3339()),
+        source_repo: None,
+        depot_ids: run_depots.iter().map(|d| d.depot_id.clone()).collect(),
+    };
+    if let Err(err) = history::add_entry(app_data_dir, entry).await {
+        eprintln!("[Download] Failed to record completed job in history: {}", err);
+    }
+
     {
         let mut jobs = state.active_jobs.lock().await;
         if let Some(job) = jobs.get_mut(job_id) {
@@ -542,14 +650,12 @@ async fn run_download_pipeline(
     Ok(())
 }
 
-/// Cancel an active download job.
 #[command]
 pub async fn cancel_download(
     app: AppHandle,
     state: tauri::State<'_, AppState>,
     job_id: String,
 ) -> Result<(), String> {
-    // Check job exists and get the download dir
     let download_dir = {
         let jobs = state.active_jobs.lock().await;
         if !jobs.contains_key(&job_id) {
@@ -558,22 +664,18 @@ pub async fn cancel_download(
         jobs.get(&job_id).and_then(|j| j.download_dir.clone())
     };
 
-    // Kill the process
     depot_runner::kill_job(&state, &job_id).await;
 
-    // Emit cancellation event
     let mut event = ProgressEvent::new("cancelled", &job_id);
     event.message = Some("Download cancelled and files are being cleaned up.".to_string());
     emit_progress(&app, &event);
 
-    // Clean up downloaded files
     if let Some(dir) = download_dir {
         let dir_path = std::path::PathBuf::from(&dir);
         if dir_path.exists() {
-            // Wait a bit for the process to fully exit
+            // Give the child a moment to release file handles before rm -rf.
             tokio::spawn(async move {
                 tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
-                // Try to delete the directory with retries
                 for attempt in 0..3 {
                     match tokio::fs::remove_dir_all(&dir_path).await {
                         Ok(_) => {
@@ -594,8 +696,6 @@ pub async fn cancel_download(
 
     Ok(())
 }
-
-// --- Helper functions ---
 
 async fn check_cancelled(state: &AppState, job_id: &str) -> bool {
     let jobs = state.active_jobs.lock().await;

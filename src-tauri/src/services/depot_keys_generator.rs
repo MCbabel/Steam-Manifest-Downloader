@@ -3,21 +3,13 @@ use tokio::fs;
 
 use crate::services::lua_parser::DepotInfo;
 
-/// Result of generating depot keys file
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DepotKeysResult {
     pub output_path: String,
     pub depot_count: usize,
 }
 
-/// Generate `steam.keys` file content in format: `depotId;hexKey\n`
-/// and write it to the specified directory.
-///
-/// # Arguments
-/// * `app_id` - The Steam app ID
-/// * `depots` - List of depot info with keys
-/// * `folder_name` - Optional folder name (defaults to app_id string)
-/// * `base_dir` - Base directory for output
+// Writes `{depotId};{hexKey}\n` lines to {base_dir}/{folder_name}/steam.keys.
 pub async fn generate_depot_keys(
     app_id: u64,
     depots: &[DepotInfo],
@@ -30,12 +22,10 @@ pub async fn generate_depot_keys(
     let output_dir = base_dir.join(&folder);
     let output_path = output_dir.join("steam.keys");
 
-    // Ensure output directory exists
     fs::create_dir_all(&output_dir)
         .await
         .map_err(|e| format!("Failed to create output directory: {}", e))?;
 
-    // Build file content: depotId;hexKey per line
     let lines: Vec<String> = depots
         .iter()
         .filter_map(|depot| {
@@ -62,7 +52,6 @@ pub async fn generate_depot_keys(
     })
 }
 
-/// Generate depot keys content as a string without writing to file.
 #[allow(dead_code)]
 pub fn generate_depot_keys_content(depots: &[DepotInfo]) -> String {
     let lines: Vec<String> = depots
