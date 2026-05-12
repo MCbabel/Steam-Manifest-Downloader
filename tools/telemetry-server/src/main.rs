@@ -29,6 +29,10 @@ struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    if std::env::args().any(|a| a == "--gen-keypair" || a == "--gen-key") {
+        return gen_keypair();
+    }
+
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -132,6 +136,27 @@ async fn ingest(
 
 fn keypair_from_secret(secret: &[u8; 32]) -> KeyPair {
     KeyPair::from_secret_key(SecretKey::from(*secret))
+}
+
+fn gen_keypair() -> Result<()> {
+    let kp = KeyPair::gen();
+    let priv_hex = hex::encode(kp.secret_key.as_array());
+    let pub_bytes = kp.public_key.as_array();
+
+    eprintln!("== Server PRIVATE key (server env: TELEMETRY_PRIVATE_KEY_HEX) ==");
+    println!("{}", priv_hex);
+    eprintln!();
+    eprintln!("== Server PUBLIC key (paste into src-tauri/src/services/telemetry.rs SERVER_PUBLIC_KEY) ==");
+    eprintln!("const SERVER_PUBLIC_KEY: [u8; 32] = [");
+    for chunk in pub_bytes.chunks(12) {
+        let formatted: Vec<String> = chunk.iter().map(|b| format!("0x{:02x}", b)).collect();
+        eprintln!("    {},", formatted.join(", "));
+    }
+    eprintln!("];");
+    eprintln!();
+    eprintln!("Store the private key somewhere safe (password manager). If you lose");
+    eprintln!("it, no opt-in client can ever send events that this server can decrypt.");
+    Ok(())
 }
 
 async fn shutdown_signal() {
