@@ -48,6 +48,16 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="1.4.1" date="2026-05-13">
+      <description>
+        <ul>
+          <li>First-launch flow: language picker → telemetry consent → update check, no more overlapping modals</li>
+          <li>Depot sources now resolve <code>.zip</code> archive paths correctly for any URL, not just <code>view_archive.php</code></li>
+          <li>Error messages are selectable again so you can copy them for bug reports</li>
+          <li>CI: build date is now populated in workflow_dispatch releases</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.4.0" date="2026-05-12">
       <description>
         <ul>

@@ -30,8 +30,10 @@ jobs:
         env:
           SMD_BUILD_CHANNEL: dev
           SMD_GIT_SHA: ${{ github.sha }}
-          SMD_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
-        run: cargo tauri build
+        shell: bash
+        run: |
+          export SMD_BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          cargo tauri build
 
       - name: Upload portable EXE
         uses: actions/upload-artifact@v4
@@ -48,8 +50,8 @@ jobs:
         env:
           SMD_BUILD_CHANNEL: dev
           SMD_GIT_SHA: ${{ github.sha }}
-          SMD_BUILD_DATE: ${{ github.event.head_commit.timestamp }}
         run: |
+          export SMD_BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           docker run --rm \
             -e SMD_BUILD_CHANNEL -e SMD_GIT_SHA -e SMD_BUILD_DATE \
             -v "${{ github.workspace }}:/workspace" \

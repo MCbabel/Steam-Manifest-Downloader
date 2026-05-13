@@ -1486,7 +1486,17 @@ async function initTelemetryConsent() {
   try {
     const status = await invoke('get_telemetry_status');
     if (status.consent === 'pending') {
-      els.telemetryModal.classList.remove('hidden');
+      const modal = els.telemetryModal;
+      await new Promise((resolve) => {
+        const observer = new MutationObserver(() => {
+          if (modal.classList.contains('hidden')) {
+            observer.disconnect();
+            resolve();
+          }
+        });
+        observer.observe(modal, { attributes: true, attributeFilter: ['class'] });
+        modal.classList.remove('hidden');
+      });
     } else if (status.consent === 'accepted') {
       invoke('emit_telemetry_event', { kind: 'app_start' }).catch(() => {});
     }
@@ -2124,9 +2134,6 @@ function initTauri() {
   checkDotNet();
 
   checkShortcutSupport();
-
-  // Check for updates after a short delay (non-blocking)
-  setTimeout(checkForUpdates, 1500);
 }
 
 async function openHistory() {
@@ -2563,22 +2570,25 @@ async function showLanguagePickerIfNeeded(initSettings, hasStored) {
   const cards = document.getElementById('language-picker-cards');
   if (!picker || !cards) return;
 
-  renderLanguageCards(cards, i18n.getCurrentLocale(), async (code) => {
-    try {
-      const fresh = await invoke('get_settings');
-      fresh.language = code;
-      await invoke('save_settings', { settings: fresh });
-    } catch (e) {
-      console.error('Failed to save language choice:', e);
-    }
-    if (code !== i18n.getCurrentLocale()) {
-      try { await i18n.loadLocale(code); } catch {}
-      i18n.applyTranslations(document);
-    }
-    picker.classList.add('hidden');
-  });
+  await new Promise((resolve) => {
+    renderLanguageCards(cards, i18n.getCurrentLocale(), async (code) => {
+      try {
+        const fresh = await invoke('get_settings');
+        fresh.language = code;
+        await invoke('save_settings', { settings: fresh });
+      } catch (e) {
+        console.error('Failed to save language choice:', e);
+      }
+      if (code !== i18n.getCurrentLocale()) {
+        try { await i18n.loadLocale(code); } catch {}
+        i18n.applyTranslations(document);
+      }
+      picker.classList.add('hidden');
+      resolve();
+    });
 
-  picker.classList.remove('hidden');
+    picker.classList.remove('hidden');
+  });
 }
 
 function bindSettingsLanguageCards() {
@@ -2625,10 +2635,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   initEvents();
   loadSettingsAndDefaults();
   initTauri();
-  initTelemetryConsent();
   refreshSourcesUI();
   setupModalA11y();
 
   bindSettingsLanguageCards();
   await showLanguagePickerIfNeeded(initSettings, hasStored);
+  await initTelemetryConsent();
+  setTimeout(checkForUpdates, 1500);
 });

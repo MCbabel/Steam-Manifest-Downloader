@@ -4,9 +4,32 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 enum Backend {
-    ArchiveOrg { base: String },
-    GitHub { raw_base: String },
-    Generic { base: String },
+    ArchiveOrg { base: String, prefix: String },
+    Generic { base: String, prefix: String },
+}
+
+fn strip_archive_ext(name: &str) -> Option<&str> {
+    name.strip_suffix(".zip")
+        .or_else(|| name.strip_suffix(".tar.gz"))
+        .or_else(|| name.strip_suffix(".tgz"))
+        .or_else(|| name.strip_suffix(".tar"))
+}
+
+fn archive_prefix(url: &str) -> String {
+    let archive_value = url
+        .split('?')
+        .nth(1)
+        .and_then(|q| q.split('&').find_map(|p| p.strip_prefix("archive=")));
+    let Some(raw) = archive_value else { return String::new() };
+    let decoded = raw.replace("%2F", "/").replace("%2f", "/");
+    let basename = decoded.rsplit('/').next().unwrap_or("");
+    strip_archive_ext(basename).unwrap_or(basename).to_string()
+}
+
+fn zip_prefix_from_path(base: &str) -> String {
+    let trimmed = base.trim_end_matches('/');
+    let last_segment = trimmed.rsplit('/').next().unwrap_or("");
+    strip_archive_ext(last_segment).unwrap_or("").to_string()
 }
 
 fn parse_backend(url: &str) -> Result<Backend, String> {
@@ -18,6 +41,7 @@ fn parse_backend(url: &str) -> Result<Backend, String> {
     if trimmed.contains("archive.org/view_archive.php") {
         return Ok(Backend::ArchiveOrg {
             base: trimmed.trim_end_matches('&').trim_end_matches('?').to_string(),
+            prefix: archive_prefix(trimmed),
         });
     }
 
@@ -32,20 +56,24 @@ fn parse_backend(url: &str) -> Result<Backend, String> {
         }
         let user = parts[0];
         let repo = parts[1];
-        let branch = if parts.len() >= 4 && parts[2] == "tree" {
-            parts[3]
+        let (branch, extra) = if parts.len() >= 4 && parts[2] == "tree" {
+            (parts[3], parts[4..].join("/"))
         } else {
-            "main"
+            ("main", String::new())
         };
-        return Ok(Backend::GitHub {
-            raw_base: format!("https://raw.githubusercontent.com/{}/{}/{}", user, repo, branch),
-        });
+        let mut base = format!("https://raw.githubusercontent.com/{}/{}/{}", user, repo, branch);
+        if !extra.is_empty() {
+            base.push('/');
+            base.push_str(&extra);
+        }
+        let prefix = zip_prefix_from_path(&base);
+        return Ok(Backend::Generic { base, prefix });
     }
 
     if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
-        return Ok(Backend::Generic {
-            base: trimmed.trim_end_matches('/').to_string(),
-        });
+        let base = trimmed.trim_end_matches('/').to_string();
+        let prefix = zip_prefix_from_path(&base);
+        return Ok(Backend::Generic { base, prefix });
     }
 
     Err(format!("unsupported source URL: {}", trimmed))
@@ -53,17 +81,22 @@ fn parse_backend(url: &str) -> Result<Backend, String> {
 
 fn build_url(backend: &Backend, app_id: &str, filename: &str) -> String {
     match backend {
-        Backend::ArchiveOrg { base } => {
-            let file_path = format!("branches/{}/{}", app_id, filename);
+        Backend::ArchiveOrg { base, prefix } => {
+            let file_path = if prefix.is_empty() {
+                format!("{}/{}", app_id, filename)
+            } else {
+                format!("{}/{}/{}", prefix, app_id, filename)
+            };
             let encoded = file_path.replace('/', "%2F");
             let sep = if base.contains('?') { '&' } else { '?' };
             format!("{}{}file={}", base, sep, encoded)
         }
-        Backend::GitHub { raw_base } => {
-            format!("{}/branches/{}/{}", raw_base, app_id, filename)
-        }
-        Backend::Generic { base } => {
-            format!("{}/branches/{}/{}", base, app_id, filename)
+        Backend::Generic { base, prefix } => {
+            if prefix.is_empty() {
+                format!("{}/{}/{}", base, app_id, filename)
+            } else {
+                format!("{}/{}/{}/{}", base, prefix, app_id, filename)
+            }
         }
     }
 }
