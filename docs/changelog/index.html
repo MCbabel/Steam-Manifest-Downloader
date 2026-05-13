@@ -260,6 +260,35 @@
 
     <div class="changelog-entry">
       <div class="changelog-entry-header">
+        <span class="changelog-version">v1.4.1</span>
+        <span class="changelog-date">May 13, 2026</span>
+      </div>
+      <ul class="changelog-changes">
+        <li>
+          <span class="badge badge-fixed">Fixed</span>
+          <span>First-launch flow no longer overlaps modals — language picker, telemetry consent and the auto-update check now run in strict sequence</span>
+        </li>
+        <li>
+          <span class="badge badge-fixed">Fixed</span>
+          <span>Depot source resolver auto-detects the in-archive root folder from any URL ending in <code>.zip</code> / <code>.tar.gz</code> — works for <code>archive.org/download/&lt;item&gt;/&lt;file&gt;.zip/</code> URLs and not just <code>view_archive.php</code></span>
+        </li>
+        <li>
+          <span class="badge badge-fixed">Fixed</span>
+          <span>Error messages (red banners) are selectable again so you can copy them into bug reports</span>
+        </li>
+        <li>
+          <span class="badge badge-fixed">Fixed</span>
+          <span>CI workflows: build date is now populated when releases are triggered via <code>workflow_dispatch</code> (was previously empty in the Debug Info panel)</span>
+        </li>
+        <li>
+          <span class="badge badge-changed">Changed</span>
+          <span>Removed the hardcoded <code>branches/</code> path prefix from generic and GitHub depot sources — paste the URL that points directly at the directory containing the <code>&lt;appid&gt;/</code> folders</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="changelog-entry">
+      <div class="changelog-entry-header">
         <span class="changelog-version">v1.4.0</span>
         <span class="changelog-date">May 12, 2026</span>
       </div>

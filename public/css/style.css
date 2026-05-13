@@ -173,6 +173,8 @@ textarea,
 .terminal__line,
 pre,
 code,
+.error-message,
+.completion-message,
 .selectable,
 [data-selectable] {
   user-select: text;
