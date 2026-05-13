@@ -83,15 +83,19 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 
 #### Arch / CachyOS / Manjaro — AUR
 
-The cleanest path on Arch-based distros: an official AUR package handled by `pacman`.
+The cleanest path on Arch-based distros: an official AUR package handled by `pacman`. Two variants:
 
 ```bash
-yay -S steam-manifest-downloader
-# or
+# Precompiled — installs in seconds, pulls the AppImage binary from the GitHub release
+paru -S steam-manifest-downloader-bin
+
+# From source — recompiles the Rust binary locally (~5 min on a modern CPU)
 paru -S steam-manifest-downloader
 ```
 
-Source: [aur.archlinux.org/packages/steam-manifest-downloader](https://aur.archlinux.org/packages/steam-manifest-downloader). Updates flow through your package manager (`yay -Syu`), and the in-app updater detects this and points you back at it instead of fetching an AppImage.
+Both packages `provide`/`conflict` each other, so you only ever have one installed. The `-bin` flavor is recommended unless you want a reproducible local build.
+
+Sources: [steam-manifest-downloader-bin](https://aur.archlinux.org/packages/steam-manifest-downloader-bin) · [steam-manifest-downloader](https://aur.archlinux.org/packages/steam-manifest-downloader). Updates flow through your package manager (`paru -Syu`), and the in-app updater detects this and points you back at it instead of fetching an AppImage.
 
 #### Other distros — AppImage
 
