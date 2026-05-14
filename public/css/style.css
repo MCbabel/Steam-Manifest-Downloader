@@ -1349,6 +1349,10 @@ button:disabled,
   animation: fadeIn 0.2s ease;
 }
 
+#remove-source-modal {
+  z-index: 1100;
+}
+
 .modal__backdrop {
   position: absolute;
   inset: 0;

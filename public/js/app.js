@@ -486,11 +486,40 @@ async function addDepotSource(rawUrl, errorEl) {
 }
 
 async function removeDepotSource(index) {
-  const sources = await loadDepotSources();
+  const settings = await invoke('get_settings');
+  const sources = Array.isArray(settings.depot_sources) ? settings.depot_sources : [];
   if (index < 0 || index >= sources.length) return;
+  const target = sources[index];
+  const pristine = Array.isArray(settings.pristine_default_sources) ? settings.pristine_default_sources : [];
+
+  if (pristine.includes(target)) {
+    const confirmed = await confirmRemoveDefaultSource();
+    if (!confirmed) return;
+  }
+
   sources.splice(index, 1);
   await saveDepotSources(sources);
   await refreshSourcesUI();
+}
+
+function confirmRemoveDefaultSource() {
+  const modal = document.getElementById('remove-source-modal');
+  const yes = document.getElementById('btn-remove-source-yes');
+  const no = document.getElementById('btn-remove-source-no');
+  if (!modal || !yes || !no) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    const cleanup = () => {
+      yes.removeEventListener('click', onYes);
+      no.removeEventListener('click', onNo);
+      modal.classList.add('hidden');
+    };
+    const onYes = () => { cleanup(); resolve(true); };
+    const onNo = () => { cleanup(); resolve(false); };
+    yes.addEventListener('click', onYes);
+    no.addEventListener('click', onNo);
+    modal.classList.remove('hidden');
+  });
 }
 
 async function performSearch() {

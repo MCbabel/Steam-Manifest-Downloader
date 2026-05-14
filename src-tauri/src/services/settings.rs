@@ -40,6 +40,10 @@ pub struct Settings {
     pub depot_sources: Vec<String>,
     #[serde(default)]
     pub language: String,
+    #[serde(default)]
+    pub auto_seeded: bool,
+    #[serde(default)]
+    pub pristine_default_sources: Vec<String>,
 }
 
 fn default_download_location() -> String {
@@ -95,8 +99,38 @@ impl Default for Settings {
             installation_id: String::new(),
             depot_sources: Vec::new(),
             language: String::new(),
+            auto_seeded: false,
+            pristine_default_sources: Vec::new(),
         }
     }
+}
+
+pub fn default_depot_sources() -> Vec<String> {
+    #[cfg(feature = "default-sources")]
+    {
+        vec![
+            "https://archive.org/download/manifest-hub-repo/NEW-depot-keys.zip/".to_string(),
+            "https://archive.org/download/manifest-hub-repo/branches.zip/".to_string(),
+        ]
+    }
+    #[cfg(not(feature = "default-sources"))]
+    {
+        Vec::new()
+    }
+}
+
+pub async fn seed_defaults_if_needed(app_data_dir: &Path) -> Settings {
+    let mut settings = load_settings(app_data_dir).await;
+    if !settings.auto_seeded {
+        let defaults = default_depot_sources();
+        if !defaults.is_empty() && settings.depot_sources.is_empty() {
+            settings.depot_sources = defaults.clone();
+            settings.pristine_default_sources = defaults;
+        }
+        settings.auto_seeded = true;
+        let _ = save_settings(app_data_dir, &settings).await;
+    }
+    settings
 }
 
 fn settings_path(app_data_dir: &Path) -> PathBuf {
@@ -120,7 +154,12 @@ pub async fn save_settings(app_data_dir: &Path, settings: &Settings) -> Result<(
             .map_err(|e| format!("Failed to create settings directory: {}", e))?;
     }
 
-    let content = serde_json::to_string_pretty(settings)
+    let mut to_persist = settings.clone();
+    to_persist
+        .pristine_default_sources
+        .retain(|u| to_persist.depot_sources.contains(u));
+
+    let content = serde_json::to_string_pretty(&to_persist)
         .map_err(|e| format!("Failed to serialize settings: {}", e))?;
 
     fs::write(&path, content)

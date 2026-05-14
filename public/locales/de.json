@@ -136,6 +136,12 @@
       "title": "Download-Verlauf",
       "clear": "Alle löschen",
       "close": "Schließen"
+    },
+    "removeDefaultSource": {
+      "title": "Standard-Quelle entfernen?",
+      "body": "Diese Quelle wurde mit der App ausgeliefert. <strong>Die Suche per App-ID funktioniert nicht mehr</strong>, bis du eine eigene Quelle hinzufügst. Du kannst sie jederzeit wieder hinzufügen.",
+      "yes": "Trotzdem entfernen",
+      "no": "Behalten"
     }
   },
   "settings": {

@@ -48,6 +48,14 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="1.4.2" date="2026-05-14">
+      <description>
+        <ul>
+          <li>Pre-configured archive.org depot sources on first launch (binary and AUR builds only — Flatpak ships clean)</li>
+          <li>Confirmation prompt when removing a source that came pre-installed, with a heads-up that Search by App ID will stop working</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.4.1" date="2026-05-13">
       <description>
         <ul>

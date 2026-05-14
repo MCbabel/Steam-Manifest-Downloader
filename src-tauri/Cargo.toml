@@ -1,8 +1,12 @@
 [package]
 name = "steam-manifest-downloader"
-version = "1.4.1"
+version = "1.4.2"
 edition = "2021"
 license = "GPL-2.0-or-later"
+
+[features]
+default = ["default-sources"]
+default-sources = []
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }

@@ -461,6 +461,27 @@
 
 
 
+  <div id="remove-source-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="remove-source-modal-title" aria-hidden="true">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__icon modal__icon--warning" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h3 class="modal__title" id="remove-source-modal-title" data-i18n="modals.removeDefaultSource.title">Remove default source?</h3>
+      <p class="modal__text" data-i18n-html="modals.removeDefaultSource.body">
+        This is a source that was installed with the app. <strong>Search by App ID will stop working</strong> until you add your own source. You can always re-add it later.
+      </p>
+      <div class="modal__actions">
+        <button id="btn-remove-source-no" class="btn btn--outline" data-modal-cancel data-i18n="modals.removeDefaultSource.no">Keep</button>
+        <button id="btn-remove-source-yes" class="btn btn--danger" data-i18n="modals.removeDefaultSource.yes">Remove anyway</button>
+      </div>
+    </div>
+  </div>
+
   <div id="telemetry-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="telemetry-modal-title" aria-hidden="true">
     <div class="modal__backdrop"></div>
     <div class="modal__content telemetry-modal-content">
