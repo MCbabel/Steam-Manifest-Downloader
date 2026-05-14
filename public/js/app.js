@@ -138,6 +138,7 @@ const els = {
   maxRetriesInput: $('#max-retries-input'),
   speedLimitInput: $('#speed-limit-input'),
   proxyInput: $('#proxy-input'),
+  hubcapApiKeyInput: $('#hubcap-apikey-input'),
   notificationSoundToggle: $('#notification-sound-toggle'),
   telemetryModal: $('#telemetry-modal'),
   btnTelemetryAccept: $('#btn-telemetry-accept'),
@@ -1030,6 +1031,9 @@ async function startDownload() {
       if (state.searchRepo) downloadConfig.repo = state.searchRepo;
       if (state.searchSha) downloadConfig.sha = state.searchSha;
       if (state.searchKeyVdfKeys) downloadConfig.keyVdfKeys = state.searchKeyVdfKeys;
+      if (state.selectedRepo && state.selectedRepo.type) {
+        downloadConfig.sourceType = state.selectedRepo.type;
+      }
     }
 
     const result = await invoke('start_download', { config: downloadConfig });
@@ -1472,6 +1476,7 @@ async function openSettings() {
     els.maxRetriesInput.value = settings.max_retries ?? 3;
     els.speedLimitInput.value = settings.download_speed_limit || '';
     els.proxyInput.value = settings.proxy || '';
+    if (els.hubcapApiKeyInput) els.hubcapApiKeyInput.value = settings.hubcap_api_key || '';
     els.notificationSoundToggle.checked = settings.notification_sound !== false;
     els.telemetryToggle.checked = settings.telemetry_consent === 'accepted';
   } catch (e) {
@@ -1609,6 +1614,9 @@ async function saveSettings() {
     currentSettings.max_retries = parseInt(els.maxRetriesInput.value) || 3;
     currentSettings.download_speed_limit = els.speedLimitInput.value.trim();
     currentSettings.proxy = els.proxyInput.value.trim();
+    if (els.hubcapApiKeyInput) {
+      currentSettings.hubcap_api_key = els.hubcapApiKeyInput.value.trim();
+    }
     currentSettings.notification_sound = els.notificationSoundToggle.checked;
 
     await invoke('save_settings', { settings: currentSettings });
