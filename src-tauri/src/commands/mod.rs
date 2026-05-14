@@ -8,6 +8,7 @@ mod updater;
 mod history;
 mod shortcuts;
 mod telemetry;
+mod emulator;
 
 pub use file_ops::*;
 pub use search::*;
@@ -19,3 +20,4 @@ pub use updater::*;
 pub use history::*;
 pub use shortcuts::*;
 pub use telemetry::*;
+pub use emulator::*;
