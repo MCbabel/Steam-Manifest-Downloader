@@ -72,6 +72,13 @@ fn main() {
             commands::get_telemetry_status,
             commands::set_telemetry_consent,
             commands::emit_telemetry_event,
+            // Emulator (gbe_fork)
+            commands::emu_release_info,
+            commands::emu_ensure_cached,
+            commands::emu_scan_game_dir,
+            commands::emu_apply_replacement,
+            commands::emu_revert_replacement,
+            commands::emu_launch_lobby_connect,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
