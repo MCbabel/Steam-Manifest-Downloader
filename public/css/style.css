@@ -2565,7 +2565,7 @@ button:disabled,
 }
 
 .update-modal__system-hint pre {
-  margin: 0 0 8px;
+  margin: 0;
   padding: 8px 10px;
   background: rgba(13, 17, 23, 0.6);
   border: 1px solid var(--border);
@@ -2575,6 +2575,32 @@ button:disabled,
   color: var(--text-primary);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  flex: 1;
+  min-width: 0;
+}
+
+.update-system-cmd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.update-system-cmd__label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.update-system-cmd__inner {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.update-system-cmd__copy {
+  flex-shrink: 0;
 }
 
 .update-modal__progress-text {

@@ -1706,8 +1706,7 @@ function showUpdateModal(info) {
   if (systemHint) {
     systemHint.classList.toggle('hidden', !externallyManaged);
     if (externallyManaged) {
-      const cmdEl = document.getElementById('update-system-cmd');
-      if (cmdEl) cmdEl.textContent = updateCommandFor(info.installMethod);
+      renderUpdateCommands(info.installMethod);
     }
   }
   els.btnUpdateNow.classList.toggle('hidden', externallyManaged);
@@ -1716,30 +1715,54 @@ function showUpdateModal(info) {
   els.updateModal.classList.remove('hidden');
 }
 
-function updateCommandFor(method) {
+function updateCommandsFor(method) {
   switch (method) {
-    case 'flatpak': return 'flatpak update de.mcbabel.SteamManifestDownloader';
-    case 'snap':    return 'sudo snap refresh steam-manifest-downloader';
+    case 'flatpak':
+      return [{ label: '', cmd: 'flatpak update de.mcbabel.SteamManifestDownloader' }];
+    case 'snap':
+      return [{ label: '', cmd: 'sudo snap refresh steam-manifest-downloader' }];
     case 'system':
-    default:        return 'yay -Syu steam-manifest-downloader';
+    default:
+      return [
+        { label: i18n.t('modals.update.aurBinLabel'), cmd: 'paru -Syu steam-manifest-downloader-bin' },
+        { label: i18n.t('modals.update.aurSourceLabel'), cmd: 'paru -Syu steam-manifest-downloader' },
+      ];
   }
 }
 
-async function copyUpdateCommand() {
-  const cmdEl = document.getElementById('update-system-cmd');
-  const cmd = cmdEl ? cmdEl.textContent : '';
-  if (!cmd) return;
-  try {
-    await navigator.clipboard.writeText(cmd);
-    const btn = document.getElementById('btn-update-copy-cmd');
-    if (btn) {
-      const original = btn.textContent;
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = original; }, 1500);
-    }
-  } catch (e) {
-    console.error('Clipboard write failed:', e);
-  }
+function renderUpdateCommands(method) {
+  const list = document.getElementById('update-system-cmd-list');
+  if (!list) return;
+  const commands = updateCommandsFor(method);
+  const copyLabel = i18n.t('modals.update.copyCmd');
+  list.innerHTML = commands.map((c, i) => {
+    const labelHtml = c.label
+      ? `<div class="update-system-cmd__label">${escapeHtml(c.label)}</div>`
+      : '';
+    return `
+      <div class="update-system-cmd__row">
+        ${labelHtml}
+        <div class="update-system-cmd__inner">
+          <pre><code>${escapeHtml(c.cmd)}</code></pre>
+          <button type="button" class="btn btn--outline btn--small update-system-cmd__copy" data-cmd-idx="${i}">${escapeHtml(copyLabel)}</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.update-system-cmd__copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.cmdIdx, 10);
+      const cmd = commands[idx]?.cmd;
+      if (!cmd) return;
+      try {
+        await navigator.clipboard.writeText(cmd);
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      } catch {}
+    });
+  });
 }
 
 function hideUpdateModal() {
@@ -2060,8 +2083,6 @@ function initEvents() {
   els.btnUpdateLater.addEventListener('click', hideUpdateModal);
   els.btnUpdateSkip.addEventListener('click', skipUpdateVersion);
   els.updateModal.querySelector('.modal__backdrop').addEventListener('click', hideUpdateModal);
-  const btnCopyCmd = document.getElementById('btn-update-copy-cmd');
-  if (btnCopyCmd) btnCopyCmd.addEventListener('click', copyUpdateCommand);
 
   els.btnThemeToggle.addEventListener('click', toggleTheme);
 

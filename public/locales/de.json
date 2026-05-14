@@ -127,6 +127,8 @@
       "released": "Veröffentlicht:",
       "systemText": "Diese Version wurde über deinen Paketmanager installiert. Update via:",
       "copyCmd": "Befehl kopieren",
+      "aurBinLabel": "AUR — vorkompiliert (empfohlen)",
+      "aurSourceLabel": "AUR — Source-Build",
       "downloading": "Update wird heruntergeladen...",
       "skip": "Diese Version überspringen",
       "later": "Später",

@@ -127,6 +127,8 @@
       "released": "Released:",
       "systemText": "This build is installed by your package manager. Update with:",
       "copyCmd": "Copy command",
+      "aurBinLabel": "AUR — precompiled (recommended)",
+      "aurSourceLabel": "AUR — source build",
       "downloading": "Downloading update...",
       "skip": "Skip This Version",
       "later": "Later",
