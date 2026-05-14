@@ -13,6 +13,10 @@ concurrency:
   group: dev-build
   cancel-in-progress: true
 
+permissions:
+  actions: write
+  contents: write
+
 jobs:
   check:
     name: Skip if commit is already on main
@@ -24,11 +28,14 @@ jobs:
         with:
           fetch-depth: 0
       - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git fetch origin main:refs/remotes/origin/main
           if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "in-main=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::Commit $GITHUB_SHA is already on main — skipping dev build."
+            echo "::notice::Commit $GITHUB_SHA is already on main — skipping dev build and deleting this run."
+            gh api -X DELETE "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true
           else
             echo "in-main=false" >> "$GITHUB_OUTPUT"
           fi

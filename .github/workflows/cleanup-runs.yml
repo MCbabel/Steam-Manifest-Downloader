@@ -1,0 +1,41 @@
+name: Cleanup workflow runs
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+concurrency:
+  group: cleanup-runs
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Keep only the latest 2 runs per workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -e
+          workflows=$(gh api "repos/$REPO/actions/workflows" --jq '.workflows[] | "\(.id)\t\(.name)"')
+          while IFS=$'\t' read -r wid wname; do
+            [ -z "$wid" ] && continue
+            echo "::group::$wname"
+            mapfile -t runs < <(gh api --paginate "repos/$REPO/actions/workflows/$wid/runs" --jq '.workflow_runs[].id')
+            kept=0
+            for run_id in "${runs[@]}"; do
+              kept=$((kept + 1))
+              if [ "$kept" -le 2 ]; then
+                echo "keep run $run_id"
+                continue
+              fi
+              echo "delete run $run_id"
+              gh api -X DELETE "repos/$REPO/actions/runs/$run_id" || echo "  (could not delete $run_id)"
+            done
+            echo "::endgroup::"
+          done <<< "$workflows"
