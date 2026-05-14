@@ -309,37 +309,37 @@ async fn run_download_pipeline(
             event.last_updated = Some("Source: Hubcap".to_string());
             emit_progress(app, &event);
         } else {
-        if depot_sources_list.is_empty() {
-            let mut event = ProgressEvent::new("error", job_id);
-            event.message = Some(
-                "No manifest sources configured. Add one in Settings → Advanced Settings → Manifest Sources."
-                    .to_string(),
-            );
-            emit_progress(app, &event);
-            return Ok(());
-        }
+            if depot_sources_list.is_empty() {
+                let mut event = ProgressEvent::new("error", job_id);
+                event.message = Some(
+                    "No manifest sources configured. Add one in Settings → Advanced Settings → Manifest Sources."
+                        .to_string(),
+                );
+                emit_progress(app, &event);
+                return Ok(());
+            }
 
-        match depot_sources::check_app_exists(&state.http_client, &depot_sources_list, &config.app_id).await {
-            Ok(true) => {
-                let mut event = ProgressEvent::new("status", job_id);
-                event.step = Some("branch_found".to_string());
-                event.app_id = Some(config.app_id.clone());
-                event.last_updated = Some("Source: configured manifest source".to_string());
-                emit_progress(app, &event);
+            match depot_sources::check_app_exists(&state.http_client, &depot_sources_list, &config.app_id).await {
+                Ok(true) => {
+                    let mut event = ProgressEvent::new("status", job_id);
+                    event.step = Some("branch_found".to_string());
+                    event.app_id = Some(config.app_id.clone());
+                    event.last_updated = Some("Source: configured manifest source".to_string());
+                    emit_progress(app, &event);
+                }
+                Ok(false) => {
+                    let mut event = ProgressEvent::new("error", job_id);
+                    event.message = Some(format!("App {} not found in any configured manifest source", config.app_id));
+                    emit_progress(app, &event);
+                    return Ok(());
+                }
+                Err(e) => {
+                    let mut event = ProgressEvent::new("error", job_id);
+                    event.message = Some(format!("Manifest source lookup failed: {}", e));
+                    emit_progress(app, &event);
+                    return Ok(());
+                }
             }
-            Ok(false) => {
-                let mut event = ProgressEvent::new("error", job_id);
-                event.message = Some(format!("App {} not found in any configured manifest source", config.app_id));
-                emit_progress(app, &event);
-                return Ok(());
-            }
-            Err(e) => {
-                let mut event = ProgressEvent::new("error", job_id);
-                event.message = Some(format!("Manifest source lookup failed: {}", e));
-                emit_progress(app, &event);
-                return Ok(());
-            }
-        }
         }
     }
 

@@ -51,10 +51,7 @@ pub async fn search_repos(
 ) -> Result<SearchResult, String> {
     let mut found = Vec::new();
 
-    // Try hubcap first when an API key is configured.
-    let has_key = !hubcap_api_key.is_empty();
-    eprintln!("[Search] hubcap_api_key present: {}, length: {}", has_key, hubcap_api_key.len());
-    if has_key {
+    if !hubcap_api_key.is_empty() {
         match hubcap_api::fetch_app_data(client, hubcap_api_key, app_data_dir, app_id).await {
             Ok(_) => {
                 found.push(RepoResult {
@@ -67,13 +64,7 @@ pub async fn search_repos(
                 return Ok(SearchResult { repos: found });
             }
             Err(e) => {
-                // When hubcap is explicitly configured, surface its error to the
-                // user rather than silently falling through to the "not found"
-                // message from the depot-sources path.
-                if !hubcap_api_key.is_empty() {
-                    return Err(format!("Hubcap error: {}", e));
-                }
-                eprintln!("[Search] Hubcap lookup failed, falling back to repos: {}", e);
+                return Err(format!("Hubcap error: {}", e));
             }
         }
     }
