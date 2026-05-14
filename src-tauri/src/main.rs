@@ -79,6 +79,8 @@ fn main() {
             commands::emu_apply_replacement,
             commands::emu_revert_replacement,
             commands::emu_launch_lobby_connect,
+            commands::emu_read_emu_settings,
+            commands::emu_write_emu_settings,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
