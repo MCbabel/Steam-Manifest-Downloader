@@ -29,7 +29,7 @@ fn add_app_id_pattern() -> &'static Regex {
 fn set_manifest_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| {
-        Regex::new(r#"(?i)setManifestid\((\d+)\s*,\s*"(\d+)"\)"#)
+        Regex::new(r#"(?i)setManifestid\((\d+)\s*,\s*"(\d+)"(?:[^)]*)\)"#)
             .expect("setManifestid pattern is a valid regex")
     })
 }
