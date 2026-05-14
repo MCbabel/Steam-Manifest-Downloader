@@ -136,6 +136,12 @@
       "title": "Download History",
       "clear": "Clear All",
       "close": "Close"
+    },
+    "removeDefaultSource": {
+      "title": "Remove default source?",
+      "body": "This is a source that was installed with the app. <strong>Search by App ID will stop working</strong> until you add your own source. You can always re-add it later.",
+      "yes": "Remove anyway",
+      "no": "Keep"
     }
   },
   "settings": {

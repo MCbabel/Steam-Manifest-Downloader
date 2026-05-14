@@ -5,7 +5,7 @@ use crate::services::settings as settings_service;
 #[command]
 pub async fn get_settings(app: AppHandle) -> Result<serde_json::Value, String> {
     let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let settings = settings_service::load_settings(&app_data_dir).await;
+    let settings = settings_service::seed_defaults_if_needed(&app_data_dir).await;
     serde_json::to_value(&settings).map_err(|e| format!("Failed to serialize settings: {}", e))
 }
 

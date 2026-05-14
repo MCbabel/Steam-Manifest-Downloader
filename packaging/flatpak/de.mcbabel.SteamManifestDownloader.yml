@@ -34,7 +34,7 @@ modules:
   - name: steam-manifest-downloader
     buildsystem: simple
     build-commands:
-      - cd src-tauri && cargo build --release --frozen --offline
+      - cd src-tauri && cargo build --release --frozen --offline --no-default-features
       - install -Dm755 src-tauri/target/release/steam-manifest-downloader -t /app/bin/
       - install -Dm644 assets/icon.svg /app/share/icons/hicolor/scalable/apps/de.mcbabel.SteamManifestDownloader.svg
       - install -Dm644 assets/icon.png /app/share/icons/hicolor/256x256/apps/de.mcbabel.SteamManifestDownloader.png
