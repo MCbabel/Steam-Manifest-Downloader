@@ -9,6 +9,9 @@ mod history;
 mod shortcuts;
 mod telemetry;
 mod emulator;
+mod steam_library;
+mod steamless;
+mod steam_api_bypass;
 
 pub use file_ops::*;
 pub use search::*;
@@ -21,3 +24,6 @@ pub use history::*;
 pub use shortcuts::*;
 pub use telemetry::*;
 pub use emulator::*;
+pub use steam_library::*;
+pub use steamless::*;
+pub use steam_api_bypass::*;

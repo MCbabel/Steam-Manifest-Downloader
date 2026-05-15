@@ -86,9 +86,11 @@
         <div class="sidebar-title">Usage Guide</div>
         <ul class="sidebar-links">
           <li><a href="#usage-guide">Overview</a></li>
-          <li class="sub"><a href="#step-upload">Upload a File</a></li>
-          <li class="sub"><a href="#step-select">Select Manifests</a></li>
-          <li class="sub"><a href="#step-download">Download</a></li>
+          <li class="sub"><a href="#step-upload">1 · Upload a File</a></li>
+          <li class="sub"><a href="#step-select">2 · Select Manifests</a></li>
+          <li class="sub"><a href="#step-download">3 · Download</a></li>
+          <li class="sub"><a href="#step-shortcuts">4 · Shortcuts &amp; Steam Library</a></li>
+          <li class="sub"><a href="#step-emulator">5 · Emulator (optional)</a></li>
           <li class="sub"><a href="#step-cancel">Cancel a Download</a></li>
         </ul>
       </div>
@@ -132,11 +134,19 @@
       <section class="doc-section" id="getting-started">
         <span class="doc-tag">Getting Started</span>
         <h2>Getting Started</h2>
-        <p>Steam Manifest Downloader (SMD) is a modern Tauri v2 desktop application built with Rust and WebView. It parses manifest files, searches multiple sources for Steam depot manifests, and downloads them automatically using an integrated DepotDownloaderMod engine.</p>
+        <p>Steam Manifest Downloader (SMD) is a modern Tauri v2 desktop application built with Rust and WebView. It walks you through five steps:</p>
+        <ol>
+          <li>Parse a <code>.lua</code> / <code>.vdf</code> / <code>.st</code> file or search by Steam App ID across all configured sources</li>
+          <li>Pick the depots you want, with platform / arch / language tags pulled live from Steam's PICS info</li>
+          <li>Download the selected manifests via the embedded DepotDownloaderMod engine</li>
+          <li>Optionally: create Desktop / Start-Menu shortcuts (Windows) or add the game to your Steam library with grid art (Linux + Windows)</li>
+          <li>Optionally: patch the game with the gbe_fork emulator so it runs without the Steam client — including DRM detection via Steamless and an API-check bypass</li>
+        </ol>
 
         <h3 id="system-requirements">System Requirements</h3>
         <ul>
-          <li><strong>.NET 9.0 Runtime</strong> — Required by the embedded DepotDownloaderMod engine. <a href="https://dotnet.microsoft.com/en-us/download/dotnet/9.0" target="_blank" rel="noopener">Download .NET 9.0</a></li>
+          <li><strong>.NET 9.0 Desktop Runtime</strong> — Required by the embedded DepotDownloaderMod engine on Windows. <a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer" target="_blank" rel="noopener">Download .NET 9.0 Desktop Runtime</a></li>
+          <li><strong>Mono</strong> <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(Linux/macOS, optional)</span> — Only needed if you want to use step 5's DRM removal feature, since Steamless is a .NET Framework tool: <code>pacman -S mono</code> / <code>apt install mono-runtime</code> / <code>brew install mono</code></li>
           <li><strong>Windows 10+</strong> — Windows 10 version 1803 or later (with WebView2)</li>
           <li><strong>Linux</strong> — Most modern distributions with GTK3 and WebKit2GTK (for AppImage: FUSE support or <code>APPIMAGE_EXTRACT_AND_RUN=1</code>)</li>
           <li><strong>Internet connection</strong> — Required for searching and downloading manifests</li>
@@ -176,18 +186,24 @@
         <hr class="doc-divider">
 
         <h3 id="first-launch">First Launch</h3>
-        <p>On first launch, the application opens with the main interface ready to accept files. No initial configuration is required — the default settings work for most users. However, you may want to:</p>
+        <p>The very first time you start SMD, two small prompts appear before the main interface:</p>
+        <ol>
+          <li><strong>Language picker</strong> — pick between English and German. Before you make the choice the UI is already auto-localised based on your OS / browser language (so a German system starts in German); if neither matches, English is used as the fallback. The picker just lets you override that. Saved immediately; you can change it later via <strong>Settings → Language</strong> (a restart prompt appears so the new translation applies cleanly)</li>
+          <li><strong>Anonymous telemetry consent</strong> — opt-in or decline. Telemetry counters are end-to-end encrypted with an embedded public key; you can change your choice anytime under <strong>Settings → Advanced Settings</strong></li>
+        </ol>
+        <p>If you installed a build with the bundled archive.org sources (the default for GitHub / installer / AUR-source builds), two depot-source URLs are seeded automatically so search works out of the box. The Flatpak build does <em>not</em> seed them — there you need to add at least one source manually under <strong>Settings → Advanced Settings → Manifest Sources</strong>.</p>
+        <p>After the prompts the main interface is ready. Optional next steps:</p>
         <ul>
-          <li>Set a custom <strong>download location</strong> on the download page before starting a download</li>
-          <li>Add a <strong>GitHub token</strong> via the ⚙️ gear icon to increase API rate limits (optional)</li>
-          <li>Configure a <strong>ManifestHub API key</strong> for additional manifest sources (optional)</li>
+          <li>Set a custom <strong>download location</strong> on the download page (Step 3) before your first download</li>
+          <li>Configure a <strong>ManifestHub API key</strong> on the download page for additional manifest sources</li>
+          <li>Open <strong>Settings → Advanced Settings</strong> to tune retry count, speed limit, proxy, or to add/remove depot sources</li>
         </ul>
       </section>
 
       <section class="doc-section" id="usage-guide">
         <span class="doc-tag">Usage Guide</span>
         <h2>Usage Guide</h2>
-        <p>Using Steam Manifest Downloader is a straightforward 3-step process: upload a file, select the manifests you need, and hit download.</p>
+        <p>The pipeline has five steps. Steps 1–3 (upload, select, download) are always required; steps 4 (shortcuts &amp; Steam library) and 5 (emulator patch) are optional and only appear when relevant for your platform / game.</p>
 
         <hr class="doc-divider">
 
@@ -214,7 +230,18 @@
           <li><strong>Search / filter</strong> depots by ID or name using the search bar</li>
           <li>View <strong>app details</strong> fetched from the Steam Store API (game name, icon, etc.)</li>
         </ul>
-        <p>Each depot entry shows the depot ID, the associated manifest ID, and whether a depot key was found in the parsed file.</p>
+        <p>Each depot entry shows the depot ID, the associated manifest ID, whether a depot key was found, and a row of metadata tags pulled live from Steam's PICS info via <code>api.steamcmd.net</code>:</p>
+        <ul>
+          <li><strong>OS tag</strong> — <span style="color:#509eff;">Windows</span> / <span style="color:#ffa940;">Linux</span> / macOS</li>
+          <li><strong>Arch tag</strong> — 32-bit or 64-bit</li>
+          <li><strong>Language tag</strong> — only shown for language-specific depots (e.g. <code>German</code>, <code>French</code>)</li>
+        </ul>
+        <p>The metadata is cached per app ID for 7 days in your app-data dir, so subsequent visits are instant. If <code>api.steamcmd.net</code> is unreachable the tags simply don't appear — the rest of the UI is unaffected.</p>
+
+        <div class="doc-callout info">
+          <span class="doc-callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+          <p>The search step queries <em>all</em> configured depot sources in parallel and merges their depots, keys and sizes. If source A only has half the depots and source B has the rest, you see the union.</p>
+        </div>
 
         <hr class="doc-divider">
 
@@ -238,6 +265,86 @@
           <span class="doc-callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
           <p>The downloaded files are saved to your configured download location (default: <code>Documents/SteamDownloads</code>). Each download creates a subdirectory named after the app ID.</p>
         </div>
+
+        <p>When the download succeeds the app automatically progresses to step 4 (or step 5 on Linux without Steam installed). The history entry is only persisted once you reach <strong>"Go to Home"</strong> — closing the app mid-flow leaves no trace.</p>
+
+        <hr class="doc-divider">
+
+        <h3 id="step-shortcuts">Step 4: Shortcuts &amp; Steam Library <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h3>
+        <p>Step 4 has two platform-specific variants. SMD picks the right one automatically based on whether you're on Windows or Linux and whether Steam is detected.</p>
+
+        <h4>Windows: Create Desktop / Start-Menu Shortcuts</h4>
+        <p>The app scans the download folder for executables, scores them (size + name match against the folder hint + blacklist of installers / redistributables) and suggests the most likely game executable. You can:</p>
+        <ul>
+          <li>Browse manually for the <code>.exe</code> if auto-detection picked the wrong one</li>
+          <li>Toggle <strong>Desktop Shortcut</strong> and <strong>Start Menu Shortcut</strong> independently</li>
+          <li>Toggle <strong>Also add to Steam library</strong> to chain the Steam integration (see next section)</li>
+        </ul>
+        <p>Shortcuts are created via PowerShell using the <code>WScript.Shell</code> COM object, with user-derived values passed through environment variables (no string interpolation, no script injection).</p>
+
+        <h4>Linux: Add to Steam Library</h4>
+        <p>The app detects your Steam installation (<code>~/.steam/steam/</code>, <code>~/.local/share/Steam/</code> or the Flatpak path) and the active user (via <code>loginusers.vdf</code>'s <code>MostRecent=1</code> flag). When you click <strong>Add to Steam</strong> it will:</p>
+        <ol>
+          <li>Download <strong>banner</strong>, <strong>hero</strong>, <strong>logo</strong> and <strong>icon</strong> images from the Steam CDN (using the icon hash from <code>api.steamcmd.net</code>)</li>
+          <li>Save them into <code>~/.steam/steam/userdata/&lt;user&gt;/config/grid/</code> with the correct naming Steam expects (<code>&lt;shortcutid&gt;.jpg</code>, <code>&lt;shortcutid&gt;p.jpg</code>, <code>&lt;shortcutid&gt;_hero.jpg</code>, <code>&lt;shortcutid&gt;_logo.png</code>, <code>&lt;shortcutid&gt;_icon.jpg</code>)</li>
+          <li>Parse the existing binary <code>shortcuts.vdf</code> file (with backup), append a new shortcut entry, and write it back</li>
+          <li>Generate the shortcut AppID as <code>CRC32(exe_path + app_name) | 0x80000000</code> — Steam-compatible and deterministic</li>
+        </ol>
+        <p>The Linux step also supports <strong>launch options</strong> (e.g. <code>%command%</code>) and a <strong>display name</strong> field. After adding, restart Steam fully (right-click tray → Exit) for the new entry to appear. For Windows games on Linux: right-click the new entry in Steam → Properties → Compatibility → enable Proton.</p>
+
+        <p>Footer buttons are minimal: <strong>Skip</strong> (proceed without adding) and <strong>Add to Steam</strong> (which switches to a single <strong>Next</strong> button after success).</p>
+
+        <hr class="doc-divider">
+
+        <h3 id="step-emulator">Step 5: Emulator <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h3>
+        <p>Step 5 patches the game with the <a href="https://github.com/Detanup01/gbe_fork" target="_blank" rel="noopener">gbe_fork</a> Steam emulator so it can run without the Steam client. The whole feature is bundled — no manual setup. It only appears when the app finds <code>steam_api*.dll</code> (Windows) or <code>libsteam_api.so</code> (Linux) in the download folder.</p>
+
+        <h4>Variant Picker</h4>
+        <p>Two gbe_fork variants are offered side-by-side:</p>
+        <ul>
+          <li><strong>Regular</strong> — stable build, recommended for most games</li>
+          <li><strong>Experimental</strong> — newer features, may be unstable</li>
+        </ul>
+        <p>The chosen variant's DLL is fetched from the latest gbe_fork GitHub release, extracted into the app-data cache (<code>$APP_DATA/gbe_fork_cache/&lt;release-tag&gt;/</code>) and copied over the game's <code>steam_api*.dll</code>. The original is backed up as <code>steam_api*.dll.steam.bak</code>. <code>steam_interfaces.txt</code> is generated natively in Rust by pattern-matching against 37 known Steam interface names — no external <code>generate_interfaces.exe</code> required.</p>
+
+        <h4>DRM Detection &amp; Removal (via Steamless)</h4>
+        <p>Before applying the emulator, SMD scans the game folder for executables protected by Steam DRM (SteamStub). Detection is a fast PE-header scan looking for a <code>.bind</code> section — no execution required.</p>
+        <p>If DRM is found, a yellow warning banner appears with the affected files. Clicking <strong>Remove DRM (via Steamless)</strong>:</p>
+        <ul>
+          <li>Downloads <a href="https://github.com/atom0s/Steamless" target="_blank" rel="noopener">Steamless v3.1.0.5</a> once into the app-data cache</li>
+          <li>On Windows: runs <code>Steamless.CLI.exe</code> directly</li>
+          <li>On Linux: runs it via <code>mono</code> (install via <code>pacman -S mono</code> / <code>apt install mono-runtime</code> / <code>brew install mono</code>); <code>MONO_PATH</code> is set to the <code>Plugins/</code> dir so plugin assemblies resolve correctly</li>
+          <li>Replaces the original <code>.exe</code> with the unpacked version, keeps the original as <code>.exe.drm.bak</code></li>
+        </ul>
+        <p>The full Steamless log is shown inline if anything fails, with a one-click copy button.</p>
+
+        <h4>Steam API Check Bypass <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional toggle)</span></h4>
+        <p>Some games perform additional integrity / size checks on <code>steam_api*.dll</code> at runtime — those reject the gbe_fork swap even when it loaded. Enabling the bypass toggle installs <a href="https://github.com/MCbabel/Steam-API-Check-Bypass" target="_blank" rel="noopener">Steam-API-Check-Bypass</a> alongside gbe_fork:</p>
+        <ul>
+          <li>The matching arch DLL (x64 for <code>steam_api64.dll</code>, x32 for <code>steam_api.dll</code>) is copied next to <code>game.exe</code> under <strong>three</strong> hijack names: <code>version.dll</code>, <code>winmm.dll</code> and <code>winhttp.dll</code>. Whichever the game imports gets loaded; the others sit harmless</li>
+          <li>A <code>SteamAPICheckBypass.json</code> file is written next to <code>game.exe</code> with a <code>file_redirect</code> rule that points the first 3 <code>CreateFile</code> reads of <code>steam_api*.dll</code> to the <code>.steam.bak</code> file gbe_fork created — so integrity checks see the original bytes while the game uses the emulator</li>
+          <li>Any pre-existing <code>version.dll</code> / <code>winmm.dll</code> / <code>winhttp.dll</code> is backed up as <code>&lt;name&gt;.bypass.bak</code> and restored on revert</li>
+        </ul>
+        <p>The bypass is only relevant for Windows games (Linux <code>libsteam_api.so</code> targets are skipped automatically).</p>
+
+        <h4>21 Emulator Settings (Accordion)</h4>
+        <p>Below the variant picker is a collapsible accordion with 5 sections of user-tunable gbe_fork options. Only fields you actually fill in are written to disk — the rest stays at gbe_fork's defaults. The values are saved to <code>localStorage</code> and pre-filled on your next visit.</p>
+        <ul>
+          <li><strong>Account</strong> — display name, 64-bit Steam ID, game language, IP country (ISO 3166-1)</li>
+          <li><strong>Saves</strong> — local save path, per-game folder name</li>
+          <li><strong>Network &amp; Compatibility</strong> — offline mode, Steam Deck mode, disable networking, disable LAN-only</li>
+          <li><strong>Stats &amp; Achievements</strong> — record playtime, achievements bypass, force SteamHTTP success, Steam pre-owned IDs, free-weekend flag</li>
+          <li><strong>Overlay</strong> — enable experimental overlay, hide popups, always show FPS / playtime, hotkey, font size</li>
+        </ul>
+        <p>Settings are written as INI files (<code>configs.user.ini</code>, <code>configs.main.ini</code>, <code>configs.overlay.ini</code>) into a <code>steam_settings/</code> folder next to the patched DLL, alongside <code>steam_interfaces.txt</code>, <code>steam_appid.txt</code> and <code>installed_app_ids.txt</code>.</p>
+
+        <h4>History Actions (per game)</h4>
+        <p>After applying, the game appears in your Download History (via <strong>Go to Home</strong>) with two extra action buttons:</p>
+        <ul>
+          <li><strong>Edit emulator settings</strong> (⚙) — re-opens step 5 in edit mode: variant picker hidden, the accordion is populated from the existing INI files, the Apply button becomes <strong>Save Settings</strong> and a red <strong>Revert Patch</strong> button appears. Reverting restores the original DLL, deletes <code>steam_settings/</code> and is gated by a confirmation modal</li>
+          <li><strong>Launch lobby_connect</strong> (▶) — spawns the gbe_fork <code>lobby_connect</code> binary in the game folder with <code>SteamAppId</code> env var set; useful for testing local-multiplayer connectivity without launching the game itself</li>
+        </ul>
+        <p>If you delete the game folder externally, the Edit / Launch actions show an inline error banner in the History modal instead of crashing.</p>
 
         <hr class="doc-divider">
 
@@ -284,7 +391,16 @@
           <li><code>addappid(depotId)</code> — Registers a depot ID</li>
           <li><code>addappid(depotId, 0, "hexKey")</code> — Registers a depot with a decryption key</li>
           <li><code>setManifestid(depotId, "manifestId")</code> — Associates a manifest ID with a depot</li>
+          <li><code>setManifestid(depotId, "manifestId", sizeBytes)</code> — Same as above, plus an explicit install-size hint; SMD picks up the size and shows it next to the depot in step 2 if no <code>.json</code> sidecar is present</li>
         </ul>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-lang">lua (3-arg variant with size)</span>
+            <button class="code-block-copy" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code><span class="code-cm">-- 3-arg setManifestid carries the install size in bytes</span>
+<span class="code-fn">setManifestid</span>(<span class="code-num">1392863</span>, <span class="code-str">"4398981003384795747"</span>, <span class="code-num">13789896785</span>)</code></pre>
+        </div>
 
         <hr class="doc-divider">
 
@@ -325,84 +441,85 @@
       <section class="doc-section" id="settings">
         <span class="doc-tag">Configuration</span>
         <h2>Settings &amp; Configuration</h2>
-        <p>Configuration options are split between the <strong>Settings modal</strong> (⚙️ gear icon in the header) and the <strong>download page</strong> (Step 3 of the workflow). All values are persisted between sessions.</p>
+        <p>Open the Settings modal via the <strong>⚙ gear icon</strong> in the header. All values are persisted to the app's settings file between sessions. Emulator-specific settings live in step 5 (see <a href="#step-emulator">Step 5: Emulator</a>) and are remembered in <code>localStorage</code>.</p>
 
-        <h3>Settings Modal (⚙️)</h3>
-        <p>Click the gear icon in the top-right corner to open the Settings modal. Currently it contains:</p>
-
-        <h4>GitHub Token <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h4>
-        <p>Adding a personal GitHub token increases the GitHub API rate limit from <strong>60 requests/hour</strong> (unauthenticated) to <strong>5,000 requests/hour</strong> (authenticated).</p>
-        <p>To generate a token:</p>
-        <ol>
-          <li>Go to <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">GitHub → Settings → Developer settings → Personal access tokens</a></li>
-          <li>Click <strong>Generate new token (classic)</strong></li>
-          <li>No special scopes are required — a token with no permissions is sufficient</li>
-          <li>Copy the token and paste it into the token field, then click <strong>Save</strong></li>
-        </ol>
-
-        <div class="doc-callout warning">
-          <span class="doc-callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-          <p>Your token is stored locally on your machine only. It is never sent anywhere except to the GitHub API for authentication.</p>
-        </div>
-
-        <hr class="doc-divider">
-
-        <h3>Download Page Options</h3>
-        <p>These options appear on the download page (Step 3) after selecting your depots, just above the download button.</p>
-
-        <h4>Download Location</h4>
-        <p>Configure where downloaded depot files are saved. Type or paste a path directly into the text field. The default location is <strong><code>Documents/SteamDownloads</code></strong> inside your home folder.</p>
+        <h3>Top-Level Settings</h3>
         <ul>
-          <li>Each download creates a subdirectory named after the app ID</li>
-          <li>Ensure the chosen path has sufficient disk space</li>
+          <li><strong>Language</strong> — UI language. English and German are bundled; the picker also runs on first launch</li>
+          <li><strong>Auto-Update</strong> — toggle whether SMD checks GitHub for new releases on startup and offers an in-app update prompt</li>
         </ul>
 
         <hr class="doc-divider">
 
-        <h4>ManifestHub API Key <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h4>
-        <p>If you have a ManifestHub API key, enter it on the download page to enable searching the ManifestHub manifest database. This provides access to a large collection of Steam manifests as an additional source.</p>
+        <h3>Advanced Settings (collapsible)</h3>
+        <p>Click "Advanced Settings" to expand the section. It contains:</p>
+
+        <h4>DepotDownloader Arguments</h4>
+        <ul>
+          <li><strong>Extra Arguments</strong> — appended verbatim to the DepotDownloaderMod CLI. Internal default is <code>-max-downloads 8 -verify-all</code>; your input is added on top</li>
+          <li><strong>Max Retries on Error</strong> — how often a failed depot is retried before SMD gives up</li>
+          <li><strong>Download Speed Limit (MB/s)</strong> — optional global cap</li>
+          <li><strong>HTTP Proxy</strong> — proxy URL forwarded to DepotDownloaderMod for environments that require one</li>
+        </ul>
+
+        <h4>Manifest Sources</h4>
+        <p>The list of depot sources searched in step 2. Add a URL (auto-detected formats: GitHub repo, archive.org, plain HTTPS folder) and click <strong>Add</strong>; remove by clicking the ✕. Sources installed by the app are tracked separately — removing a default source triggers a confirmation modal warning that <em>"Search by App ID will stop working"</em>. Adding the same URL again clears that warning.</p>
+
+        <h4>Notification Sound</h4>
+        <p>Toggles a short system notification sound when a download completes (separate from the OS desktop notification itself).</p>
+
+        <h4>Anonymous Telemetry <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(opt-in)</span></h4>
+        <p>SMD can send anonymous usage counters (which features get used) to the maintainer's server to help prioritise development. Events are end-to-end encrypted with an embedded public key — only the maintainer's server can decrypt. Disabled by default; the choice is asked on first launch and can be changed here anytime. Never sent: game IDs, depot IDs, file contents, IP addresses, account info.</p>
 
         <hr class="doc-divider">
 
-        <h3>Internal Defaults</h3>
-        <p>The app passes default arguments to the DepotDownloaderMod engine automatically. These include:</p>
-        <div class="code-block">
-          <div class="code-block-header">
-            <span class="code-block-lang">args</span>
-          </div>
-          <pre><code><span class="code-kw">-max-downloads</span> <span class="code-num">8</span> <span class="code-kw">-verify-all</span></code></pre>
-        </div>
-        <p>This limits concurrent download connections to 8 and verifies all downloaded files. These defaults are not configurable through the UI.</p>
+        <h3>Download Page Options</h3>
+        <p>These options appear on the download page (Step 3) just above the download button.</p>
+
+        <h4>Download Location</h4>
+        <p>Where downloaded depot files are saved. Default: <code>Documents/SteamDownloads</code> inside your home folder. Each download creates a subdirectory named after the app ID. The path is remembered between sessions.</p>
+
+        <h4>ManifestHub API Key <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h4>
+        <p>If you have a <a href="https://manifesthub1.filegear-sg.me/" target="_blank" rel="noopener">ManifestHub</a> API key, paste it here to query that database as an additional source.</p>
+
+        <hr class="doc-divider">
+
+        <h3>Emulator Settings Persistence</h3>
+        <p>The 21 emulator options in step 5 (display name, language, offline mode, overlay tweaks, etc.) are not stored in the global settings file. Instead they're saved to the browser's <code>localStorage</code> after each successful Apply and pre-filled the next time you reach step 5. Settings opened via History (Edit mode) read live from the game's <code>steam_settings/</code> INI files instead.</p>
       </section>
 
       <section class="doc-section" id="manifest-sources">
         <span class="doc-tag">Configuration</span>
         <h2>Manifest Sources</h2>
-        <p>SMD searches multiple sources to locate manifest files for your selected depots. Here's where it looks:</p>
+        <p>SMD lets you plug in any number of depot sources via <strong>Settings → Advanced Settings → Manifest Sources</strong>. Every search hits all configured sources in parallel and merges their results — if source A has depots 1–10 and source B has 5–15, you see the union (1–15) with keys / sizes / manifest IDs deduplicated.</p>
 
-        <h3>ManifestHub API</h3>
-        <p>The primary manifest source. SMD queries the ManifestHub API at:</p>
-        <div class="code-block">
-          <div class="code-block-header">
-            <span class="code-block-lang">url</span>
-          </div>
-          <pre><code><span class="code-str">manifesthub1.filegear-sg.me</span></code></pre>
-        </div>
-        <p>This API provides fast, indexed access to a large database of Steam manifests. Requires an API key entered on the download page.</p>
+        <h3>Supported Source Formats</h3>
+        <ul>
+          <li><strong>GitHub repos</strong> — auto-detected from <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;</code> URLs; fetched via the Contents API with a <code>branches/&lt;appid&gt;/</code> layout</li>
+          <li><strong>archive.org items</strong> — detected from <code>archive.org/download/...</code> or <code>view_archive.php?file=...</code> URLs; SMD treats the zip's basename as a path prefix automatically</li>
+          <li><strong>Plain HTTPS folders</strong> — any base URL that serves <code>&lt;appid&gt;.lua</code>, <code>key.vdf</code>, <code>&lt;appid&gt;.json</code> and <code>&lt;depot&gt;_&lt;manifest&gt;.manifest</code> files</li>
+        </ul>
 
         <hr class="doc-divider">
 
-        <h3>GitHub Repositories</h3>
-        <p>SMD searches multiple GitHub repositories for manifest files using the GitHub Contents API. The primary repositories include:</p>
+        <h3>What Gets Fetched</h3>
+        <p>For each app ID, SMD fetches (from each source that has them) and merges:</p>
         <ul>
-          <li><strong>SteamAutoCracks/ManifestHub</strong> — The main manifest repository</li>
+          <li><code>&lt;appid&gt;.lua</code> — depot IDs, manifest IDs, depot keys and optional install-size hints</li>
+          <li><code>key.vdf</code> — additional depot decryption keys</li>
+          <li><code>&lt;appid&gt;.json</code> — depot manifest metadata + per-manifest install / download sizes</li>
+          <li><code>&lt;depot&gt;_&lt;manifest&gt;.manifest</code> — the actual manifest payload, only downloaded for the depots you select</li>
         </ul>
-        <p>The app searches for manifest files matching the depot ID and manifest ID pattern within these repositories.</p>
 
         <div class="doc-callout info">
           <span class="doc-callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
-          <p>GitHub API has rate limits. Without a token, you're limited to 60 requests/hour. Add a GitHub token in Settings to increase this to 5,000 requests/hour.</p>
+          <p>GitHub API has rate limits — unauthenticated requests are capped at 60/hour per IP. SMD doesn't ship a token field for this; if you hit the cap, wait an hour or add a different source (archive.org / plain HTTPS) which has no such limit.</p>
         </div>
+
+        <hr class="doc-divider">
+
+        <h3>Depot Metadata (Step 2 Tags)</h3>
+        <p>Independent of the manifest sources, SMD queries the public Steam PICS mirror at <code>api.steamcmd.net/v1/info/&lt;appid&gt;</code> to render the OS / arch / language tags shown next to each depot in step 2. Results are cached per app ID for 7 days in <code>$APP_DATA/depot_info_cache/</code>.</p>
 
       </section>
 
@@ -426,7 +543,7 @@
           <pre><code><span class="code-fn">cargo</span> install tauri-cli</code></pre>
         </div>
         <ul>
-          <li><strong>.NET SDK 9.0</strong> — Only needed if building DepotDownloaderMod from source. <a href="https://dotnet.microsoft.com/en-us/download/dotnet/9.0" target="_blank" rel="noopener">Download .NET SDK 9.0</a></li>
+          <li><strong>.NET 9.0 Desktop Runtime</strong> — Required to run the embedded DepotDownloaderMod. <a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer" target="_blank" rel="noopener">Download .NET 9.0 Desktop Runtime</a></li>
         </ul>
 
         <h4>Linux Additional Dependencies</h4>
@@ -523,7 +640,7 @@
           </div>
           <pre><code><span class="code-kw">NO_STRIP</span>=true <span class="code-kw">APPIMAGE_EXTRACT_AND_RUN</span>=1 <span class="code-fn">cargo</span> tauri build</code></pre>
         </div>
-        <p>Output: <code>src-tauri/target/release/bundle/appimage/Steam Manifest Downloader_1.1.0_amd64.AppImage</code></p>
+        <p>Output: <code>src-tauri/target/release/bundle/appimage/Steam Manifest Downloader_&lt;version&gt;_amd64.AppImage</code></p>
 
         <div class="doc-callout tip">
           <span class="doc-callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.5.5.8 1.1.9 1.8h6.2c.1-.7.4-1.3.9-1.8A7 7 0 0 0 12 2z"/></svg></span>
@@ -553,9 +670,9 @@
         <div class="faq-item">
           <div class="faq-q">".NET not found" error on launch</div>
           <div class="faq-a">
-            The embedded DepotDownloaderMod requires <strong>.NET 9.0 Runtime</strong>. Download and install it from
-            <a href="https://dotnet.microsoft.com/en-us/download/dotnet/9.0" target="_blank" rel="noopener">dotnet.microsoft.com</a>.
-            Make sure to install the <strong>.NET Runtime</strong> (not just the ASP.NET or Desktop runtime).
+            The embedded DepotDownloaderMod requires the <strong>.NET 9.0 Desktop Runtime</strong>. Direct installer:
+            <a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer" target="_blank" rel="noopener">.NET 9.0.16 Desktop Runtime (Windows x64)</a>.
+            After installing, restart SMD — the warning banner should disappear automatically.
           </div>
         </div>
 
@@ -569,7 +686,7 @@
         <div class="faq-item">
           <div class="faq-q">Download stuck at 0%</div>
           <div class="faq-a">
-            First, check your internet connection. If your connection is fine, ensure your firewall or antivirus is not blocking <code>DepotDownloaderMod.exe</code>. You may need to add an exception for the application. Also verify that .NET 9.0 Runtime is properly installed.
+            First, check your internet connection. If your connection is fine, ensure your firewall or antivirus is not blocking <code>DepotDownloaderMod.exe</code>. You may need to add an exception for the application. Also verify that the .NET 9.0 Desktop Runtime is properly installed.
           </div>
         </div>
 
@@ -595,6 +712,41 @@
           <div class="faq-q">App crashes or shows a white screen</div>
           <div class="faq-a">
             On Windows, ensure <strong>Microsoft Edge WebView2 Runtime</strong> is installed (it's included with Windows 10 1803+ and Windows 11). On Linux, ensure <strong>WebKit2GTK</strong> is installed (<code>sudo apt install libwebkit2gtk-4.1-0</code> on Debian/Ubuntu).
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">Step 5 says "Removing DRM" but Steamless fails on Linux</div>
+          <div class="faq-a">
+            Steamless is a .NET Framework 4.5.2 tool, so on Linux/macOS it needs <strong><code>mono</code></strong>. Install it via your package manager: <code>sudo pacman -S mono</code> (Arch), <code>sudo apt install mono-runtime</code> (Debian/Ubuntu) or <code>brew install mono</code> (macOS). After that, retry the DRM removal — SMD passes <code>MONO_PATH</code> automatically so Steamless's plugin assemblies resolve.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">Patched game still refuses to start (gbe_fork applied but game checks the API DLL)</div>
+          <div class="faq-a">
+            Some games verify the size or hash of <code>steam_api*.dll</code> at runtime and reject the gbe_fork swap. Open step 5 again via History → <strong>Edit emulator settings</strong>, scroll up and enable the <strong>Steam API Check Bypass</strong> toggle, then click Save. This installs <code>version.dll</code> / <code>winmm.dll</code> / <code>winhttp.dll</code> hijacks next to <code>game.exe</code> plus a <code>SteamAPICheckBypass.json</code> that redirects integrity-check reads to the original <code>.steam.bak</code>.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">Linux: "Add to Steam" added the game but no banner / hero is showing</div>
+          <div class="faq-a">
+            Steam only re-reads <code>shortcuts.vdf</code> and the <code>grid/</code> folder on a <strong>full restart</strong>. Closing the window isn't enough — right-click the Steam tray icon → <strong>Exit</strong>, then start Steam again. If the game has no Linux build, also right-click the new entry in Steam → Properties → Compatibility → enable a Proton version.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">Edit emulator settings says "Folder not found"</div>
+          <div class="faq-a">
+            The game folder was moved or deleted after SMD recorded it in history. Restore the folder or remove the history entry (it leaves disk files untouched). For partial cleanups, the History modal's confirm dialogs make destructive actions explicit.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-q">No depot tags (Windows/Linux/64-bit) appear in step 2</div>
+          <div class="faq-a">
+            The tags come from <code>api.steamcmd.net</code>. If that service is rate-limited or down, the request fails silently and tags don't appear — the rest of the UI is unaffected. Results are cached for 7 days in <code>$APP_DATA/depot_info_cache/</code>, so once they appear they stick.
           </div>
         </div>
       </section>

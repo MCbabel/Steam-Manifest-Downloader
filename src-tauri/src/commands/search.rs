@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use tauri::{command, AppHandle, Manager};
 use crate::services::AppState;
+use crate::services::depot_info::{self, DepotInfo};
 use crate::services::multi_repo_search;
 use crate::services::settings as settings_service;
 use crate::services::steam_store_api;
@@ -67,6 +68,16 @@ pub async fn get_steam_app_info(
             .map_err(|e| format!("Failed to serialize game info: {}", e)),
         None => Ok(serde_json::Value::Null),
     }
+}
+
+#[command]
+pub async fn fetch_depot_metadata(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    app_id: String,
+) -> Result<Vec<DepotInfo>, String> {
+    let dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    depot_info::fetch_depot_info(&state.http_client, &dir, &app_id).await
 }
 
 #[command]

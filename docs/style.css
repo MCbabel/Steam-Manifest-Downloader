@@ -69,16 +69,12 @@ a:hover {
   transform: translateY(0);
 }
 
-/* staggered children */
-.features-grid .reveal:nth-child(2) { transition-delay: 0.07s; }
-.features-grid .reveal:nth-child(3) { transition-delay: 0.14s; }
-.features-grid .reveal:nth-child(4) { transition-delay: 0.21s; }
-.features-grid .reveal:nth-child(5) { transition-delay: 0.28s; }
-.features-grid .reveal:nth-child(6) { transition-delay: 0.35s; }
-.features-grid .reveal:nth-child(7) { transition-delay: 0.42s; }
-.features-grid .reveal:nth-child(8) { transition-delay: 0.49s; }
-.features-grid .reveal:nth-child(9) { transition-delay: 0.56s; }
-.features-grid .reveal:nth-child(10) { transition-delay: 0.63s; }
+/* Staggered children — cycles per row so each row animates 0 / 0.07 / 0.14s
+   regardless of total card count. Matches the 3-column grid; on narrower
+   layouts the visual cascade still feels natural. */
+.features-grid .reveal              { transition-delay: 0s; }
+.features-grid .reveal:nth-child(3n+2) { transition-delay: 0.07s; }
+.features-grid .reveal:nth-child(3n+3) { transition-delay: 0.14s; }
 
 /* Navigation */
 .nav {
