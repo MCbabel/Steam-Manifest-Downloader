@@ -44,6 +44,8 @@ pub struct Settings {
     pub auto_seeded: bool,
     #[serde(default)]
     pub pristine_default_sources: Vec<String>,
+    #[serde(default)]
+    pub hubcap_api_key: String,
 }
 
 fn default_download_location() -> String {
@@ -101,6 +103,7 @@ impl Default for Settings {
             language: String::new(),
             auto_seeded: false,
             pristine_default_sources: Vec::new(),
+            hubcap_api_key: String::new(),
         }
     }
 }
