@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::services::{AppState, JobInfo};
 use crate::services::depot_runner::{self, DepotRunConfig, ProgressEvent, emit_progress};
 use crate::services::depot_sources;
+use crate::services::hubcap_api;
 use crate::services::settings as settings_service;
 use crate::services::manifest_hub_api;
 use crate::services::steam_store_api;
@@ -38,6 +39,8 @@ pub struct DownloadConfig {
     pub manifest_hub_api_key: Option<String>,
     #[serde(rename = "headerImage", default)]
     pub header_image: Option<String>,
+    #[serde(rename = "sourceType", default)]
+    pub source_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -267,6 +270,7 @@ async fn run_download_pipeline(
     let depot_sources_list = settings_service::load_settings(app_data_dir)
         .await
         .depot_sources;
+    let is_hubcap = config.source_type.as_deref() == Some("hubcap");
 
     tokio::fs::create_dir_all(&work_dir)
         .await
@@ -298,35 +302,43 @@ async fn run_download_pipeline(
             return Ok(());
         }
 
-        if depot_sources_list.is_empty() {
-            let mut event = ProgressEvent::new("error", job_id);
-            event.message = Some(
-                "No manifest sources configured. Add one in Settings → Advanced Settings → Manifest Sources."
-                    .to_string(),
-            );
+        if is_hubcap {
+            let mut event = ProgressEvent::new("status", job_id);
+            event.step = Some("branch_found".to_string());
+            event.app_id = Some(config.app_id.clone());
+            event.last_updated = Some("Source: Hubcap".to_string());
             emit_progress(app, &event);
-            return Ok(());
-        }
+        } else {
+            if depot_sources_list.is_empty() {
+                let mut event = ProgressEvent::new("error", job_id);
+                event.message = Some(
+                    "No manifest sources configured. Add one in Settings → Advanced Settings → Manifest Sources."
+                        .to_string(),
+                );
+                emit_progress(app, &event);
+                return Ok(());
+            }
 
-        match depot_sources::check_app_exists(&state.http_client, &depot_sources_list, &config.app_id).await {
-            Ok(true) => {
-                let mut event = ProgressEvent::new("status", job_id);
-                event.step = Some("branch_found".to_string());
-                event.app_id = Some(config.app_id.clone());
-                event.last_updated = Some("Source: configured manifest source".to_string());
-                emit_progress(app, &event);
-            }
-            Ok(false) => {
-                let mut event = ProgressEvent::new("error", job_id);
-                event.message = Some(format!("App {} not found in any configured manifest source", config.app_id));
-                emit_progress(app, &event);
-                return Ok(());
-            }
-            Err(e) => {
-                let mut event = ProgressEvent::new("error", job_id);
-                event.message = Some(format!("Manifest source lookup failed: {}", e));
-                emit_progress(app, &event);
-                return Ok(());
+            match depot_sources::check_app_exists(&state.http_client, &depot_sources_list, &config.app_id).await {
+                Ok(true) => {
+                    let mut event = ProgressEvent::new("status", job_id);
+                    event.step = Some("branch_found".to_string());
+                    event.app_id = Some(config.app_id.clone());
+                    event.last_updated = Some("Source: configured manifest source".to_string());
+                    emit_progress(app, &event);
+                }
+                Ok(false) => {
+                    let mut event = ProgressEvent::new("error", job_id);
+                    event.message = Some(format!("App {} not found in any configured manifest source", config.app_id));
+                    emit_progress(app, &event);
+                    return Ok(());
+                }
+                Err(e) => {
+                    let mut event = ProgressEvent::new("error", job_id);
+                    event.message = Some(format!("Manifest source lookup failed: {}", e));
+                    emit_progress(app, &event);
+                    return Ok(());
+                }
             }
         }
     }
@@ -387,16 +399,28 @@ async fn run_download_pipeline(
         event.manifest_id = Some(depot.manifest_id.clone());
         emit_progress(app, &event);
 
-        match depot_sources::download_manifest_file(
-            &state.http_client,
-            &depot_sources_list,
-            &config.app_id,
-            &depot.depot_id,
-            &depot.manifest_id,
-            &work_dir,
-        )
-        .await
-        {
+        let manifest_result = if is_hubcap {
+            hubcap_api::copy_cached_manifest(
+                app_data_dir,
+                &config.app_id,
+                &depot.depot_id,
+                &depot.manifest_id,
+                &work_dir,
+            )
+            .await
+        } else {
+            depot_sources::download_manifest_file(
+                &state.http_client,
+                &depot_sources_list,
+                &config.app_id,
+                &depot.depot_id,
+                &depot.manifest_id,
+                &work_dir,
+            )
+            .await
+        };
+
+        match manifest_result {
             Ok(_) => {
                 manifest_results.push((depot.depot_id.clone(), true));
             }
@@ -507,7 +531,7 @@ async fn run_download_pipeline(
         })
         .collect();
 
-    if depot_infos.iter().any(|d| d.depot_key.is_none()) {
+    if !is_hubcap && depot_infos.iter().any(|d| d.depot_key.is_none()) {
         let mut event = ProgressEvent::new("status", job_id);
         event.step = Some("downloading_keyvdf".to_string());
         emit_progress(app, &event);

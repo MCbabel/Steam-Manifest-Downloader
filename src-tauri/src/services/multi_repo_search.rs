@@ -1,8 +1,12 @@
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::Path;
 
 use crate::services::depot_sources;
+use crate::services::hubcap_api;
+
+pub const HUBCAP_REPO_NAME: &str = "Hubcap (hubcapmanifest.com)";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepoResult {
@@ -42,8 +46,31 @@ pub async fn search_repos(
     client: &Client,
     sources: &[String],
     app_id: &str,
+    hubcap_api_key: &str,
+    app_data_dir: &Path,
 ) -> Result<SearchResult, String> {
     let mut found = Vec::new();
+
+    if !hubcap_api_key.is_empty() {
+        match hubcap_api::fetch_app_data(client, hubcap_api_key, app_data_dir, app_id).await {
+            Ok(_) => {
+                found.push(RepoResult {
+                    repo: HUBCAP_REPO_NAME.to_string(),
+                    date: None,
+                    sha: None,
+                    source_type: "hubcap".to_string(),
+                    source: Some("Hubcap".to_string()),
+                });
+                return Ok(SearchResult { repos: found });
+            }
+            Err(e) => {
+                eprintln!(
+                    "[Search] Hubcap lookup failed, falling back to depot sources: {}",
+                    e
+                );
+            }
+        }
+    }
 
     if sources.is_empty() {
         return Ok(SearchResult { repos: found });
@@ -72,10 +99,16 @@ pub async fn get_repo_manifests(
     client: &Client,
     sources: &[String],
     app_id: &str,
-    _repo: &str,
+    repo: &str,
     _sha: &str,
+    hubcap_api_key: &str,
+    app_data_dir: &Path,
 ) -> Result<RepoManifests, String> {
-    let app_data = depot_sources::get_app_data(client, sources, app_id).await?;
+    let app_data = if repo == HUBCAP_REPO_NAME {
+        hubcap_api::fetch_app_data(client, hubcap_api_key, app_data_dir, app_id).await?
+    } else {
+        depot_sources::get_app_data(client, sources, app_id).await?
+    };
 
     let lua_filename = Some(format!("{}.lua", app_id));
 

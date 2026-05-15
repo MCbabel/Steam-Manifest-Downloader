@@ -6,9 +6,20 @@ use crate::services::multi_repo_search;
 use crate::services::settings as settings_service;
 use crate::services::steam_store_api;
 
+fn app_data_dir(app: &AppHandle) -> PathBuf {
+    app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
+
 async fn load_sources(app: &AppHandle) -> Vec<String> {
-    let dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
-    settings_service::load_settings(&dir).await.depot_sources
+    settings_service::load_settings(&app_data_dir(app))
+        .await
+        .depot_sources
+}
+
+async fn load_hubcap_key(app: &AppHandle) -> String {
+    settings_service::load_settings(&app_data_dir(app))
+        .await
+        .hubcap_api_key
 }
 
 #[command]
@@ -18,10 +29,14 @@ pub async fn search_repos(
     app_id: String,
 ) -> Result<serde_json::Value, String> {
     let sources = load_sources(&app).await;
+    let hubcap_key = load_hubcap_key(&app).await;
+    let dir = app_data_dir(&app);
     let result = multi_repo_search::search_repos(
         &state.http_client,
         &sources,
         &app_id,
+        &hubcap_key,
+        &dir,
     )
     .await?;
 
@@ -38,6 +53,8 @@ pub async fn get_repo_manifests(
 ) -> Result<serde_json::Value, String> {
     let effective_sha = sha.unwrap_or_default();
     let sources = load_sources(&app).await;
+    let hubcap_key = load_hubcap_key(&app).await;
+    let dir = app_data_dir(&app);
 
     let result = multi_repo_search::get_repo_manifests(
         &state.http_client,
@@ -45,6 +62,8 @@ pub async fn get_repo_manifests(
         &app_id,
         &repo,
         &effective_sha,
+        &hubcap_key,
+        &dir,
     )
     .await?;
 
