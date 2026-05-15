@@ -1,5 +1,5 @@
 use reqwest::Client;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
@@ -301,52 +301,63 @@ pub async fn get_app_data(
     app_id: &str,
 ) -> Result<AppArchiveData, String> {
     let lua_filename = format!("{}.lua", app_id);
-    let lua_content = download_text_file(client, sources, app_id, &lua_filename).await?;
-
-    let lua_result = crate::services::lua_parser::parse_lua_file(&lua_content)
-        .map_err(|e| format!("Failed to parse {}.lua: {}", app_id, e))?;
-
-    let mut depot_keys = HashMap::new();
-    for vdf_content in download_text_file_from_all(client, sources, app_id, "key.vdf").await {
-        let vdf_keys = crate::services::vdf_parser::parse_key_vdf(&vdf_content, None);
-        depot_keys.extend(vdf_keys);
+    let lua_contents = download_text_file_from_all(client, sources, app_id, &lua_filename).await;
+    if lua_contents.is_empty() {
+        return Err(format!("{} not found in any configured source", lua_filename));
     }
 
-    let depot_sizes = match download_text_file(client, sources, app_id, &format!("{}.json", app_id)).await {
-        Ok(json_content) => match serde_json::from_str::<serde_json::Value>(&json_content) {
-            Ok(json) => extract_depot_sizes(&json),
-            Err(e) => {
-                eprintln!("[DepotSources] failed to parse {}.json: {}", app_id, e);
-                HashMap::new()
-            }
-        },
-        Err(_) => HashMap::new(),
-    };
-
-    for depot in &lua_result.depots {
-        if let Some(ref key) = depot.depot_key {
-            depot_keys.insert(depot.depot_id.to_string(), key.clone());
+    let mut depot_keys: HashMap<String, String> = HashMap::new();
+    for vdf_content in download_text_file_from_all(client, sources, app_id, "key.vdf").await {
+        let vdf_keys = crate::services::vdf_parser::parse_key_vdf(&vdf_content, None);
+        for (k, v) in vdf_keys {
+            depot_keys.entry(k).or_insert(v);
         }
     }
 
-    let manifests: Vec<ManifestInfo> = lua_result
-        .depots
-        .iter()
-        .filter_map(|d| {
-            d.manifest_id.as_ref().map(|mid| {
-                let size_bytes = depot_sizes
-                    .get(&(d.depot_id.to_string(), mid.clone()))
-                    .copied();
+    let mut depot_sizes: HashMap<(String, String), u64> = HashMap::new();
+    for json_content in download_text_file_from_all(client, sources, app_id, &format!("{}.json", app_id)).await {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&json_content) {
+            for (k, v) in extract_depot_sizes(&json) {
+                depot_sizes.entry(k).or_insert(v);
+            }
+        }
+    }
 
-                ManifestInfo {
-                    depot_id: d.depot_id.to_string(),
+    let mut manifests: Vec<ManifestInfo> = Vec::new();
+    let mut seen_depots: HashSet<String> = HashSet::new();
+
+    for lua_content in &lua_contents {
+        let parsed = match crate::services::lua_parser::parse_lua_file(lua_content) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("[DepotSources] failed to parse a {}.lua variant: {}", app_id, e);
+                continue;
+            }
+        };
+
+        for depot in &parsed.depots {
+            let depot_id_str = depot.depot_id.to_string();
+            if let Some(ref key) = depot.depot_key {
+                depot_keys.entry(depot_id_str.clone()).or_insert_with(|| key.clone());
+            }
+            if seen_depots.contains(&depot_id_str) {
+                continue;
+            }
+            if let Some(mid) = depot.manifest_id.as_ref() {
+                let size_bytes = depot_sizes
+                    .get(&(depot_id_str.clone(), mid.clone()))
+                    .copied()
+                    .or(depot.size_bytes);
+                manifests.push(ManifestInfo {
+                    depot_id: depot_id_str.clone(),
                     manifest_id: mid.clone(),
-                    depot_key: depot_keys.get(&d.depot_id.to_string()).cloned(),
+                    depot_key: depot_keys.get(&depot_id_str).cloned(),
                     size_bytes,
-                }
-            })
-        })
-        .collect();
+                });
+                seen_depots.insert(depot_id_str);
+            }
+        }
+    }
 
     let has_key_vdf = !depot_keys.is_empty();
 

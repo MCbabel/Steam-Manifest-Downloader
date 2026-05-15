@@ -12,6 +12,10 @@ pub mod embedded_tools;
 pub mod history;
 pub mod telemetry;
 pub mod emulator;
+pub mod depot_info;
+pub mod steam_library;
+pub mod steamless;
+pub mod steam_api_bypass;
 
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -73,7 +73,7 @@
         <span class="dotnet-warning__text" data-i18n-html="dotnetWarning.text">
           <strong>.NET 9 Runtime</strong> is required but not installed. DepotDownloader will not work without it.
         </span>
-        <a href="https://dotnet.microsoft.com/en-us/download/dotnet/9.0"
+        <a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer"
            id="dotnet-install-link"
            class="btn btn--small dotnet-warning__btn"
            target="_blank" rel="noopener"
@@ -103,6 +103,11 @@
       <div class="steps__item steps__item--shortcut hidden" data-step="4" id="step4-indicator">
         <div class="steps__number">4</div>
         <div class="steps__label" data-i18n="steps.shortcut">Shortcut</div>
+      </div>
+      <div class="steps__connector steps__connector--steam hidden" id="step6-connector"></div>
+      <div class="steps__item steps__item--steam hidden" data-step="6" id="step6-indicator">
+        <div class="steps__number">6</div>
+        <div class="steps__label" data-i18n="steps.steamLibrary">Steam</div>
       </div>
       <div class="steps__connector steps__connector--emulator" id="step5-connector"></div>
       <div class="steps__item steps__item--emulator" data-step="5" id="step5-indicator">
@@ -400,6 +405,16 @@
               <span class="toggle-switch__slider"></span>
             </label>
           </div>
+          <div class="shortcut-option shortcut-option--full" id="shortcut-steam-row">
+            <div class="shortcut-option__text">
+              <span class="shortcut-option__label" data-i18n="steamLibrary.windowsToggle">Also add to Steam library</span>
+              <p class="shortcut-option__hint" data-i18n="steamLibrary.windowsToggleHint">Creates a non-Steam shortcut with grid art so the game appears in your Steam library too.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="shortcut-steam-library">
+              <span class="toggle-switch__slider"></span>
+            </label>
+          </div>
         </div>
 
         <div id="shortcut-status" class="completion-message hidden"></div>
@@ -420,12 +435,103 @@
       </div>
     </section>
 
+    <section id="step-steam-library" class="step hidden">
+      <div class="card">
+        <h2 class="shortcut-header" data-i18n="steamLibrary.title">Add to Steam Library</h2>
+        <p class="shortcut-description" data-i18n="steamLibrary.description">Add this game to your Steam library as a non-Steam shortcut with full grid art.</p>
+
+        <div id="steam-library-status" class="emu-release-status" data-i18n="steamLibrary.detecting">Detecting Steam installation...</div>
+
+        <div class="shortcut-exe-section">
+          <label for="steam-exe-path" class="settings-section__label" data-i18n="steamLibrary.exeLabel">Game Executable</label>
+          <div class="dd-path__input-wrap dd-path__input-wrap--with-btn">
+            <input type="text" id="steam-exe-path" class="dd-path__input" data-i18n-attr="placeholder=shortcut.exePlaceholder" readonly>
+            <button type="button" id="btn-steam-browse-exe" class="btn btn--small btn--outline dd-path__browse-btn" data-i18n="shortcut.browse">Browse</button>
+          </div>
+          <p class="dd-path__hint" data-i18n="steamLibrary.exeHint">Auto-detected executable. Click Browse or pick from detected files.</p>
+        </div>
+
+        <div id="steam-detected-section" class="shortcut-detected-section hidden">
+          <button type="button" id="btn-steam-toggle-detected" class="settings-advanced__toggle">
+            <span class="settings-advanced__arrow">&#9654;</span>
+            <span data-i18n="shortcut.otherDetected">Other detected executables</span>
+          </button>
+          <div id="steam-detected-list" class="shortcut-detected-list hidden"></div>
+        </div>
+
+        <div class="settings-field">
+          <label for="steam-game-name" class="settings-field__label" data-i18n="steamLibrary.gameNameLabel">Display name</label>
+          <input type="text" id="steam-game-name" class="dd-path__input" data-i18n-attr="placeholder=steamLibrary.gameNamePlaceholder" autocomplete="off">
+        </div>
+
+        <div class="settings-field">
+          <label for="steam-launch-options" class="settings-field__label" data-i18n="steamLibrary.launchOptionsLabel">Launch options</label>
+          <input type="text" id="steam-launch-options" class="dd-path__input" data-i18n-attr="placeholder=steamLibrary.launchOptionsPlaceholder" autocomplete="off">
+          <p class="dd-path__hint" data-i18n="steamLibrary.launchOptionsHint">Optional. For Windows games on Linux, set the Proton compatibility tool in Steam after adding.</p>
+        </div>
+
+        <div id="steam-library-result" class="completion-message hidden"></div>
+
+        <div class="card__footer">
+          <div class="card__footer-left">
+            <button id="btn-steam-skip" class="btn btn--outline" data-i18n="steamLibrary.skip">
+              Skip
+            </button>
+          </div>
+          <button id="btn-steam-add" class="btn btn--primary" data-i18n="steamLibrary.add">
+            Add to Steam
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section id="step-emulator" class="step hidden">
       <div class="card">
         <h2 class="emu-header" data-i18n="emulator.title">Apply Emulator Patch</h2>
         <p class="emu-description" data-i18n="emulator.description">Replace the game's Steam API library with the gbe_fork emulator so the game can run without the Steam client.</p>
 
         <div id="emu-release-status" class="emu-release-status" data-i18n="emulator.releaseLoading">Loading emulator release info...</div>
+
+        <div id="emu-drm-section" class="emu-drm-section hidden">
+          <div class="emu-drm-header">
+            <svg class="emu-drm-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <div class="emu-drm-header__text">
+              <h3 class="emu-drm-title" data-i18n="emulator.drmTitle">Steam DRM detected</h3>
+              <p class="emu-drm-description" data-i18n="emulator.drmDescription">These executables are protected by Steam DRM (SteamStub). They won't run with the emulator until the DRM is removed.</p>
+            </div>
+          </div>
+          <div id="emu-drm-list" class="emu-drm-list"></div>
+          <div id="emu-drm-status-wrap" class="emu-drm-status-wrap hidden">
+            <button id="btn-emu-drm-copy" class="emu-drm-copy-btn" type="button" data-i18n-attr="title=emulator.drmCopyLog,aria-label=emulator.drmCopyLog">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+            <div id="emu-drm-status" class="emu-drm-status"></div>
+          </div>
+          <div class="emu-drm-actions">
+            <button id="btn-emu-drm-remove" class="btn btn--danger" data-i18n="emulator.drmRemove">Remove DRM (via Steamless)</button>
+            <span class="emu-drm-attribution" data-i18n="emulator.drmAttribution">Powered by Steamless by atom0s</span>
+          </div>
+        </div>
+
+        <div id="emu-bypass-section" class="emu-section emu-bypass-section">
+          <div class="emu-bypass-row">
+            <div class="emu-bypass-row__text">
+              <span class="emu-bypass-row__label" data-i18n="emulator.bypassLabel">Steam API Check Bypass</span>
+              <p class="emu-bypass-row__hint" data-i18n-html="emulator.bypassHint">Installs a <code>version.dll</code> next to the game that intercepts Steam-API integrity checks. Enable if the game refuses to launch with gbe_fork. Windows games only.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="emu-bypass-toggle">
+              <span class="toggle-switch__slider"></span>
+            </label>
+          </div>
+        </div>
 
         <div id="emu-variant-section" class="emu-section">
           <label class="settings-section__label" data-i18n="emulator.variantLabel">Emulator variant</label>
@@ -646,8 +752,8 @@
             <button id="btn-emu-revert" class="btn btn--danger hidden" data-i18n="emulator.revert">
               Revert Patch
             </button>
-            <button id="btn-emu-new" class="btn btn--outline" data-i18n="emulator.startNewDownload">
-              Start New Download
+            <button id="btn-emu-new" class="btn btn--outline" data-i18n="emulator.goToHome">
+              Go to Home
             </button>
           </div>
           <button id="btn-emu-apply" class="btn btn--primary" data-i18n="emulator.apply">

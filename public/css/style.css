@@ -925,6 +925,62 @@ button:disabled,
   white-space: nowrap;
 }
 
+.depot-item__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.3rem 0 0.1rem 0;
+  min-height: 1.1rem;
+}
+
+.depot-item__tags:empty {
+  display: none;
+}
+
+.depot-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: var(--font);
+  line-height: 1.3;
+  background: var(--bg-card-solid);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.depot-tag--windows {
+  background: rgba(80, 158, 255, 0.12);
+  color: #509eff;
+  border-color: rgba(80, 158, 255, 0.4);
+}
+
+.depot-tag--linux {
+  background: rgba(255, 169, 64, 0.12);
+  color: #ffa940;
+  border-color: rgba(255, 169, 64, 0.4);
+}
+
+.depot-tag--mac {
+  background: rgba(189, 189, 189, 0.12);
+  color: #bdbdbd;
+  border-color: rgba(189, 189, 189, 0.4);
+}
+
+.depot-tag--arch {
+  background: rgba(155, 89, 182, 0.12);
+  color: #b07ac9;
+  border-color: rgba(155, 89, 182, 0.4);
+}
+
+.depot-tag--lang {
+  background: rgba(46, 213, 115, 0.12);
+  color: #2ed573;
+  border-color: rgba(46, 213, 115, 0.4);
+}
+
 /* Buttons */
 .btn {
   padding: 0.6rem 1.25rem;
@@ -1245,6 +1301,31 @@ button:disabled,
 .shortcut-option__label {
   color: var(--text-primary);
   font-size: 0.9rem;
+}
+
+.shortcut-option--full {
+  border-top: 1px solid var(--border);
+  padding-top: 0.85rem;
+  align-items: flex-start;
+}
+
+.shortcut-option__text {
+  flex: 1;
+  min-width: 0;
+  padding-right: 1rem;
+}
+
+.shortcut-option__hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0.25rem 0 0 0;
+}
+
+#steam-library-result {
+  white-space: pre-line;
+  text-align: left;
+  padding: 1rem 1.25rem;
 }
 
 .shortcut-detected-section {
@@ -1610,6 +1691,211 @@ button:disabled,
 #emu-apply-status {
   margin-top: 1.25rem;
   margin-bottom: 0;
+  white-space: pre-line;
+}
+
+.emu-drm-section {
+  margin-top: 1.5rem;
+  padding: 1rem 1.1rem 1rem 1.1rem;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.emu-drm-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.emu-drm-icon {
+  color: var(--warning);
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.emu-drm-header__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.emu-drm-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--warning);
+  margin: 0 0 0.25rem 0;
+}
+
+.emu-drm-description {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.emu-drm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.emu-drm-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+}
+
+.emu-drm-item__path {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.emu-drm-item__size {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.emu-drm-item--success {
+  border-color: var(--success);
+  background: var(--success-bg);
+}
+
+.emu-drm-item--success .emu-drm-item__path {
+  color: var(--success);
+}
+
+.emu-drm-status-wrap {
+  position: relative;
+}
+
+.emu-drm-status {
+  font-size: 0.85rem;
+  padding: 0.55rem 2.4rem 0.55rem 0.8rem;
+  border-radius: var(--radius-sm);
+  text-align: center;
+  white-space: pre-line;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.emu-drm-copy-btn {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  width: 1.8rem;
+  height: 1.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  z-index: 1;
+}
+
+.emu-drm-copy-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.emu-drm-copy-btn--copied {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.emu-drm-status--busy {
+  background: var(--bg-hover);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.emu-drm-status--success {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.emu-drm-status--error {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+.emu-drm-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.emu-drm-attribution {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.emu-bypass-section {
+  padding: 0.85rem 1rem;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.emu-bypass-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.emu-bypass-row__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.emu-bypass-row__label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.emu-bypass-row__hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.emu-bypass-row__hint code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.05rem 0.3rem;
+  background: var(--bg-card-solid);
+  border-radius: 3px;
 }
 
 /* Animations */

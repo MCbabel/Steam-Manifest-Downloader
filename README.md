@@ -2,9 +2,9 @@
 
 # 🎮 Steam Manifest Downloader
 
-**A sleek desktop app for downloading Steam game depots using manifest data.**
+**A sleek desktop app for downloading Steam game depots, adding them to Steam, and patching them with gbe_fork — all in one pipeline.**
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.4.2-blue)
 ![License](https://img.shields.io/badge/license-GPL--2.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-0078D6?logo=windows)
 ![Built with](https://img.shields.io/badge/built_with-Rust-dea584?logo=rust)
@@ -12,7 +12,7 @@
 ![Downloads](https://img.shields.io/github/downloads/MCbabel/Steam-Manifest-Downloader/total?color=brightgreen)
 [![Lines of Code](https://img.shields.io/endpoint?url=https%3A%2F%2Ftokei.kojix2.net%2Fbadge%2Fgithub%2FMCbabel%2FSteam-Manifest-Downloader%2Flines)](https://tokei.kojix2.net/github/MCbabel/Steam-Manifest-Downloader)
 
-Upload `.lua` files, search across GitHub repos, and let the app handle manifests, depot keys, and downloads — all in one click.
+Upload `.lua` files or search by App ID across configurable sources (GitHub, archive.org, plain HTTPS folders). The app aggregates depots from every source, downloads them via the integrated DepotDownloaderMod engine, optionally creates Steam library entries with full grid art, and can even patch games with the gbe_fork emulator + Steamless DRM removal.
 
 </div>
 
@@ -32,28 +32,36 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 
 | | Feature |
 |---|---|
-| 📂 | **Drag & drop** `.lua` file upload |
-| 🔍 | **Multi-repo search** via Internet Archive |
-| 📦 | **Automatic manifest download** from Internet Archive |
+| 📂 | **Drag & drop** `.lua` / `.vdf` / `.st` upload |
+| 🔍 | **Configurable depot sources** — GitHub, archive.org, plain HTTPS; all queried in parallel and merged |
+| 🏷️ | **Live depot metadata** — Windows / Linux / macOS, 32/64-bit and language tags via Steam PICS |
 | 🔑 | **Automatic depot keys** generation |
-| ⚡ | **Integrated DepotDownloader** execution |
-| 📊 | **Real-time download** progress tracking |
+| ⚡ | **Integrated DepotDownloaderMod** execution |
+| 📊 | **Real-time progress** with per-depot speed + ETA |
 | 🎮 | **Steam Store API** integration — game names + cover art |
-| 🌙 | **Dark / Light theme** support |
-| ⚙️ | **Configurable** download location & GitHub token |
+| 🖼️ | **Add to Steam Library** — non-Steam shortcut with banner / hero / logo / icon (Linux step + Windows toggle) |
+| 🔧 | **gbe_fork emulator** patching — Regular + Experimental variants, 21 settings, lobby_connect launcher |
+| 🛡️ | **DRM detection & removal** via Steamless (works through `mono` on Linux) |
+| 🪝 | **Steam-API-Check Bypass** — bundled `version.dll` hijack for stubborn integrity checks |
+| 🌙 | **Dark / Light theme** + English & German localisation |
 | 🔒 | **Fully self-contained** — DepotDownloaderMod embedded |
 
 ---
 
 ## 🚀 Quick Start
 
-> **How it works — in 5 steps:**
+1. 📥 **Install** — grab the latest build from [Releases](../../releases) (NSIS for Windows, AppImage for Linux, AUR for Arch)
+2. 🌍 **First launch** — pick your language, accept or decline anonymous telemetry, done
 
-1. 📥 **Download** the installer from [Releases](../../releases)
-2. 📂 **Upload** your `.lua` file or search for a game
-3. ✅ **Select** the depots and manifests you want
-4. 🚀 **Click Download** — everything happens automatically
-5. ✨ **Done!** Files are in your configured download folder
+Then walk through the 5-step pipeline:
+
+| Step | What it does |
+|---|---|
+| 1 · Upload | Drop a `.lua` / `.vdf` / `.st` file or search by App ID |
+| 2 · Select | Pick depots — each row shows OS / arch / language tags from Steam PICS |
+| 3 · Download | Integrated DepotDownloaderMod streams every selected depot |
+| 4 · Shortcuts / Steam Library | Optional — Windows shortcut or non-Steam Steam library entry with grid art |
+| 5 · Emulator | Optional — patch with gbe_fork, remove DRM via Steamless, install API-check bypass |
 
 ---
 
@@ -62,7 +70,7 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 | | Requirement | Details |
 |---|---|---|
 | 💻 | **Operating System** | Windows 10 / 11 (64-bit) or a modern Linux distro (glibc ≥ 2.35) |
-| ⚙️ | **Runtime (Windows)** | [.NET 9.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) — required by DepotDownloader |
+| ⚙️ | **Runtime (Windows)** | [.NET 9.0 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer) — required by DepotDownloader |
 | 📦 | **Runtime (Linux)** | `webkit2gtk-4.1`, `libayatana-appindicator3`, `librsvg2` (install commands below) |
 | 🌐 | **Network** | Internet connection |
 
@@ -77,7 +85,7 @@ Upload `.lua` files, search across GitHub repos, and let the app handle manifest
 3. Launch **Steam Manifest Downloader** from the Start Menu
 
 > [!NOTE]
-> Make sure you have the [.NET 9.0 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/9.0) installed. The app will warn you on first launch if it's missing.
+> Make sure you have the [.NET 9.0 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer) installed. The app will warn you on first launch if it's missing.
 
 ### 🐧 Linux
 
@@ -152,7 +160,8 @@ chmod +x Steam\ Manifest\ Downloader_*_amd64.AppImage
 
 - **Rust** (latest stable) + **Cargo** — [Install via rustup](https://rustup.rs/)
 - **Tauri CLI** — `cargo install tauri-cli`
-- **.NET SDK 9.0** — Only needed if building DepotDownloaderMod from source ([Download](https://dotnet.microsoft.com/en-us/download/dotnet/9.0))
+- **.NET 9.0 Desktop Runtime** — Required to run the embedded DepotDownloaderMod ([Download](https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer))
+- **Mono** *(Linux/macOS, optional)* — Only needed for step 5's DRM removal via Steamless: `pacman -S mono` / `apt install mono-runtime` / `brew install mono`
 - **Linux additional:** `libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`, `patchelf` (for AppImage)
 
 ---
@@ -223,7 +232,7 @@ Output:
 NO_STRIP=true APPIMAGE_EXTRACT_AND_RUN=1 cargo tauri build
 ```
 
-Output: `src-tauri/target/release/bundle/appimage/Steam Manifest Downloader_1.0.0_amd64.AppImage`
+Output: `src-tauri/target/release/bundle/appimage/Steam Manifest Downloader_<version>_amd64.AppImage`
 
 > [!NOTE]
 > `NO_STRIP=true` prevents stripping symbols from the embedded .NET binary. `APPIMAGE_EXTRACT_AND_RUN=1` is needed on some distros for the AppImage bundler.
@@ -261,7 +270,9 @@ The `include_bytes!` macro in `src-tauri/src/services/embedded_tools.rs` embeds 
 | **Backend** | Rust, reqwest, tokio, serde |
 | **Frontend** | HTML / CSS / JS (vanilla) |
 | **Framework** | Tauri v2 |
-| **Downloader** | DepotDownloaderMod (.NET 8) |
+| **Downloader** | DepotDownloaderMod (.NET 9) |
+| **Emulator** | gbe_fork (downloaded on demand from GitHub releases) |
+| **DRM tooling** | Steamless v3.1.0.5 (CC-BY-NC-ND), Steam-API-Check-Bypass |
 
 ---
 
@@ -319,6 +330,9 @@ This project is licensed under the [GPL-2.0 License](LICENSE).
 - **[DepotDownloaderMod](https://github.com/SteamAutoCracks/DepotDownloaderMod)** — Steam depot downloading engine
 - **[Steam Store API](https://store.steampowered.com/api/)** — Game metadata & artwork
 - **[Tauri](https://v2.tauri.app/)** — Desktop application framework
+- **[gbe_fork](https://github.com/Detanup01/gbe_fork)** — Steamworks API emulator (downloaded on demand)
+- **[Steamless](https://github.com/atom0s/Steamless)** by atom0s — SteamStub DRM unpacker (downloaded on demand)
+- **[api.steamcmd.net](https://api.steamcmd.net/)** — public Steam PICS mirror for depot metadata tags
 
 ---
 

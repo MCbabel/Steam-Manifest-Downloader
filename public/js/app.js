@@ -15,10 +15,17 @@ const state = {
   emulatorAvailable: false,
   emulatorScan: [],
   emulatorReleaseInfo: null,
+  drmTargets: [],
   emuEditMode: false,
   emuEditTargets: [],
   emuApplyComplete: false,
+  bypassInitialState: false,
   pendingHistoryRemoveId: null,
+  steamLibrarySupported: false,
+  steamLibraryUser: null,
+  steamLibraryDetectedExes: [],
+  downloadStartedAt: null,
+  pendingHistoryEntry: null,
   notificationsEnabled: false,
   notificationSoundEnabled: true,
   depotManifests: {}, // depotId -> { originalName, storedPath }
@@ -201,6 +208,14 @@ const els = {
   btnEmuApply: $('#btn-emu-apply'),
   btnEmuNew: $('#btn-emu-new'),
   btnEmuStartOver: $('#btn-emu-start-over'),
+  emuDrmSection: $('#emu-drm-section'),
+  emuDrmList: $('#emu-drm-list'),
+  emuDrmStatusWrap: $('#emu-drm-status-wrap'),
+  emuDrmStatus: $('#emu-drm-status'),
+  btnEmuDrmRemove: $('#btn-emu-drm-remove'),
+  btnEmuDrmCopy: $('#btn-emu-drm-copy'),
+  emuBypassSection: $('#emu-bypass-section'),
+  emuBypassToggle: $('#emu-bypass-toggle'),
   emuHeader: $('.emu-header'),
   emuDescription: $('.emu-description'),
   emuVariantSection: $('#emu-variant-section'),
@@ -214,21 +229,49 @@ const els = {
   historyClearModal: $('#history-clear-modal'),
   btnHistoryClearYes: $('#btn-history-clear-yes'),
   btnHistoryClearNo: $('#btn-history-clear-no'),
+  stepSteamLibrary: $('#step-steam-library'),
+  step6Connector: $('#step6-connector'),
+  step6Indicator: $('#step6-indicator'),
+  steamLibraryStatus: $('#steam-library-status'),
+  steamExePath: $('#steam-exe-path'),
+  btnSteamBrowseExe: $('#btn-steam-browse-exe'),
+  steamDetectedSection: $('#steam-detected-section'),
+  btnSteamToggleDetected: $('#btn-steam-toggle-detected'),
+  steamDetectedList: $('#steam-detected-list'),
+  steamGameName: $('#steam-game-name'),
+  steamLaunchOptions: $('#steam-launch-options'),
+  steamLibraryResult: $('#steam-library-result'),
+  btnSteamAdd: $('#btn-steam-add'),
+  btnSteamSkip: $('#btn-steam-skip'),
+  shortcutSteamRow: $('#shortcut-steam-row'),
+  shortcutSteamLibrary: $('#shortcut-steam-library'),
 };
 
 function goToStep(step) {
   state.currentStep = step;
 
-  [els.stepUpload, els.stepSelect, els.stepProgress, els.stepShortcut, els.stepEmulator].forEach((el, i) => {
+  const stepMap = {
+    1: els.stepUpload,
+    2: els.stepSelect,
+    3: els.stepProgress,
+    4: els.stepShortcut,
+    5: els.stepEmulator,
+    6: els.stepSteamLibrary,
+  };
+  Object.entries(stepMap).forEach(([n, el]) => {
     if (!el) return;
-    el.classList.toggle('active', i + 1 === step);
-    el.classList.toggle('hidden', i + 1 !== step);
+    const match = parseInt(n) === step;
+    el.classList.toggle('active', match);
+    el.classList.toggle('hidden', !match);
   });
 
+  const visibleItems = Array.from($$('.steps__item:not(.hidden)'));
+  const currentPos = visibleItems.findIndex(el => parseInt(el.dataset.step) === step);
   $$('.steps__item').forEach((el) => {
     const s = parseInt(el.dataset.step);
+    const myPos = visibleItems.findIndex(it => parseInt(it.dataset.step) === s);
     el.classList.toggle('active', s === step);
-    el.classList.toggle('completed', s < step);
+    el.classList.toggle('completed', currentPos >= 0 && myPos >= 0 && myPos < currentPos);
   });
 
   const stepsIndicator = document.getElementById('steps-indicator');
@@ -913,6 +956,7 @@ function showSelectionStep() {
       <div class="depot-item__checkbox"></div>
       <div class="depot-item__info">
         <div class="depot-item__depot-id">Depot ${safeDepotId}${safeSize ? `<span class="depot-item__size">${safeSize}</span>` : ''}</div>
+        <div class="depot-item__tags" data-depot-tags="${safeDepotId}"></div>
         <div class="depot-item__manifest-id">Manifest: ${safeManifestId}</div>
         <div class="depot-item__custom-manifest">
           <label>Custom:</label>
@@ -967,6 +1011,42 @@ function showSelectionStep() {
 
   updateDownloadButton();
   goToStep(2);
+
+  fetchDepotMetadataAsync(data.mainAppId);
+}
+
+async function fetchDepotMetadataAsync(appId) {
+  try {
+    const depots = await invoke('fetch_depot_metadata', { appId: String(appId) });
+    if (!Array.isArray(depots)) return;
+    depots.forEach((d) => renderDepotTags(d));
+  } catch (e) {
+    console.warn('fetch_depot_metadata failed:', e);
+  }
+}
+
+function renderDepotTags(info) {
+  if (!info || !info.depot_id) return;
+  const container = document.querySelector(`[data-depot-tags="${CSS.escape(String(info.depot_id))}"]`);
+  if (!container) return;
+
+  const tags = [];
+  const osList = (info.oslist || '').toLowerCase();
+  if (osList.includes('windows')) tags.push(['windows', window.i18n.t('depotTags.windows')]);
+  if (osList.includes('linux')) tags.push(['linux', window.i18n.t('depotTags.linux')]);
+  if (osList.includes('macos') || osList.includes('mac')) tags.push(['mac', window.i18n.t('depotTags.macos')]);
+  if (info.osarch === '64') tags.push(['arch', window.i18n.t('depotTags.arch64')]);
+  else if (info.osarch === '32') tags.push(['arch', window.i18n.t('depotTags.arch32')]);
+  if (info.language) tags.push(['lang', capitalize(info.language)]);
+
+  container.innerHTML = tags.map(([cls, label]) =>
+    `<span class="depot-tag depot-tag--${cls}">${escapeHtml(label)}</span>`
+  ).join('');
+}
+
+function capitalize(s) {
+  if (!s) return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function toggleDepot(depotId, element) {
@@ -1059,6 +1139,8 @@ async function startDownload() {
 
   goToStep(3);
   initProgressUI(depotsWithCustomManifests);
+  await commitPendingHistory();
+  state.downloadStartedAt = new Date().toISOString();
 
   try {
     const downloadConfig = {
@@ -1365,6 +1447,58 @@ function formatElapsed(seconds) {
   return `${s}s`;
 }
 
+function newEntryId() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function buildPendingHistoryEntry(msg) {
+  if (!state.downloadDir) return;
+  const results = Array.isArray(msg && msg.results) ? msg.results : [];
+  const total = results.length || (state.parsedData ? state.selectedDepots.size : 0);
+  const successCount = results.length
+    ? results.filter(r => r.success).length
+    : total;
+  const status = total > 0 && successCount === total ? 'complete' : 'partial';
+  const appId = state.parsedData && state.parsedData.mainAppId
+    ? String(state.parsedData.mainAppId)
+    : (state.searchAppId ? String(state.searchAppId) : '');
+  const depotIds = results.length
+    ? results.map(r => String(r.depotId)).filter(Boolean)
+    : Array.from(state.selectedDepots);
+  state.pendingHistoryEntry = {
+    id: newEntryId(),
+    app_id: appId,
+    game_name: state.gameName || null,
+    header_image: state.headerImage || null,
+    depot_count: total,
+    depots_downloaded: successCount,
+    status,
+    download_dir: state.downloadDir,
+    started_at: state.downloadStartedAt || new Date().toISOString(),
+    completed_at: new Date().toISOString(),
+    source_repo: state.searchRepo || null,
+    depot_ids: depotIds.map(String),
+  };
+}
+
+async function commitPendingHistory() {
+  const entry = state.pendingHistoryEntry;
+  if (!entry) return;
+  state.pendingHistoryEntry = null;
+  try {
+    await invoke('record_history_entry', { entry });
+  } catch (e) {
+    console.error('record_history_entry failed:', e);
+  }
+}
+
 function handleComplete(msg) {
   clearInterval(state.speedTracker.staleTimer);
   state.speedTracker.staleTimer = null;
@@ -1373,6 +1507,7 @@ function handleComplete(msg) {
   updateDepotDownloadProgress(100);
   if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
   emitEvent('download_completed', { success: true });
+  buildPendingHistoryEntry(msg);
   showCompletion(true, msg.message);
 
   if (msg.results) {
@@ -1478,6 +1613,7 @@ function showCompletion(success, message) {
 }
 
 function resetApp() {
+  commitPendingHistory();
   state.parsedData = null;
   state.selectedDepots.clear();
   state.jobId = null;
@@ -1494,7 +1630,20 @@ function resetApp() {
   state.emulatorScan = [];
   state.emuEditTargets = [];
   state.emuApplyComplete = false;
+  state.bypassInitialState = false;
+  state.drmTargets = [];
+  if (els.emuDrmSection) els.emuDrmSection.classList.add('hidden');
+  if (els.emuDrmStatusWrap) els.emuDrmStatusWrap.classList.add('hidden');
+  if (els.emuBypassToggle) els.emuBypassToggle.checked = false;
   setEmuEditMode(false);
+  state.steamLibraryDetectedExes = [];
+  if (els.steamExePath) els.steamExePath.value = '';
+  if (els.steamGameName) els.steamGameName.value = '';
+  if (els.steamLaunchOptions) els.steamLaunchOptions.value = '';
+  if (els.steamLibraryResult) els.steamLibraryResult.classList.add('hidden');
+  if (els.steamDetectedSection) els.steamDetectedSection.classList.add('hidden');
+  resetSteamButtons();
+  if (els.shortcutSteamLibrary) els.shortcutSteamLibrary.checked = false;
   cleanupProgressListener();
   if (els.shortcutStatus) els.shortcutStatus.classList.add('hidden');
   if (els.shortcutDetectedSection) els.shortcutDetectedSection.classList.add('hidden');
@@ -2037,10 +2186,10 @@ function showDotNetWarning() {
     installLink.addEventListener('click', (e) => {
       e.preventDefault();
       try {
-        window.__TAURI__.shell.open('https://dotnet.microsoft.com/en-us/download/dotnet/9.0');
+        window.__TAURI__.shell.open('https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer');
       } catch {
         // Fallback: just let the link work normally
-        window.open('https://dotnet.microsoft.com/en-us/download/dotnet/9.0', '_blank');
+        window.open('https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer', '_blank');
       }
     });
   }
@@ -2156,6 +2305,8 @@ function initEvents() {
     els.btnNextStep.addEventListener('click', () => {
       if (state.shortcutSupported) {
         goToShortcutStep();
+      } else if (state.steamLibrarySupported) {
+        goToSteamLibraryStep();
       } else if (state.emulatorAvailable) {
         goToEmulatorStep();
       } else {
@@ -2191,18 +2342,44 @@ function initEvents() {
   if (els.btnEmuApply) {
     els.btnEmuApply.addEventListener('click', applyEmuReplacement);
   }
+  if (els.btnEmuDrmRemove) {
+    els.btnEmuDrmRemove.addEventListener('click', removeDrm);
+  }
+  if (els.btnEmuDrmCopy) {
+    els.btnEmuDrmCopy.addEventListener('click', copyDrmLog);
+  }
   if (els.btnEmuNew) {
     els.btnEmuNew.addEventListener('click', () => {
-      if (state.emuEditMode) {
-        resetApp();
-        openHistory();
-      } else {
-        resetApp();
-      }
+      resetApp();
     });
   }
   if (els.btnEmuStartOver) {
     els.btnEmuStartOver.addEventListener('click', () => goToStep(2));
+  }
+  if (els.btnSteamAdd) {
+    els.btnSteamAdd.addEventListener('click', async () => {
+      if (els.btnSteamAdd.dataset.mode === 'next') {
+        steamLibraryContinue();
+        return;
+      }
+      const ok = await performSteamLibraryAdd();
+      if (ok) switchSteamButtonToNext();
+    });
+  }
+  if (els.btnSteamBrowseExe) {
+    els.btnSteamBrowseExe.addEventListener('click', browseSteamExe);
+  }
+  if (els.btnSteamSkip) {
+    els.btnSteamSkip.addEventListener('click', steamLibraryContinue);
+  }
+  if (els.btnSteamToggleDetected) {
+    els.btnSteamToggleDetected.addEventListener('click', () => {
+      const list = els.steamDetectedList;
+      const arrow = els.btnSteamToggleDetected.querySelector('.settings-advanced__arrow');
+      if (!list) return;
+      list.classList.toggle('hidden');
+      if (arrow) arrow.textContent = list.classList.contains('hidden') ? '▶' : '▼';
+    });
   }
   if (els.btnEmuRevert) {
     els.btnEmuRevert.addEventListener('click', showEmuRevertConfirm);
@@ -2481,7 +2658,210 @@ async function checkShortcutSupport() {
   } catch (e) {
     console.error('Failed to check shortcut support:', e);
   }
+  await checkSteamLibrarySupport();
   renumberSteps();
+}
+
+async function checkSteamLibrarySupport() {
+  try {
+    const install = await invoke('steam_library_detect');
+    state.steamLibrarySupported = true;
+    state.steamLibraryUser = install;
+  } catch (e) {
+    state.steamLibrarySupported = false;
+    state.steamLibraryUser = null;
+  }
+
+  const showLinuxStep = state.steamLibrarySupported && !state.shortcutSupported;
+  const showWindowsToggle = state.steamLibrarySupported && state.shortcutSupported;
+
+  if (els.step6Connector) els.step6Connector.classList.toggle('hidden', !showLinuxStep);
+  if (els.step6Indicator) els.step6Indicator.classList.toggle('hidden', !showLinuxStep);
+  if (els.shortcutSteamRow) els.shortcutSteamRow.classList.toggle('hidden', !showWindowsToggle);
+}
+
+async function goToSteamLibraryStep() {
+  goToStep(6);
+  resetSteamButtons();
+  if (els.steamLibraryStatus) {
+    if (state.steamLibraryUser) {
+      els.steamLibraryStatus.classList.remove('emu-release-status--busy');
+      els.steamLibraryStatus.classList.add('emu-release-status--ready');
+      els.steamLibraryStatus.textContent = window.i18n.t('steamLibrary.detected', {
+        name: state.steamLibraryUser.persona_name || state.steamLibraryUser.user_id3,
+      });
+    } else {
+      els.steamLibraryStatus.classList.remove('emu-release-status--ready');
+      els.steamLibraryStatus.textContent = window.i18n.t('steamLibrary.notDetected');
+    }
+  }
+  if (els.steamGameName) {
+    els.steamGameName.value = state.gameName || '';
+  }
+  if (els.steamLaunchOptions) {
+    els.steamLaunchOptions.value = '';
+  }
+  if (els.steamLibraryResult) {
+    els.steamLibraryResult.classList.add('hidden');
+  }
+  await detectSteamExecutables();
+}
+
+async function detectSteamExecutables() {
+  if (!state.downloadDir) return;
+  if (els.steamExePath) {
+    els.steamExePath.value = window.i18n.t('shortcut.exePlaceholder') || 'Scanning...';
+  }
+  if (els.btnSteamAdd) els.btnSteamAdd.disabled = true;
+  if (els.steamDetectedSection) els.steamDetectedSection.classList.add('hidden');
+
+  try {
+    const result = await invoke('detect_executables', { downloadDir: state.downloadDir });
+    const exes = result.executables || [];
+    state.steamLibraryDetectedExes = exes;
+
+    if (exes.length === 0) {
+      if (els.steamExePath) {
+        els.steamExePath.value = '';
+        els.steamExePath.placeholder = 'No executables found. Browse manually.';
+      }
+      if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+      return;
+    }
+
+    const recommended = exes.find(e => e.recommended) || exes[0];
+    if (els.steamExePath) els.steamExePath.value = recommended.path;
+    if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+
+    if (exes.length > 1 && els.steamDetectedSection && els.steamDetectedList) {
+      els.steamDetectedSection.classList.remove('hidden');
+      els.steamDetectedList.innerHTML = exes.map(exe => {
+        const sizeStr = formatShortcutFileSize(exe.size);
+        const recBadge = exe.recommended ? ' <span class="shortcut-exe-badge">Recommended</span>' : '';
+        return `<div class="shortcut-exe-item" data-path="${escapeHtml(exe.path)}">
+          <span class="shortcut-exe-item__name">${escapeHtml(exe.name)}${recBadge}</span>
+          <span class="shortcut-exe-item__size">${sizeStr}</span>
+        </div>`;
+      }).join('');
+
+      els.steamDetectedList.querySelectorAll('.shortcut-exe-item').forEach(item => {
+        item.addEventListener('click', () => {
+          if (els.steamExePath) els.steamExePath.value = item.dataset.path;
+          if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+        });
+      });
+    }
+  } catch (e) {
+    console.error('detect_executables failed:', e);
+    if (els.steamExePath) els.steamExePath.value = '';
+    if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+  }
+}
+
+async function browseSteamExe() {
+  try {
+    const { open } = window.__TAURI__.dialog;
+    const opts = {
+      defaultPath: state.downloadDir || undefined,
+      title: 'Select Game Executable',
+    };
+    if (state.shortcutSupported) {
+      opts.filters = [{ name: 'Executables', extensions: ['exe'] }];
+    }
+    const filePath = await open(opts);
+    if (filePath) {
+      if (els.steamExePath) els.steamExePath.value = filePath;
+      if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+    }
+  } catch (e) {
+    console.error('Failed to browse for exe:', e);
+  }
+}
+
+function setSteamLibraryResult(kind, text) {
+  if (!els.steamLibraryResult) return;
+  els.steamLibraryResult.classList.remove('hidden', 'completion-message--success', 'completion-message--error');
+  if (kind === 'success') els.steamLibraryResult.classList.add('completion-message--success');
+  else if (kind === 'error') els.steamLibraryResult.classList.add('completion-message--error');
+  els.steamLibraryResult.textContent = text;
+}
+
+function currentAppIdForSteam() {
+  if (state.parsedData && state.parsedData.mainAppId) return String(state.parsedData.mainAppId);
+  if (state.searchAppId) return String(state.searchAppId);
+  return '';
+}
+
+function deriveStartDir(exePath) {
+  if (!exePath) return '';
+  const lastSlash = Math.max(exePath.lastIndexOf('/'), exePath.lastIndexOf('\\'));
+  if (lastSlash <= 0) return '';
+  const dir = exePath.slice(0, lastSlash);
+  return dir.endsWith('/') || dir.endsWith('\\') ? dir : dir + (exePath.includes('\\') ? '\\' : '/');
+}
+
+function switchSteamButtonToNext() {
+  if (!els.btnSteamAdd) return;
+  els.btnSteamAdd.textContent = window.i18n.t('steamLibrary.next');
+  els.btnSteamAdd.dataset.mode = 'next';
+  els.btnSteamAdd.disabled = false;
+  if (els.btnSteamSkip) els.btnSteamSkip.classList.add('hidden');
+}
+
+function resetSteamButtons() {
+  if (els.btnSteamAdd) {
+    els.btnSteamAdd.textContent = window.i18n.t('steamLibrary.add');
+    delete els.btnSteamAdd.dataset.mode;
+    els.btnSteamAdd.disabled = false;
+  }
+  if (els.btnSteamSkip) els.btnSteamSkip.classList.remove('hidden');
+}
+
+function steamLibraryContinue() {
+  if (state.emulatorAvailable) goToEmulatorStep();
+  else resetApp();
+}
+
+async function performSteamLibraryAdd() {
+  const exePath = (els.steamExePath && els.steamExePath.value || '').trim();
+  if (!exePath) {
+    setSteamLibraryResult('error', window.i18n.t('steamLibrary.error', { message: 'no executable selected' }));
+    return false;
+  }
+  const appId = currentAppIdForSteam();
+  if (!appId) {
+    setSteamLibraryResult('error', window.i18n.t('steamLibrary.error', { message: 'missing app id' }));
+    return false;
+  }
+  const appName = (els.steamGameName && els.steamGameName.value || state.gameName || '').trim()
+    || `App ${appId}`;
+  const launchOptions = (els.steamLaunchOptions && els.steamLaunchOptions.value || '').trim();
+  const startDir = deriveStartDir(exePath);
+
+  if (els.btnSteamAdd) els.btnSteamAdd.disabled = true;
+  setSteamLibraryResult('busy', window.i18n.t('steamLibrary.adding'));
+
+  try {
+    const result = await invoke('steam_library_add', {
+      appId,
+      appName,
+      exePath,
+      startDir,
+      launchOptions,
+    });
+    const gridCount = (result.grid_files || []).length;
+    const successMsg = window.i18n.t('steamLibrary.success', { name: appName })
+      + '\n\n' + window.i18n.t('steamLibrary.gridArtCount', { count: gridCount })
+      + '\n' + window.i18n.t('steamLibrary.protonNote');
+    setSteamLibraryResult('success', successMsg);
+    return true;
+  } catch (e) {
+    console.error('steam_library_add failed:', e);
+    setSteamLibraryResult('error', window.i18n.t('steamLibrary.error', { message: String(e) }));
+    return false;
+  } finally {
+    if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+  }
 }
 
 async function goToShortcutStep() {
@@ -2513,13 +2893,10 @@ async function checkEmulatorSupport() {
 
 function updateNextButtonText() {
   if (!els.btnNextStep) return;
-  if (state.shortcutSupported) {
-    els.btnNextStep.textContent = window.i18n.t('progress.next');
-  } else if (state.emulatorAvailable) {
-    els.btnNextStep.textContent = window.i18n.t('emulator.nextAfterDownload');
-  } else {
-    els.btnNextStep.textContent = window.i18n.t('shortcut.startNewDownload');
-  }
+  const hasNext = state.shortcutSupported || state.steamLibrarySupported || state.emulatorAvailable;
+  els.btnNextStep.textContent = hasNext
+    ? window.i18n.t('common.next')
+    : window.i18n.t('emulator.goToHome');
 }
 
 async function goToEmulatorStep() {
@@ -2531,7 +2908,121 @@ async function goToEmulatorStep() {
     await checkEmulatorSupport();
   }
   renderEmuFileList(state.emulatorScan);
+  populateEmuSettings(loadLastEmuSettings() || {});
+  scanForDrmAsync();
   await loadEmuReleaseInfo();
+}
+
+async function scanForDrmAsync() {
+  if (!state.downloadDir) return;
+  try {
+    const entries = await invoke('steamless_scan', { gameDir: state.downloadDir });
+    state.drmTargets = Array.isArray(entries) ? entries : [];
+    renderDrmSection();
+  } catch (e) {
+    console.warn('steamless_scan failed:', e);
+    state.drmTargets = [];
+    if (els.emuDrmSection) els.emuDrmSection.classList.add('hidden');
+  }
+}
+
+function renderDrmSection() {
+  if (!els.emuDrmSection) return;
+  if (!state.drmTargets || state.drmTargets.length === 0) {
+    els.emuDrmSection.classList.add('hidden');
+    return;
+  }
+  els.emuDrmSection.classList.remove('hidden');
+  if (els.emuDrmList) {
+    els.emuDrmList.innerHTML = state.drmTargets.map(t => {
+      const rel = relativizeEmuPath(t.path);
+      const size = formatBytes(t.size_bytes);
+      return `<div class="emu-drm-item" data-path="${escapeHtml(t.path)}">
+        <span class="emu-drm-item__path" title="${escapeHtml(t.path)}">${escapeHtml(rel)}</span>
+        <span class="emu-drm-item__size">${escapeHtml(size || '')}</span>
+      </div>`;
+    }).join('');
+  }
+  if (els.emuDrmStatusWrap) els.emuDrmStatusWrap.classList.add('hidden');
+  if (els.btnEmuDrmRemove) {
+    els.btnEmuDrmRemove.disabled = false;
+    els.btnEmuDrmRemove.textContent = window.i18n.t('emulator.drmRemove');
+  }
+}
+
+function setDrmStatus(kind, text) {
+  if (!els.emuDrmStatus) return;
+  els.emuDrmStatus.classList.remove('emu-drm-status--busy', 'emu-drm-status--success', 'emu-drm-status--error');
+  if (kind === 'busy') els.emuDrmStatus.classList.add('emu-drm-status--busy');
+  else if (kind === 'success') els.emuDrmStatus.classList.add('emu-drm-status--success');
+  else if (kind === 'error') els.emuDrmStatus.classList.add('emu-drm-status--error');
+  els.emuDrmStatus.textContent = text;
+  if (els.emuDrmStatusWrap) els.emuDrmStatusWrap.classList.remove('hidden');
+}
+
+const DRM_COPY_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+</svg>`;
+const DRM_COPY_ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <polyline points="20 6 9 17 4 12"/>
+</svg>`;
+
+async function copyDrmLog() {
+  if (!els.emuDrmStatus || !els.btnEmuDrmCopy) return;
+  const text = els.emuDrmStatus.textContent || '';
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    console.error('clipboard write failed:', e);
+    return;
+  }
+  els.btnEmuDrmCopy.classList.add('emu-drm-copy-btn--copied');
+  els.btnEmuDrmCopy.innerHTML = DRM_COPY_ICON_CHECK;
+  els.btnEmuDrmCopy.setAttribute('title', window.i18n.t('emulator.drmCopyLogCopied'));
+  setTimeout(() => {
+    els.btnEmuDrmCopy.classList.remove('emu-drm-copy-btn--copied');
+    els.btnEmuDrmCopy.innerHTML = DRM_COPY_ICON;
+    els.btnEmuDrmCopy.setAttribute('title', window.i18n.t('emulator.drmCopyLog'));
+  }, 1500);
+}
+
+async function removeDrm() {
+  if (!state.drmTargets || state.drmTargets.length === 0) return;
+  const paths = state.drmTargets.map(t => t.path);
+  if (els.btnEmuDrmRemove) els.btnEmuDrmRemove.disabled = true;
+  setDrmStatus('busy', window.i18n.t('emulator.drmRemoving'));
+
+  try {
+    const results = await invoke('steamless_unpack', { targets: paths });
+    const success = results.filter(r => r.success).length;
+    const failed = results.length - success;
+    if (failed === 0) {
+      setDrmStatus('success', window.i18n.t('emulator.drmRemoveSuccess', { count: success }));
+      results.forEach((r, i) => {
+        const item = els.emuDrmList && els.emuDrmList.children[i];
+        if (item && r.success) item.classList.add('emu-drm-item--success');
+      });
+      state.drmTargets = [];
+    } else {
+      const first = results.find(r => !r.success);
+      const errMsg = first && first.error ? first.error : 'unknown error';
+      const monoNeeded = /command not found|No such file|cannot run|exec format/i.test(errMsg)
+        && /mono/i.test(errMsg);
+      const hint = monoNeeded ? '\n\n' + window.i18n.t('emulator.drmMonoHint') : '';
+      const summary = window.i18n.t('emulator.drmRemovePartial', { success, failed });
+      setDrmStatus('error', `${summary}\n\n${errMsg}${hint}`);
+    }
+  } catch (e) {
+    console.error('steamless_unpack failed:', e);
+    const errMsg = String(e);
+    const monoNeeded = /command not found|No such file|cannot run|exec format/i.test(errMsg)
+      && /mono/i.test(errMsg);
+    const hint = monoNeeded ? '\n\n' + window.i18n.t('emulator.drmMonoHint') : '';
+    setDrmStatus('error', window.i18n.t('emulator.drmRemoveError', { message: errMsg }) + hint);
+  } finally {
+    if (els.btnEmuDrmRemove) els.btnEmuDrmRemove.disabled = false;
+  }
 }
 
 function renderEmuFileList(files) {
@@ -2605,6 +3096,25 @@ function selectedEmuVariant() {
   return (checked && checked.value === 'experimental') ? 'experimental' : 'regular';
 }
 
+async function applySteamApiBypass() {
+  const windowsTargets = (state.emulatorScan || []).filter(t => t.platform === 'windows');
+  if (windowsTargets.length === 0) return '';
+  try {
+    const results = await invoke('steam_api_bypass_apply', { targets: windowsTargets });
+    const success = results.filter(r => r.success).length;
+    const failed = results.length - success;
+    if (failed === 0) {
+      return window.i18n.t('emulator.bypassSuccess', { count: success });
+    }
+    const first = results.find(r => !r.success);
+    const detail = first && first.error ? `\n${first.error}` : '';
+    return window.i18n.t('emulator.bypassPartial', { success, failed }) + detail;
+  } catch (e) {
+    console.error('steam_api_bypass_apply failed:', e);
+    return window.i18n.t('emulator.bypassError', { message: String(e) });
+  }
+}
+
 async function applyEmuReplacement() {
   if (state.emuApplyComplete) {
     resetApp();
@@ -2625,19 +3135,25 @@ async function applyEmuReplacement() {
 
   try {
     const variant = selectedEmuVariant();
+    const gathered = gatherEmuSettings();
     const results = await invoke('emu_apply_replacement', {
       targets: state.emulatorScan,
       variant,
       appId,
       installedAppIds: [],
-      emuSettings: gatherEmuSettings(),
+      emuSettings: gathered,
     });
     const total = results.length;
     const success = results.filter(r => r.success).length;
     const failed = total - success;
     if (failed === 0) {
-      setEmuApplyStatus('success', window.i18n.t('emulator.applySuccess', { count: success, total }));
+      let extra = '';
+      if (els.emuBypassToggle && els.emuBypassToggle.checked) {
+        extra = '\n\n' + await applySteamApiBypass();
+      }
+      setEmuApplyStatus('success', window.i18n.t('emulator.applySuccess', { count: success, total }) + extra);
       state.emuApplyComplete = true;
+      saveLastEmuSettings(gathered);
       if (els.btnEmuApply) els.btnEmuApply.textContent = window.i18n.t('emulator.goBackHome');
     } else {
       setEmuApplyStatus('error', window.i18n.t('emulator.applyPartial', { success, failed }));
@@ -2683,8 +3199,23 @@ async function saveEmuEditSettings() {
     setEmuApplyStatus('error', window.i18n.t('emulator.savePartial', { success, failed }));
     return;
   }
+
+  const wantBypass = !!(els.emuBypassToggle && els.emuBypassToggle.checked);
+  if (wantBypass !== state.bypassInitialState) {
+    if (wantBypass) {
+      const windowsTargets = state.emuEditTargets.filter(t => t.platform === 'windows');
+      if (windowsTargets.length > 0) {
+        try { await invoke('steam_api_bypass_apply', { targets: windowsTargets }); }
+        catch (e) { console.error('bypass apply on save:', e); }
+      }
+    } else {
+      const paths = state.emuEditTargets.map(t => t.path);
+      try { await invoke('steam_api_bypass_revert', { targets: paths }); }
+      catch (e) { console.error('bypass revert on save:', e); }
+    }
+  }
+
   resetApp();
-  openHistory();
 }
 
 function showEmuRevertConfirm() {
@@ -2711,6 +3242,8 @@ async function confirmEmuRevert() {
   try {
     const paths = state.emuEditTargets.map(t => t.path);
     const results = await invoke('emu_revert_replacement', { targets: paths });
+    try { await invoke('steam_api_bypass_revert', { targets: paths }); }
+    catch (e) { console.error('bypass revert during emu revert:', e); }
     const total = results.length;
     const success = results.filter(r => r.success).length;
     const failed = total - success;
@@ -2728,7 +3261,6 @@ async function confirmEmuRevert() {
     return;
   }
   resetApp();
-  openHistory();
 }
 
 async function showFolderMissing() {
@@ -2760,6 +3292,7 @@ function setEmuEditMode(on) {
   document.body.classList.toggle('emu-edit-mode', state.emuEditMode);
   if (els.emuVariantSection) els.emuVariantSection.classList.toggle('hidden', state.emuEditMode);
   if (els.emuReleaseStatus) els.emuReleaseStatus.classList.toggle('hidden', state.emuEditMode);
+  if (els.emuDrmSection && state.emuEditMode) els.emuDrmSection.classList.add('hidden');
   if (els.btnEmuStartOver) els.btnEmuStartOver.classList.toggle('hidden', state.emuEditMode);
   if (els.btnEmuRevert) els.btnEmuRevert.classList.toggle('hidden', !state.emuEditMode);
   if (els.emuHeader) {
@@ -2779,8 +3312,8 @@ function setEmuEditMode(on) {
   }
   if (els.btnEmuNew) {
     els.btnEmuNew.textContent = state.emuEditMode
-      ? window.i18n.t('emulator.backToHistory')
-      : window.i18n.t('emulator.startNewDownload');
+      ? window.i18n.t('emulator.backToHome')
+      : window.i18n.t('emulator.goToHome');
   }
 }
 
@@ -2822,6 +3355,15 @@ async function openEmuEditFromHistory(entry) {
     console.error('emu_read_emu_settings failed:', e);
   }
   populateEmuSettings(initial || {});
+
+  let bypassInstalled = false;
+  try {
+    bypassInstalled = await invoke('steam_api_bypass_status', { targets: patched.map(t => t.path) });
+  } catch (e) {
+    console.error('steam_api_bypass_status failed:', e);
+  }
+  state.bypassInitialState = !!bypassInstalled;
+  if (els.emuBypassToggle) els.emuBypassToggle.checked = !!bypassInstalled;
 
   goToStep(5);
   renderEmuFileList(patched);
@@ -2874,6 +3416,23 @@ const EMU_BOOL_KEYS = new Set([
   'overlay_always_show_fps', 'overlay_always_show_playtime',
 ]);
 const EMU_FLOAT_KEYS = new Set(['font_size']);
+
+const EMU_LAST_SETTINGS_KEY = 'lastEmuSettings_v1';
+
+function loadLastEmuSettings() {
+  try {
+    const raw = localStorage.getItem(EMU_LAST_SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveLastEmuSettings(settings) {
+  try {
+    localStorage.setItem(EMU_LAST_SETTINGS_KEY, JSON.stringify(settings || {}));
+  } catch {}
+}
 
 function gatherEmuSettings() {
   const settings = {};
@@ -2983,11 +3542,14 @@ async function detectExecutables() {
 async function browseExe() {
   try {
     const { open } = window.__TAURI__.dialog;
-    const filePath = await open({
+    const opts = {
       defaultPath: state.downloadDir || undefined,
-      filters: [{ name: 'Executables', extensions: ['exe'] }],
       title: 'Select Game Executable'
-    });
+    };
+    if (state.shortcutSupported) {
+      opts.filters = [{ name: 'Executables', extensions: ['exe'] }];
+    }
+    const filePath = await open(opts);
     if (filePath) {
       els.shortcutExePath.value = filePath;
       els.btnCreateShortcuts.disabled = false;
@@ -3040,10 +3602,44 @@ async function createShortcuts() {
       els.btnCreateShortcuts.disabled = false;
       els.btnCreateShortcuts.textContent = 'Create Shortcuts';
     }
+
+    if (els.shortcutSteamLibrary && els.shortcutSteamLibrary.checked && state.steamLibrarySupported) {
+      await addToSteamLibraryFromShortcutStep(exePath);
+    }
   } catch (e) {
     showShortcutStatus(false, `Failed to create shortcuts: ${e}`);
     els.btnCreateShortcuts.disabled = false;
     els.btnCreateShortcuts.textContent = 'Create Shortcuts';
+  }
+}
+
+async function addToSteamLibraryFromShortcutStep(exePath) {
+  const appId = currentAppIdForSteam();
+  if (!appId) return;
+  const appName = state.gameName || `App ${appId}`;
+  const startDir = deriveStartDir(exePath);
+  try {
+    const result = await invoke('steam_library_add', {
+      appId,
+      appName,
+      exePath,
+      startDir,
+      launchOptions: '',
+    });
+    const gridCount = (result.grid_files || []).length;
+    const msg = window.i18n.t('steamLibrary.success', { name: appName })
+      + ' (' + window.i18n.t('steamLibrary.gridArtCount', { count: gridCount }) + ')';
+    if (els.shortcutStatus) {
+      const existing = els.shortcutStatus.textContent || '';
+      els.shortcutStatus.textContent = existing ? existing + '\n\n' + msg : msg;
+    }
+  } catch (e) {
+    console.error('steam_library_add (windows toggle) failed:', e);
+    const errMsg = window.i18n.t('steamLibrary.error', { message: String(e) });
+    if (els.shortcutStatus) {
+      const existing = els.shortcutStatus.textContent || '';
+      els.shortcutStatus.textContent = existing ? existing + '\n\n' + errMsg : errMsg;
+    }
   }
 }
 

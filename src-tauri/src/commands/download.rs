@@ -502,6 +502,7 @@ async fn run_download_pipeline(
                 depot_id: d.depot_id.parse().expect("depot IDs are validated at entry"),
                 depot_key: key,
                 manifest_id: Some(d.custom_manifest_id.as_deref().unwrap_or(&d.manifest_id).to_string()),
+                size_bytes: None,
             }
         })
         .collect();
@@ -622,22 +623,24 @@ async fn run_download_pipeline(
     } else {
         "failed"
     };
-    let entry = history::HistoryEntry {
-        id: uuid::Uuid::new_v4().to_string(),
-        app_id: config.app_id.clone(),
-        game_name: _game_name.map(|s| s.to_string()),
-        header_image: _header_image.map(|s| s.to_string()),
-        depot_count: run_depots.len(),
-        depots_downloaded: dl_success_count,
-        status: status.to_string(),
-        download_dir: work_dir.to_string_lossy().to_string(),
-        started_at: _started_at.to_rfc3339(),
-        completed_at: Some(chrono::Utc::now().to_rfc3339()),
-        source_repo: None,
-        depot_ids: run_depots.iter().map(|d| d.depot_id.clone()).collect(),
-    };
-    if let Err(err) = history::add_entry(app_data_dir, entry).await {
-        eprintln!("[Download] Failed to record completed job in history: {}", err);
+    if status == "failed" {
+        let entry = history::HistoryEntry {
+            id: uuid::Uuid::new_v4().to_string(),
+            app_id: config.app_id.clone(),
+            game_name: _game_name.map(|s| s.to_string()),
+            header_image: _header_image.map(|s| s.to_string()),
+            depot_count: run_depots.len(),
+            depots_downloaded: dl_success_count,
+            status: status.to_string(),
+            download_dir: work_dir.to_string_lossy().to_string(),
+            started_at: _started_at.to_rfc3339(),
+            completed_at: Some(chrono::Utc::now().to_rfc3339()),
+            source_repo: None,
+            depot_ids: run_depots.iter().map(|d| d.depot_id.clone()).collect(),
+        };
+        if let Err(err) = history::add_entry(app_data_dir, entry).await {
+            eprintln!("[Download] Failed to record failed job in history: {}", err);
+        }
     }
 
     {

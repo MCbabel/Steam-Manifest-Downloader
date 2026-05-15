@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Steam Manifest Downloader — Download Steam Depots Effortlessly</title>
-  <meta name="description" content="Download Steam depots effortlessly. Parse, select, download — all in one click. A modern Tauri-based tool built with Rust.">
+  <title>Steam Manifest Downloader — From Lua to Playable in One Pipeline</title>
+  <meta name="description" content="Download Steam depots, create shortcuts, add to your Steam library and patch with the gbe_fork emulator — all in one Tauri-based desktop app.">
   <meta property="og:title" content="Steam Manifest Downloader" />
-  <meta property="og:description" content="A sleek desktop app for downloading Steam game depots using manifest data. Built with Tauri v2 and Rust." />
+  <meta property="og:description" content="Download Steam depots, create shortcuts, integrate with your Steam library and patch with the gbe_fork emulator — a full pipeline in one desktop app built with Tauri v2 and Rust." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://smd.mcbabel.de/" />
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Steam Manifest Downloader" />
-  <meta name="twitter:description" content="A sleek desktop app for downloading Steam game depots using manifest data. Built with Tauri v2 and Rust." />
+  <meta name="twitter:description" content="Download Steam depots, create shortcuts, integrate with your Steam library and patch with the gbe_fork emulator — a full pipeline in one desktop app built with Tauri v2 and Rust." />
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
 </head>
@@ -71,7 +71,7 @@
         Steam Manifest<br><span class="gradient-text">Downloader</span>
       </h1>
       <p class="hero-subtitle reveal">
-        Download Steam depots effortlessly.<br>Parse, select, download — all in one click.
+        Download Steam depots, integrate with your Steam library<br>and run them via gbe_fork — all in one pipeline.
       </p>
       <div class="hero-buttons reveal">
         <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
@@ -140,7 +140,7 @@
           </div>
           <div class="feature-text">
             <h3>Configurable Depot Sources</h3>
-            <p>Plug in any depot source — GitHub, archive.org or a plain HTTPS folder — and the app queries them in order.</p>
+            <p>Plug in any depot source — GitHub, archive.org or a plain HTTPS folder. The app queries them all in parallel and merges depots, keys and sizes so nothing slips through.</p>
           </div>
         </div>
         <div class="feature-card reveal">
@@ -177,6 +177,33 @@
           <div class="feature-text">
             <h3>Live Progress Tracking</h3>
             <p>Real-time progress bars, speed metrics, and ETA estimates.</p>
+          </div>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+          <div class="feature-text">
+            <h3>Emulator Patching</h3>
+            <p>Drop in the gbe_fork Steam emulator so downloaded games run without the Steam client. Variant picker, 21 configurable settings (account name, language, offline mode, overlay) and a built-in lobby_connect launcher for local multiplayer.</p>
+          </div>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="9" y1="12" x2="15" y2="12"/></svg>
+          </div>
+          <div class="feature-text">
+            <h3>DRM Detection &amp; Removal</h3>
+            <p>Automatic SteamStub detection by scanning PE headers. One-click removal via the bundled Steamless integration, plus an optional Steam-API-Check bypass (<code>version.dll</code>/<code>winmm.dll</code>/<code>winhttp.dll</code> hijack) for games that resist the swap.</p>
+          </div>
+        </div>
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><circle cx="8" cy="14" r="1"/><line x1="11" y1="14" x2="17" y2="14"/><line x1="11" y1="17" x2="14" y2="17"/></svg>
+          </div>
+          <div class="feature-text">
+            <h3>Steam Library Integration</h3>
+            <p>Add downloaded games to your Steam library as non-Steam shortcuts with full grid art — banner, hero, logo and icon are pulled from the Steam CDN automatically. Works on both Linux (dedicated step) and Windows (toggle in the shortcut flow).</p>
           </div>
         </div>
         <div class="feature-card reveal">
@@ -223,8 +250,8 @@
     <div class="container">
       <div class="section-header reveal">
         <span class="section-tag">How It Works</span>
-        <h2>Simple as 1-2-3-4</h2>
-        <p>Get from zero to downloaded in four easy steps.</p>
+        <h2>From Lua to Playable in 5 Steps</h2>
+        <p>A guided pipeline that goes beyond just downloading files — shortcuts, Steam library integration, and emulator patching are baked in.</p>
       </div>
       <div class="steps">
         <div class="steps-line"></div>
@@ -232,28 +259,35 @@
           <div class="step-number" data-count="1">1</div>
           <div class="step-content">
             <h3>Upload or Search</h3>
-            <p>Drop a .lua manifest file or search for your game by name across multiple repositories.</p>
+            <p>Drop a .lua manifest file or search for your game by name across all configured depot sources at once.</p>
           </div>
         </div>
         <div class="step reveal">
           <div class="step-number" data-count="2">2</div>
           <div class="step-content">
             <h3>Select Depots &amp; Manifests</h3>
-            <p>Choose which depots and manifest versions you want to download.</p>
+            <p>Pick the depots you want. Each one shows its platform (Windows / Linux / macOS), architecture (32/64-bit) and language at a glance — pulled live from Steam's PICS info.</p>
           </div>
         </div>
         <div class="step reveal">
           <div class="step-number" data-count="3">3</div>
           <div class="step-content">
             <h3>Click Download</h3>
-            <p>Hit the download button and let the integrated downloader handle the rest.</p>
+            <p>Hit the button and watch the integrated downloader stream every selected depot with live progress, ETA and per-depot status.</p>
           </div>
         </div>
         <div class="step reveal">
           <div class="step-number" data-count="4">4</div>
           <div class="step-content">
-            <h3>Done — Files Ready</h3>
-            <p>Your depot files are downloaded and ready to use. It's that simple.</p>
+            <h3>Shortcuts &amp; Steam Library</h3>
+            <p>On Windows: create Desktop / Start-Menu shortcuts and optionally add the game to Steam as a non-Steam entry with full grid art. On Linux: add directly to your Steam library with banner, hero, logo and icon — ready for Proton.</p>
+          </div>
+        </div>
+        <div class="step reveal">
+          <div class="step-number" data-count="5">5</div>
+          <div class="step-content">
+            <h3>Emulator (optional)</h3>
+            <p>Patch the game with the gbe_fork Steam emulator so it runs without the Steam client. DRM detection via Steamless, a one-click Steam-API-Check bypass, 21 configurable emulator settings and a lobby_connect launcher for local multiplayer — all in one step.</p>
           </div>
         </div>
       </div>

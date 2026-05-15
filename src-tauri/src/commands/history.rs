@@ -22,6 +22,15 @@ pub async fn clear_history(app: AppHandle) -> Result<(), String> {
 }
 
 #[command]
+pub async fn record_history_entry(
+    app: AppHandle,
+    entry: history_service::HistoryEntry,
+) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    history_service::add_entry(&app_data_dir, entry).await
+}
+
+#[command]
 pub async fn open_folder(path: String) -> Result<(), String> {
     let dir = std::path::Path::new(&path);
     if !dir.exists() {

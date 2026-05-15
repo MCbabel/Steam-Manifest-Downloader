@@ -38,6 +38,7 @@ fn main() {
             commands::search_repos,
             commands::get_repo_manifests,
             commands::search_steam_games,
+            commands::fetch_depot_metadata,
             // Steam
             commands::get_steam_app_info,
             // Download
@@ -63,6 +64,7 @@ fn main() {
             commands::get_history,
             commands::remove_history_entry,
             commands::clear_history,
+            commands::record_history_entry,
             commands::open_folder,
             // Shortcuts
             commands::is_shortcut_supported,
@@ -81,6 +83,16 @@ fn main() {
             commands::emu_launch_lobby_connect,
             commands::emu_read_emu_settings,
             commands::emu_write_emu_settings,
+            // Steam library (non-Steam shortcut + grid art)
+            commands::steam_library_detect,
+            commands::steam_library_add,
+            // Steamless (DRM detection + removal)
+            commands::steamless_scan,
+            commands::steamless_unpack,
+            // Steam API Check Bypass (version.dll DLL-hijack)
+            commands::steam_api_bypass_apply,
+            commands::steam_api_bypass_revert,
+            commands::steam_api_bypass_status,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
