@@ -177,4 +177,33 @@
       closeMobileMenu();
     }
   });
+
+  // Hero "Download" button: on Windows, swap the link from the releases
+  // landing page to the direct latest setup.exe download. Other OSes keep
+  // the releases page so users can pick AppImage / AUR / etc.
+  const heroDownloadBtn = document.getElementById('hero-download-btn');
+  const heroDownloadLabel = document.getElementById('hero-download-label');
+  if (heroDownloadBtn && /windows/i.test(navigator.userAgent || '')) {
+    fetch('https://api.github.com/repos/MCbabel/Steam-Manifest-Downloader/releases/latest', {
+      headers: { Accept: 'application/vnd.github+json' },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((release) => {
+        const assets = Array.isArray(release && release.assets) ? release.assets : [];
+        const installer = assets.find((a) => /\.exe$/i.test(a.name) && !/portable/i.test(a.name))
+          || assets.find((a) => /\.exe$/i.test(a.name));
+        if (!installer || !installer.browser_download_url) return;
+        heroDownloadBtn.href = installer.browser_download_url;
+        heroDownloadBtn.removeAttribute('target');
+        heroDownloadBtn.removeAttribute('rel');
+        if (heroDownloadLabel && release.tag_name) {
+          heroDownloadLabel.textContent = 'Download for Windows · ' + release.tag_name;
+        } else if (heroDownloadLabel) {
+          heroDownloadLabel.textContent = 'Download for Windows';
+        }
+      })
+      .catch(() => {
+        // network / api error → leave the button pointing at the releases page
+      });
+  }
 })();
