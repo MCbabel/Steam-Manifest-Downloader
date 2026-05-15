@@ -64,7 +64,10 @@ pub async fn search_repos(
                 return Ok(SearchResult { repos: found });
             }
             Err(e) => {
-                return Err(format!("Hubcap error: {}", e));
+                eprintln!(
+                    "[Search] Hubcap lookup failed, falling back to depot sources: {}",
+                    e
+                );
             }
         }
     }
