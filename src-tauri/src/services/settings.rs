@@ -50,6 +50,8 @@ pub struct Settings {
     pub use_native_downloader: bool,
     #[serde(default = "default_cancel_keep_files")]
     pub cancel_keep_files: bool,
+    #[serde(default)]
+    pub ryuu_api_key: String,
 }
 
 fn default_use_native_downloader() -> bool {
@@ -118,6 +120,7 @@ impl Default for Settings {
             hubcap_api_key: String::new(),
             use_native_downloader: default_use_native_downloader(),
             cancel_keep_files: default_cancel_keep_files(),
+            ryuu_api_key: String::new(),
         }
     }
 }

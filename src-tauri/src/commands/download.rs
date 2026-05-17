@@ -11,6 +11,7 @@ use crate::services::{AppState, JobInfo};
 use crate::services::depot_runner::{self, DepotRunConfig, ProgressEvent, emit_progress};
 use crate::services::depot_sources;
 use crate::services::hubcap_api;
+use crate::services::ryuu_api;
 use crate::services::settings as settings_service;
 use crate::services::manifest_hub_api;
 use crate::services::steam_store_api;
@@ -290,6 +291,15 @@ async fn run_download_pipeline(
     let depot_sources_list = loaded_settings.depot_sources.clone();
     let use_native = loaded_settings.use_native_downloader;
     let is_hubcap = config.source_type.as_deref() == Some("hubcap");
+    let is_ryuu = config.source_type.as_deref() == Some("ryuu");
+    let is_cached_manifest_source = is_hubcap || is_ryuu;
+    let cached_source_label = if is_ryuu {
+        Some("Ryuu")
+    } else if is_hubcap {
+        Some("Hubcap")
+    } else {
+        None
+    };
 
     tokio::fs::create_dir_all(&work_dir)
         .await
@@ -321,11 +331,11 @@ async fn run_download_pipeline(
             return Ok(());
         }
 
-        if is_hubcap {
+        if let Some(source_label) = cached_source_label {
             let mut event = ProgressEvent::new("status", job_id);
             event.step = Some("branch_found".to_string());
             event.app_id = Some(config.app_id.clone());
-            event.last_updated = Some("Source: Hubcap".to_string());
+            event.last_updated = Some(format!("Source: {}", source_label));
             emit_progress(app, &event);
         } else {
             if depot_sources_list.is_empty() {
@@ -422,7 +432,16 @@ async fn run_download_pipeline(
         event.manifest_id = Some(depot.manifest_id.clone());
         emit_progress(app, &event);
 
-        let manifest_result = if is_hubcap {
+        let manifest_result = if is_ryuu {
+            ryuu_api::copy_cached_manifest(
+                app_data_dir,
+                &config.app_id,
+                &depot.depot_id,
+                &depot.manifest_id,
+                &work_dir,
+            )
+            .await
+        } else if is_hubcap {
             hubcap_api::copy_cached_manifest(
                 app_data_dir,
                 &config.app_id,
@@ -601,7 +620,7 @@ async fn run_download_pipeline(
         })
         .collect();
 
-    if !is_hubcap && depot_infos.iter().any(|d| d.depot_key.is_none()) {
+    if !is_cached_manifest_source && depot_infos.iter().any(|d| d.depot_key.is_none()) {
         let mut event = ProgressEvent::new("status", job_id);
         event.step = Some("downloading_keyvdf".to_string());
         emit_progress(app, &event);

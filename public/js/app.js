@@ -159,6 +159,7 @@ const els = {
   speedLimitInput: $('#speed-limit-input'),
   proxyInput: $('#proxy-input'),
   hubcapApiKeyInput: $('#hubcap-apikey-input'),
+  ryuuApiKeyInput: $('#ryuu-apikey-input'),
   notificationSoundToggle: $('#notification-sound-toggle'),
   nativeDownloaderToggle: $('#native-downloader-toggle'),
   cancelKeepFilesToggle: $('#cancel-keep-files-toggle'),
@@ -2058,6 +2059,7 @@ async function openSettings() {
     els.speedLimitInput.value = settings.download_speed_limit || '';
     els.proxyInput.value = settings.proxy || '';
     if (els.hubcapApiKeyInput) els.hubcapApiKeyInput.value = settings.hubcap_api_key || '';
+    if (els.ryuuApiKeyInput) els.ryuuApiKeyInput.value = settings.ryuu_api_key || '';
     if (els.nativeDownloaderToggle) els.nativeDownloaderToggle.checked = !!settings.use_native_downloader;
     if (els.cancelKeepFilesToggle) els.cancelKeepFilesToggle.checked = !!settings.cancel_keep_files;
     els.notificationSoundToggle.checked = settings.notification_sound !== false;
@@ -2199,6 +2201,9 @@ async function saveSettings() {
     currentSettings.proxy = els.proxyInput.value.trim();
     if (els.hubcapApiKeyInput) {
       currentSettings.hubcap_api_key = els.hubcapApiKeyInput.value.trim();
+    }
+    if (els.ryuuApiKeyInput) {
+      currentSettings.ryuu_api_key = els.ryuuApiKeyInput.value.trim();
     }
     if (els.nativeDownloaderToggle) {
       currentSettings.use_native_downloader = els.nativeDownloaderToggle.checked;
