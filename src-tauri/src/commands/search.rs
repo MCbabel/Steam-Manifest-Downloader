@@ -22,6 +22,12 @@ async fn load_hubcap_key(app: &AppHandle) -> String {
         .hubcap_api_key
 }
 
+async fn load_ryuu_key(app: &AppHandle) -> String {
+    settings_service::load_settings(&app_data_dir(app))
+        .await
+        .ryuu_api_key
+}
+
 #[command]
 pub async fn search_repos(
     app: AppHandle,
@@ -29,12 +35,14 @@ pub async fn search_repos(
     app_id: String,
 ) -> Result<serde_json::Value, String> {
     let sources = load_sources(&app).await;
+    let ryuu_key = load_ryuu_key(&app).await;
     let hubcap_key = load_hubcap_key(&app).await;
     let dir = app_data_dir(&app);
     let result = multi_repo_search::search_repos(
         &state.http_client,
         &sources,
         &app_id,
+        &ryuu_key,
         &hubcap_key,
         &dir,
     )
@@ -53,6 +61,7 @@ pub async fn get_repo_manifests(
 ) -> Result<serde_json::Value, String> {
     let effective_sha = sha.unwrap_or_default();
     let sources = load_sources(&app).await;
+    let ryuu_key = load_ryuu_key(&app).await;
     let hubcap_key = load_hubcap_key(&app).await;
     let dir = app_data_dir(&app);
 
@@ -62,6 +71,7 @@ pub async fn get_repo_manifests(
         &app_id,
         &repo,
         &effective_sha,
+        &ryuu_key,
         &hubcap_key,
         &dir,
     )

@@ -5,8 +5,10 @@ use std::path::Path;
 
 use crate::services::depot_sources;
 use crate::services::hubcap_api;
+use crate::services::ryuu_api;
 
 pub const HUBCAP_REPO_NAME: &str = "Hubcap (hubcapmanifest.com)";
+pub const RYUU_REPO_NAME: &str = "Ryuu (generator.ryuu.lol)";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RepoResult {
@@ -46,10 +48,32 @@ pub async fn search_repos(
     client: &Client,
     sources: &[String],
     app_id: &str,
+    ryuu_api_key: &str,
     hubcap_api_key: &str,
     app_data_dir: &Path,
 ) -> Result<SearchResult, String> {
     let mut found = Vec::new();
+
+    if !ryuu_api_key.is_empty() {
+        match ryuu_api::fetch_app_data(client, ryuu_api_key, app_data_dir, app_id).await {
+            Ok(_) => {
+                found.push(RepoResult {
+                    repo: RYUU_REPO_NAME.to_string(),
+                    date: None,
+                    sha: None,
+                    source_type: "ryuu".to_string(),
+                    source: Some("Ryuu".to_string()),
+                });
+                return Ok(SearchResult { repos: found });
+            }
+            Err(e) => {
+                eprintln!(
+                    "[Search] Ryuu lookup failed, falling back to Hubcap/depot sources: {}",
+                    e
+                );
+            }
+        }
+    }
 
     if !hubcap_api_key.is_empty() {
         match hubcap_api::fetch_app_data(client, hubcap_api_key, app_data_dir, app_id).await {
@@ -98,10 +122,13 @@ pub async fn get_repo_manifests(
     app_id: &str,
     repo: &str,
     _sha: &str,
+    ryuu_api_key: &str,
     hubcap_api_key: &str,
     app_data_dir: &Path,
 ) -> Result<RepoManifests, String> {
-    let app_data = if repo == HUBCAP_REPO_NAME {
+    let app_data = if repo == RYUU_REPO_NAME {
+        ryuu_api::fetch_app_data(client, ryuu_api_key, app_data_dir, app_id).await?
+    } else if repo == HUBCAP_REPO_NAME {
         hubcap_api::fetch_app_data(client, hubcap_api_key, app_data_dir, app_id).await?
     } else {
         depot_sources::get_app_data(client, sources, app_id).await?

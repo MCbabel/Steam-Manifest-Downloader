@@ -4,6 +4,7 @@ pub mod vdf_parser;
 pub mod multi_repo_search;
 pub mod manifest_hub_api;
 pub mod hubcap_api;
+pub mod ryuu_api;
 pub mod depot_sources;
 pub mod depot_keys_generator;
 pub mod depot_runner;
