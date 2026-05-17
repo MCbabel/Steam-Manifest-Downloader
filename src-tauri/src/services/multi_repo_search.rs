@@ -64,13 +64,9 @@ pub async fn search_repos(
                     source_type: "ryuu".to_string(),
                     source: Some("Ryuu".to_string()),
                 });
-                return Ok(SearchResult { repos: found });
             }
             Err(e) => {
-                eprintln!(
-                    "[Search] Ryuu lookup failed, falling back to Hubcap/depot sources: {}",
-                    e
-                );
+                eprintln!("[Search] Ryuu lookup failed: {}", e);
             }
         }
     }
@@ -87,10 +83,7 @@ pub async fn search_repos(
                 });
             }
             Err(e) => {
-                eprintln!(
-                    "[Search] Hubcap lookup failed: {}",
-                    e
-                );
+                eprintln!("[Search] Hubcap lookup failed: {}", e);
             }
         }
     }
