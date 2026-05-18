@@ -20,7 +20,7 @@ use crate::services::steam_session::{
 };
 
 const CHUNK_CONCURRENCY: usize = 32;
-const CHUNK_RETRY_COUNT: usize = 3;
+const CHUNK_RETRY_COUNT: usize = 8;
 
 #[derive(Clone, Debug)]
 pub struct NativeDownloadProgress {
@@ -334,6 +334,10 @@ async fn process_chunk(
 
     let mut last_err: Option<String> = None;
     for attempt in 0..CHUNK_RETRY_COUNT {
+        if attempt > 0 {
+            let delay_ms = chunk_retry_backoff_ms(attempt);
+            tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
+        }
         let server = pick_server(servers, attempt);
         let token = get_or_fetch_token(
             &token_cache,
@@ -363,6 +367,9 @@ async fn process_chunk(
                 continue;
             }
             Err(e) => {
+                if is_hard_chunk_error(&e) {
+                    return Err(e);
+                }
                 last_err = Some(e);
                 continue;
             }
@@ -540,6 +547,19 @@ async fn fetch_manifest_with_fallback(
 
 fn pick_server<'a>(servers: &'a [CdnServer], attempt: usize) -> &'a CdnServer {
     &servers[attempt % servers.len()]
+}
+
+fn chunk_retry_backoff_ms(attempt: usize) -> u64 {
+    let base = 250u64 << attempt.min(7);
+    base.min(15_000)
+}
+
+fn is_hard_chunk_error(err: &str) -> bool {
+    err.contains(" 400 ")
+        || err.contains(" 401 ")
+        || err.contains(" 403 ")
+        || err.contains(" 404 ")
+        || err.contains(" 410 ")
 }
 
 fn sanitise_relative_path(p: &str) -> String {
