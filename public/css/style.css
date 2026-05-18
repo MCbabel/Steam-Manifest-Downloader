@@ -2278,6 +2278,86 @@ button:disabled,
   color: var(--error);
 }
 
+.modal__notice {
+  position: relative;
+  margin: 0.25rem 0 1.5rem;
+  padding: 0.9rem 1rem 0.9rem 2.6rem;
+  border: 1px solid color-mix(in srgb, var(--error) 55%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--error) 9%, transparent);
+  text-align: left;
+}
+
+.modal__notice::before {
+  content: "";
+  position: absolute;
+  left: 0.85rem;
+  top: 0.95rem;
+  width: 18px;
+  height: 18px;
+  background-color: var(--error);
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/><line x1='12' y1='9' x2='12' y2='13'/><line x1='12' y1='17' x2='12.01' y2='17'/></svg>") no-repeat center / contain;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z'/><line x1='12' y1='9' x2='12' y2='13'/><line x1='12' y1='17' x2='12.01' y2='17'/></svg>") no-repeat center / contain;
+}
+
+.modal__notice .modal__text {
+  margin: 0 0 0.85rem;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.modal__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  user-select: none;
+  line-height: 1.35;
+}
+
+.modal__check input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1.5px solid color-mix(in srgb, var(--error) 70%, transparent);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.modal__check input[type="checkbox"]:hover {
+  border-color: var(--error);
+}
+
+.modal__check input[type="checkbox"]:checked {
+  background: var(--error);
+  border-color: var(--error);
+}
+
+.modal__check input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.modal__check input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--error);
+  outline-offset: 2px;
+}
+
 .modal__actions {
   display: flex;
   gap: 0.75rem;

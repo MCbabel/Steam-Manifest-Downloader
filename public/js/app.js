@@ -2931,6 +2931,12 @@ async function loadHistory() {
   els.historyList.innerHTML = '<div class="history-loading"><div class="spinner"></div><span>Loading history...</span></div>';
 
   try {
+    try {
+      const s = await invoke('get_settings');
+      state.useNativeDownloader = s.use_native_downloader !== false;
+    } catch (_) {
+      state.useNativeDownloader = true;
+    }
     const entries = await invoke('get_history');
     renderHistory(entries);
   } catch (e) {
@@ -2940,6 +2946,7 @@ async function loadHistory() {
 }
 
 function renderHistory(entries) {
+  state.cachedHistory = entries || [];
   if (!entries || entries.length === 0) {
     els.historyList.innerHTML = '<div class="history-empty">No downloads yet. Your download history will appear here.</div>';
     els.btnHistoryClear.style.display = 'none';
@@ -2953,6 +2960,7 @@ function renderHistory(entries) {
   els.historyList.innerHTML = entries.map(entry => {
     const date = entry.completed_at ? formatHistoryDate(entry.completed_at) : formatHistoryDate(entry.started_at);
     const isResumable = entry.status === 'cancelled_resumable' && !!entry.resume_payload;
+    const canResumeNow = isResumable && state.useNativeDownloader !== false;
     const badgeClass = entry.status === 'complete' ? 'history-entry__badge--complete'
       : entry.status === 'partial' ? 'history-entry__badge--partial'
       : isResumable ? 'history-entry__badge--resumable'
@@ -2983,7 +2991,7 @@ function renderHistory(entries) {
           </div>
         </div>
         <div class="history-entry__actions">
-          ${isResumable
+          ${canResumeNow
             ? `<button class="btn btn--small btn--primary history-action-resume" data-entry-id="${escapeHtml(entry.id)}" title="${escapeHtml(window.i18n.t('history.resumeTooltip'))}" aria-label="${escapeHtml(window.i18n.t('history.resumeTooltip'))}">${ICONS.play}</button>`
             : ''}
           <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" data-depot-ids="${escapeHtml((entry.depot_ids || []).join(','))}" title="Re-download" aria-label="Re-download">${ICONS.refresh}</button>
@@ -3080,7 +3088,9 @@ function renderHistory(entries) {
   els.historyList.querySelectorAll('.history-action-remove').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      showHistoryRemoveConfirm(btn.dataset.entryId);
+      const entry = entryById.get(btn.dataset.entryId);
+      const resumable = !!(entry && entry.status === 'cancelled_resumable' && entry.resume_payload);
+      showHistoryRemoveConfirm(btn.dataset.entryId, resumable);
     });
   });
 
@@ -3111,39 +3121,81 @@ function formatHistoryDate(dateStr) {
   }
 }
 
-async function clearHistory() {
+async function clearHistory(deleteResumableFiles = false) {
   try {
-    await invoke('clear_history');
+    await invoke('clear_history', { deleteResumableFiles });
     await loadHistory();
   } catch (e) {
     console.error('Failed to clear history:', e);
+    alert(String(e));
+    await loadHistory();
   }
 }
 
 function showHistoryClearConfirm() {
-  if (els.historyClearModal) els.historyClearModal.classList.remove('hidden');
+  if (!els.historyClearModal) return;
+  const warningEl = document.getElementById('history-clear-resumable-warning');
+  const warningTextEl = document.getElementById('history-clear-resumable-text');
+  const checkbox = document.getElementById('history-clear-delete-files');
+  const bodyEl = els.historyClearModal.querySelector('.modal__text[data-i18n-html="modals.historyClear.body"]');
+  const resumableCount = (state.cachedHistory || []).filter(
+    e => e.status === 'cancelled_resumable' && e.resume_payload
+  ).length;
+  if (warningEl && warningTextEl && checkbox) {
+    if (resumableCount > 0) {
+      warningEl.classList.remove('hidden');
+      warningTextEl.innerHTML = window.i18n.t('modals.historyClear.resumableWarning', { count: resumableCount });
+      checkbox.checked = false;
+      if (bodyEl) bodyEl.innerHTML = window.i18n.t('modals.historyClear.bodyShort');
+    } else {
+      warningEl.classList.add('hidden');
+      checkbox.checked = false;
+      if (bodyEl) bodyEl.innerHTML = window.i18n.t('modals.historyClear.body');
+    }
+  }
+  els.historyClearModal.classList.remove('hidden');
 }
 
 async function confirmHistoryClear() {
+  const checkbox = document.getElementById('history-clear-delete-files');
+  const deleteFiles = !!(checkbox && checkbox.checked);
   if (els.historyClearModal) els.historyClearModal.classList.add('hidden');
-  await clearHistory();
+  await clearHistory(deleteFiles);
 }
 
-function showHistoryRemoveConfirm(entryId) {
+function showHistoryRemoveConfirm(entryId, resumable = false) {
   state.pendingHistoryRemoveId = entryId;
-  if (els.historyRemoveModal) els.historyRemoveModal.classList.remove('hidden');
+  state.pendingHistoryRemoveResumable = !!resumable;
+  if (!els.historyRemoveModal) return;
+  const titleEl = els.historyRemoveModal.querySelector('#history-remove-modal-title');
+  const bodyEl = els.historyRemoveModal.querySelector('.modal__text');
+  const yesBtn = els.historyRemoveModal.querySelector('#btn-history-remove-yes');
+  if (resumable) {
+    if (titleEl) titleEl.innerHTML = window.i18n.t('modals.historyRemove.titleResumable');
+    if (bodyEl) bodyEl.innerHTML = window.i18n.t('modals.historyRemove.bodyResumable');
+    if (yesBtn) yesBtn.textContent = window.i18n.t('modals.historyRemove.yesResumable');
+  } else {
+    if (titleEl) titleEl.innerHTML = window.i18n.t('modals.historyRemove.title');
+    if (bodyEl) bodyEl.innerHTML = window.i18n.t('modals.historyRemove.body');
+    if (yesBtn) yesBtn.textContent = window.i18n.t('modals.historyRemove.yes');
+  }
+  els.historyRemoveModal.classList.remove('hidden');
 }
 
 async function confirmHistoryRemove() {
   const id = state.pendingHistoryRemoveId;
+  const deleteFiles = !!state.pendingHistoryRemoveResumable;
   state.pendingHistoryRemoveId = null;
+  state.pendingHistoryRemoveResumable = false;
   if (els.historyRemoveModal) els.historyRemoveModal.classList.add('hidden');
   if (!id) return;
   try {
-    await invoke('remove_history_entry', { entryId: id });
+    await invoke('remove_history_entry', { entryId: id, deleteFiles });
     await loadHistory();
   } catch (err) {
     console.error('Failed to remove history entry:', err);
+    alert(String(err));
+    await loadHistory();
   }
 }
 

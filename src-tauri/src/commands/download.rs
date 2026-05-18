@@ -23,7 +23,6 @@ use crate::services::steam_downloader::{
 use std::sync::Arc;
 use tauri::Emitter;
 
-// Keep finished jobs in the map briefly so the UI can still read final status.
 const JOB_RETENTION: std::time::Duration = std::time::Duration::from_secs(30 * 60);
 
 #[derive(Debug, Deserialize, serde::Serialize)]
@@ -157,6 +156,7 @@ pub async fn start_download(
                 game_name: game_name.clone(),
                 header_image: header_image.clone(),
                 work_dir: Some(download_dir.to_string_lossy().to_string()),
+                history_written: false,
                 #[cfg(target_os = "windows")]
                 job_object: None,
             },
@@ -201,16 +201,16 @@ pub async fn start_download(
         )
         .await;
 
-        let is_cancelled = {
+        let (is_cancelled, history_already_written) = {
             let jobs = active_jobs.lock().await;
             jobs.get(&job_id_clone)
-                .map(|j| j.status == "cancelled")
-                .unwrap_or(false)
+                .map(|j| (j.status == "cancelled", j.history_written))
+                .unwrap_or((false, false))
         };
 
         match result {
             Ok(_) => {
-                if is_cancelled {
+                if is_cancelled && !history_already_written {
                     let entry = history::HistoryEntry {
                         id: Uuid::new_v4().to_string(),
                         app_id: config.app_id.clone(),
@@ -238,23 +238,25 @@ pub async fn start_download(
                     emit_progress(&app_clone, &event);
                 }
 
-                let entry = history::HistoryEntry {
-                    id: Uuid::new_v4().to_string(),
-                    app_id: config.app_id.clone(),
-                    game_name: game_name.clone(),
-                    header_image: header_image.clone(),
-                    depot_count: config.depots.len(),
-                    depots_downloaded: 0,
-                    status: if is_cancelled { "cancelled" } else { "failed" }.to_string(),
-                    download_dir: download_dir_for_history.clone(),
-                    started_at: started_at.to_rfc3339(),
-                    completed_at: Some(chrono::Utc::now().to_rfc3339()),
-                    source_repo: None,
-                    depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
-                    resume_payload: None,
-                };
-                if let Err(err) = history::add_entry(&app_data_dir, entry).await {
-                    eprintln!("[Download] Failed to record failed job in history: {}", err);
+                if !history_already_written {
+                    let entry = history::HistoryEntry {
+                        id: Uuid::new_v4().to_string(),
+                        app_id: config.app_id.clone(),
+                        game_name: game_name.clone(),
+                        header_image: header_image.clone(),
+                        depot_count: config.depots.len(),
+                        depots_downloaded: 0,
+                        status: if is_cancelled { "cancelled" } else { "failed" }.to_string(),
+                        download_dir: download_dir_for_history.clone(),
+                        started_at: started_at.to_rfc3339(),
+                        completed_at: Some(chrono::Utc::now().to_rfc3339()),
+                        source_repo: None,
+                        depot_ids: config.depots.iter().map(|d| d.depot_id.clone()).collect(),
+                        resume_payload: None,
+                    };
+                    if let Err(err) = history::add_entry(&app_data_dir, entry).await {
+                        eprintln!("[Download] Failed to record failed job in history: {}", err);
+                    }
                 }
             }
         }
@@ -799,9 +801,22 @@ pub async fn cancel_download(
     state: tauri::State<'_, AppState>,
     job_id: String,
 ) -> Result<(), String> {
-    let (depot_dirs, cancel_flag, snapshot, started_at, game_name, header_image, work_dir_str) = {
-        let jobs = state.active_jobs.lock().await;
-        let job = jobs.get(&job_id).ok_or_else(|| "Job not found".to_string())?;
+    let (
+        depot_dirs,
+        cancel_flag,
+        snapshot,
+        started_at,
+        game_name,
+        header_image,
+        work_dir_str,
+        claim_ok,
+    ) = {
+        let mut jobs = state.active_jobs.lock().await;
+        let job = jobs.get_mut(&job_id).ok_or_else(|| "Job not found".to_string())?;
+        let claim_ok = job.status == "running" && !job.history_written;
+        if claim_ok {
+            job.history_written = true;
+        }
         (
             job.depot_dirs.clone(),
             job.cancel_flag.clone(),
@@ -810,8 +825,13 @@ pub async fn cancel_download(
             job.game_name.clone(),
             job.header_image.clone(),
             job.work_dir.clone(),
+            claim_ok,
         )
     };
+
+    if !claim_ok {
+        return Ok(());
+    }
 
     cancel_flag.store(true, std::sync::atomic::Ordering::SeqCst);
     depot_runner::kill_job(&state, &job_id).await;
@@ -832,43 +852,47 @@ pub async fn cancel_download(
     });
     emit_progress(&app, &event);
 
-    if keep_files {
-        if let Some(payload) = snapshot {
-            let app_id_str = payload
-                .get("mainAppId")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .unwrap_or_default();
-            let depot_ids: Vec<String> = payload
-                .get("selectedDepots")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|d| {
-                            d.get("depotId").and_then(|v| v.as_str()).map(String::from)
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
-            let entry = crate::services::history::HistoryEntry {
-                id: uuid::Uuid::new_v4().to_string(),
-                app_id: app_id_str,
-                game_name,
-                header_image,
-                depot_count: depot_ids.len(),
-                depots_downloaded: 0,
-                status: "cancelled_resumable".to_string(),
-                download_dir: work_dir_str.clone().unwrap_or_default(),
-                started_at: started_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
-                completed_at: Some(chrono::Utc::now().to_rfc3339()),
-                source_repo: None,
-                depot_ids,
-                resume_payload: Some(payload),
-            };
-            if let Err(err) = crate::services::history::add_entry(&app_data_dir, entry).await {
-                eprintln!("[Cancel] Failed to record resumable history entry: {}", err);
-            }
+    let snapshot_app_id = snapshot
+        .as_ref()
+        .and_then(|p| p.get("mainAppId"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+        .unwrap_or_default();
+    let snapshot_depot_ids: Vec<String> = snapshot
+        .as_ref()
+        .and_then(|p| p.get("selectedDepots"))
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|d| d.get("depotId").and_then(|v| v.as_str()).map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let entry = crate::services::history::HistoryEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        app_id: snapshot_app_id,
+        game_name,
+        header_image,
+        depot_count: snapshot_depot_ids.len(),
+        depots_downloaded: 0,
+        status: if keep_files { "cancelled_resumable" } else { "cancelled" }.to_string(),
+        download_dir: work_dir_str.clone().unwrap_or_default(),
+        started_at: started_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+        completed_at: Some(chrono::Utc::now().to_rfc3339()),
+        source_repo: None,
+        depot_ids: snapshot_depot_ids,
+        resume_payload: if keep_files { snapshot } else { None },
+    };
+    if let Err(err) = crate::services::history::add_entry(&app_data_dir, entry).await {
+        eprintln!("[Cancel] Failed to record history entry: {}", err);
+        let mut jobs = state.active_jobs.lock().await;
+        if let Some(job) = jobs.get_mut(&job_id) {
+            job.history_written = false;
         }
+    }
+
+    if keep_files {
         return Ok(());
     }
 
@@ -886,6 +910,13 @@ pub async fn cancel_download(
             tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
             for dir in depot_dirs_final {
                 let dir_path = std::path::PathBuf::from(&dir);
+                if !is_safe_depot_cleanup_path(&dir_path) {
+                    eprintln!(
+                        "[Cancel] Refusing to delete unsafe path: {:?}",
+                        dir_path
+                    );
+                    continue;
+                }
                 if !dir_path.exists() {
                     continue;
                 }
@@ -1360,6 +1391,26 @@ async fn run_native_pipeline(
     }
 
     Ok(results)
+}
+
+fn is_safe_depot_cleanup_path(path: &Path) -> bool {
+    if !path.is_absolute() {
+        return false;
+    }
+    let s = path.to_string_lossy();
+    if s.trim().is_empty() || s.len() < 6 {
+        return false;
+    }
+    if path.components().count() < 4 {
+        return false;
+    }
+    let has_depot_segment = path.components().any(|c| {
+        c.as_os_str()
+            .to_str()
+            .map(|seg| seg == "depots" || seg == ".DepotDownloader")
+            .unwrap_or(false)
+    });
+    has_depot_segment
 }
 
 fn sanitize_folder_segment(input: &str) -> String {
