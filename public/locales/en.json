@@ -173,13 +173,19 @@
       "title": "Remove entry?",
       "body": "This removes the entry from your history. <strong>Downloaded files stay on disk.</strong>",
       "yes": "Remove",
-      "no": "Keep"
+      "no": "Keep",
+      "titleResumable": "Remove entry and delete files?",
+      "bodyResumable": "This download is resumable. Removing the entry will <strong>also delete the partially downloaded files on disk</strong> and you won't be able to resume it.",
+      "yesResumable": "Remove entry & delete files"
     },
     "historyClear": {
       "title": "Clear all history?",
       "body": "This removes <strong>all entries</strong> from your history. Downloaded files stay on disk.",
+      "bodyShort": "This removes <strong>all entries</strong> from your history.",
       "yes": "Clear all",
-      "no": "Keep"
+      "no": "Keep",
+      "resumableWarning": "{count} resumable download still has partial files on disk. You will not be able to resume it after this.",
+      "deleteFilesLabel": "Also delete the partial files from disk"
     },
     "emuRevert": {
       "title": "Revert emulator patch?",

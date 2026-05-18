@@ -173,13 +173,19 @@
       "title": "Eintrag entfernen?",
       "body": "Entfernt den Eintrag aus deinem Verlauf. <strong>Heruntergeladene Dateien bleiben auf der Platte.</strong>",
       "yes": "Entfernen",
-      "no": "Behalten"
+      "no": "Behalten",
+      "titleResumable": "Eintrag und Dateien löschen?",
+      "bodyResumable": "Dieser Download ist fortsetzbar. Wenn du den Eintrag entfernst, werden <strong>auch die teilweise heruntergeladenen Dateien auf der Platte gelöscht</strong> und du kannst den Download nicht mehr fortsetzen.",
+      "yesResumable": "Eintrag und Dateien löschen"
     },
     "historyClear": {
       "title": "Gesamten Verlauf löschen?",
       "body": "Entfernt <strong>alle Einträge</strong> aus dem Verlauf. Heruntergeladene Dateien bleiben auf der Platte.",
+      "bodyShort": "Entfernt <strong>alle Einträge</strong> aus dem Verlauf.",
       "yes": "Alles löschen",
-      "no": "Behalten"
+      "no": "Behalten",
+      "resumableWarning": "{count} fortsetzbarer Download hat noch teilweise heruntergeladene Dateien auf der Platte. Du kannst diesen Download danach nicht mehr fortsetzen.",
+      "deleteFilesLabel": "Auch die teilweise heruntergeladenen Dateien von der Platte löschen"
     },
     "emuRevert": {
       "title": "Emulator-Patch zurücksetzen?",
