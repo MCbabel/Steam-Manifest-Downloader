@@ -2008,6 +2008,7 @@ function resetApp() {
   state.searchKeyVdfKeys = null;
   state.emulatorAvailable = false;
   state.emulatorScan = [];
+  state.emuSelectedFiles = new Set();
   state.emuEditTargets = [];
   state.emuApplyComplete = false;
   state.bypassInitialState = false;
@@ -3415,9 +3416,12 @@ async function performSteamLibraryAdd() {
       launchOptions,
     });
     const gridCount = (result.grid_files || []).length;
-    const successMsg = window.i18n.t('steamLibrary.success', { name: appName })
-      + '\n\n' + window.i18n.t('steamLibrary.gridArtCount', { count: gridCount })
-      + '\n' + window.i18n.t('steamLibrary.protonNote');
+    const isWindowsExe = exePath.toLowerCase().endsWith('.exe');
+    let successMsg = window.i18n.t('steamLibrary.success', { name: appName })
+      + '\n\n' + window.i18n.t('steamLibrary.gridArtCount', { count: gridCount });
+    if (isWindowsExe) {
+      successMsg += '\n' + window.i18n.t('steamLibrary.protonNote');
+    }
     setSteamLibraryResult('success', successMsg);
     return true;
   } catch (e) {
@@ -3464,10 +3468,12 @@ async function checkEmulatorSupport() {
   try {
     const scanned = await invoke('emu_scan_game_dir', { gameDir: state.downloadDir });
     state.emulatorScan = Array.isArray(scanned) ? scanned : [];
+    state.emuSelectedFiles = new Set();
     state.emulatorAvailable = state.emulatorScan.length > 0;
   } catch (e) {
     console.error('emu_scan_game_dir failed:', e);
     state.emulatorScan = [];
+    state.emuSelectedFiles = new Set();
     state.emulatorAvailable = false;
   }
   updateNextButtonText();
@@ -3720,18 +3726,64 @@ async function removeDrm() {
   }
 }
 
+function extractDepotFolderFromPath(p) {
+  if (!p) return '';
+  const norm = p.replace(/\\/g, '/');
+  const marker = '/depots/';
+  const idx = norm.indexOf(marker);
+  if (idx < 0) return '';
+  const rest = norm.slice(idx + marker.length);
+  const slash = rest.indexOf('/');
+  return slash < 0 ? rest : rest.slice(0, slash);
+}
+
+function pickDefaultEmuDepot(files) {
+  const hostIsLinux = (navigator.userAgent || '').toLowerCase().includes('linux');
+  const groups = new Map();
+  for (const f of files) {
+    const key = extractDepotFolderFromPath(f.path) || '__root__';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(f);
+  }
+  let best = null;
+  let bestScore = -Infinity;
+  for (const [key, group] of groups.entries()) {
+    let score = 0;
+    const hasHostPlatform = group.some(f => (f.platform === 'linux') === hostIsLinux);
+    if (hasHostPlatform) score += 1000;
+    if (group.some(f => f.arch === 'x64')) score += 100;
+    score += group.length;
+    if (score > bestScore) {
+      bestScore = score;
+      best = key;
+    }
+  }
+  return best;
+}
+
 function renderEmuFileList(files) {
   if (!els.emuFileList) return;
   if (!files || files.length === 0) {
     els.emuFileList.innerHTML = '';
     if (els.emuFileEmpty) els.emuFileEmpty.classList.remove('hidden');
     if (els.btnEmuApply) els.btnEmuApply.disabled = true;
+    state.emuSelectedFiles = new Set();
     return;
   }
   if (els.emuFileEmpty) els.emuFileEmpty.classList.add('hidden');
-  if (els.btnEmuApply) els.btnEmuApply.disabled = false;
 
-  const rows = files.map((f) => {
+  const multipleDepots = new Set(files.map(f => extractDepotFolderFromPath(f.path)).filter(Boolean)).size > 1;
+  const defaultDepot = multipleDepots ? pickDefaultEmuDepot(files) : null;
+
+  if (!state.emuSelectedFiles || state.emuSelectedFiles.size === 0) {
+    state.emuSelectedFiles = new Set(
+      multipleDepots
+        ? files.filter(f => extractDepotFolderFromPath(f.path) === defaultDepot).map(f => f.path)
+        : files.map(f => f.path)
+    );
+  }
+
+  const rows = files.map((f, idx) => {
     const relPath = relativizeEmuPath(f.path);
     const isLinux = f.platform === 'linux';
     const platformLabel = isLinux
@@ -3741,16 +3793,43 @@ function renderEmuFileList(files) {
     const archLabel = f.arch === 'x64'
       ? window.i18n.t('emulator.archX64')
       : window.i18n.t('emulator.archX32');
+    const checked = state.emuSelectedFiles.has(f.path) ? 'checked' : '';
     return `
-      <div class="emu-file-item">
+      <label class="emu-file-item">
+        <input type="checkbox" class="emu-file-item__check" data-path="${escapeHtml(f.path)}" data-idx="${idx}" ${checked}>
         <span class="emu-file-item__path" title="${escapeHtml(f.path)}">${escapeHtml(relPath)}</span>
         <span class="emu-file-item__tags">
           <span class="emu-file-tag ${platformClass}">${escapeHtml(platformLabel)}</span>
           <span class="emu-file-tag">${escapeHtml(archLabel)}</span>
         </span>
-      </div>`;
+      </label>`;
   }).join('');
   els.emuFileList.innerHTML = rows;
+
+  els.emuFileList.querySelectorAll('.emu-file-item__check').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const p = cb.dataset.path;
+      if (cb.checked) state.emuSelectedFiles.add(p);
+      else state.emuSelectedFiles.delete(p);
+      updateEmuApplyEnabled();
+    });
+  });
+
+  updateEmuApplyEnabled();
+}
+
+function updateEmuApplyEnabled() {
+  if (!els.btnEmuApply) return;
+  const any = state.emuSelectedFiles && state.emuSelectedFiles.size > 0;
+  els.btnEmuApply.disabled = !any;
+}
+
+function getSelectedEmuTargets() {
+  if (!state.emulatorScan) return [];
+  if (!state.emuSelectedFiles || state.emuSelectedFiles.size === 0) {
+    return state.emulatorScan.slice();
+  }
+  return state.emulatorScan.filter(f => state.emuSelectedFiles.has(f.path));
 }
 
 function relativizeEmuPath(absPath) {
@@ -3792,7 +3871,7 @@ function selectedEmuVariant() {
 }
 
 async function applySteamApiBypass() {
-  const windowsTargets = (state.emulatorScan || []).filter(t => t.platform === 'windows');
+  const windowsTargets = getSelectedEmuTargets().filter(t => t.platform === 'windows');
   if (windowsTargets.length === 0) return '';
   try {
     const results = await invoke('steam_api_bypass_apply', { targets: windowsTargets });
@@ -3828,6 +3907,11 @@ async function applyEmuReplacement() {
     return;
   }
   if (!state.emulatorScan || state.emulatorScan.length === 0) return;
+  const selectedTargets = getSelectedEmuTargets();
+  if (selectedTargets.length === 0) {
+    setEmuApplyStatus('error', window.i18n.t('emulator.applyNoSelection') || 'No files selected');
+    return;
+  }
   const appId = currentAppIdForEmu();
   if (!appId) {
     setEmuApplyStatus('error', window.i18n.t('emulator.applyError', { message: 'missing app id' }));
@@ -3841,7 +3925,7 @@ async function applyEmuReplacement() {
     const gathered = gatherEmuSettings();
     const installedAppIds = collectInstalledAppIds(appId);
     const results = await invoke('emu_apply_replacement', {
-      targets: state.emulatorScan,
+      targets: selectedTargets,
       variant,
       appId,
       installedAppIds,

@@ -164,6 +164,7 @@ pub async fn emu_scan_for_dlc_merge(
         let info = pics_map.get(&depot_id);
         let path_str = d.to_string_lossy().to_string();
         let label = info.and_then(|m| m.name.clone());
+        let has_own_exe = depot_dir_has_executable(d);
 
         if let Some(meta) = info {
             let role_str = match meta.role {
@@ -181,16 +182,20 @@ pub async fn emu_scan_for_dlc_merge(
                 .map(|os| os.to_ascii_lowercase().contains(main_os))
                 .unwrap_or(false);
 
-            let should_merge = match meta.role {
-                crate::services::steam_pics::DepotRole::SharedContent => true,
-                crate::services::steam_pics::DepotRole::Dlc => meta
-                    .oslist
-                    .as_deref()
-                    .map(|os| same_platform(os, main_os))
-                    .unwrap_or(true),
-                crate::services::steam_pics::DepotRole::Language => true,
-                crate::services::steam_pics::DepotRole::Platform => same_platform_as_main,
-                crate::services::steam_pics::DepotRole::Other => true,
+            let should_merge = if has_own_exe {
+                false
+            } else {
+                match meta.role {
+                    crate::services::steam_pics::DepotRole::SharedContent => true,
+                    crate::services::steam_pics::DepotRole::Dlc => meta
+                        .oslist
+                        .as_deref()
+                        .map(|os| same_platform(os, main_os))
+                        .unwrap_or(true),
+                    crate::services::steam_pics::DepotRole::Language => true,
+                    crate::services::steam_pics::DepotRole::Platform => same_platform_as_main,
+                    crate::services::steam_pics::DepotRole::Other => true,
+                }
             };
 
             let cand = MergeCandidate {
@@ -204,6 +209,13 @@ pub async fn emu_scan_for_dlc_merge(
             } else {
                 skipped.push(cand);
             }
+        } else if has_own_exe {
+            skipped.push(MergeCandidate {
+                depot_id: depot_id.clone(),
+                path: path_str,
+                role: "standalone".to_string(),
+                label,
+            });
         } else {
             to_merge.push(MergeCandidate {
                 depot_id: depot_id.clone(),
@@ -228,6 +240,76 @@ pub async fn emu_scan_for_dlc_merge(
         skipped,
         dlc_depot_dirs,
     }))
+}
+
+fn depot_dir_has_executable(dir: &Path) -> bool {
+    depot_dir_has_executable_recursive(dir, 0)
+}
+
+fn depot_dir_has_executable_recursive(dir: &Path, depth: usize) -> bool {
+    if depth > 5 {
+        return false;
+    }
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return false,
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(ft) = entry.file_type() else { continue };
+        if ft.is_symlink() {
+            continue;
+        }
+        if ft.is_dir() {
+            if depot_dir_has_executable_recursive(&path, depth + 1) {
+                return true;
+            }
+            continue;
+        }
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            let lower = name.to_lowercase();
+            if lower.ends_with(".exe") {
+                return true;
+            }
+            if lower.ends_with(".dll")
+                || lower.ends_with(".so")
+                || lower.ends_with(".dylib")
+                || lower.ends_with(".pak")
+                || lower.ends_with(".dat")
+                || lower.ends_with(".txt")
+                || lower.ends_with(".json")
+                || lower.ends_with(".ini")
+                || lower.ends_with(".vdf")
+                || lower.ends_with(".manifest")
+                || lower.ends_with(".png")
+                || lower.ends_with(".jpg")
+                || lower.ends_with(".pdb")
+                || lower.ends_with(".lua")
+            {
+                continue;
+            }
+            if is_elf_executable_sync(&path) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn is_elf_executable_sync(path: &Path) -> bool {
+    use std::io::Read;
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return false;
+    };
+    let mut header = [0u8; 20];
+    if file.read_exact(&mut header).is_err() {
+        return false;
+    }
+    if &header[..4] != b"\x7fELF" {
+        return false;
+    }
+    let e_type = u16::from_le_bytes([header[16], header[17]]);
+    e_type == 2 || e_type == 3
 }
 
 fn extract_depot_id_from_folder(p: &Path) -> Option<String> {
@@ -258,10 +340,17 @@ pub async fn emu_merge_dlc_depots(
     if !main.is_dir() {
         return Err(format!("Main depot dir not a directory: {}", main_depot_dir));
     }
+    if !is_safe_depot_path(&main) {
+        return Err(format!("Refusing unsafe main depot path: {}", main_depot_dir));
+    }
     let mut moved: u64 = 0;
     for src in dlc_depot_dirs {
         let src_path = PathBuf::from(&src);
         if !src_path.is_dir() {
+            continue;
+        }
+        if !is_safe_depot_path(&src_path) {
+            eprintln!("[Merge] Refusing unsafe DLC depot path: {:?}", src_path);
             continue;
         }
         moved += merge_dir_into(&src_path, &main).await?;
@@ -272,6 +361,25 @@ pub async fn emu_merge_dlc_depots(
     Ok(moved)
 }
 
+fn is_safe_depot_path(path: &Path) -> bool {
+    if !path.is_absolute() {
+        return false;
+    }
+    let s = path.to_string_lossy();
+    if s.trim().is_empty() || s.len() < 6 {
+        return false;
+    }
+    if path.components().count() < 4 {
+        return false;
+    }
+    path.components().any(|c| {
+        c.as_os_str()
+            .to_str()
+            .map(|seg| seg == "depots")
+            .unwrap_or(false)
+    })
+}
+
 fn merge_dir_into<'a>(
     src: &'a Path,
     dst: &'a Path,
@@ -280,7 +388,7 @@ fn merge_dir_into<'a>(
         tokio::fs::create_dir_all(dst)
             .await
             .map_err(|e| format!("create dst {}: {}", dst.display(), e))?;
-        let mut moved: u64 = 0;
+        let mut files_moved: u64 = 0;
         let mut entries = tokio::fs::read_dir(src)
             .await
             .map_err(|e| format!("read {}: {}", src.display(), e))?;
@@ -293,13 +401,13 @@ fn merge_dir_into<'a>(
             let name = entry.file_name();
             let target = dst.join(&name);
             if path.is_dir() {
-                moved += merge_dir_into(&path, &target).await?;
+                files_moved += merge_dir_into(&path, &target).await?;
             } else {
                 if target.exists() {
                     continue;
                 }
                 if let Err(e) = tokio::fs::rename(&path, &target).await {
-                    let bytes = tokio::fs::copy(&path, &target).await.map_err(|copy_err| {
+                    tokio::fs::copy(&path, &target).await.map_err(|copy_err| {
                         format!(
                             "rename + copy failed ({} / {}): {} / {}",
                             path.display(),
@@ -308,14 +416,19 @@ fn merge_dir_into<'a>(
                             copy_err
                         )
                     })?;
-                    let _ = tokio::fs::remove_file(&path).await;
-                    moved += bytes;
-                } else {
-                    moved += 1;
+                    if let Err(rm_err) = tokio::fs::remove_file(&path).await {
+                        eprintln!(
+                            "[Merge] Copied {} -> {} but failed to remove source: {}",
+                            path.display(),
+                            target.display(),
+                            rm_err
+                        );
+                    }
                 }
+                files_moved += 1;
             }
         }
-        Ok(moved)
+        Ok(files_moved)
     })
 }
 

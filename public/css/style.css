@@ -1577,10 +1577,47 @@ button:disabled,
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   transition: border-color var(--transition);
+  cursor: pointer;
 }
 
 .emu-file-item:hover {
   border-color: var(--accent);
+}
+
+.emu-file-item__check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.emu-file-item__check:hover {
+  border-color: var(--accent);
+}
+
+.emu-file-item__check:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.emu-file-item__check:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .emu-file-item__path {
