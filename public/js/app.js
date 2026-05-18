@@ -12,6 +12,8 @@ const state = {
   headerImage: null,
   downloadDir: null,
   shortcutSupported: false,
+  shortcutsCreated: false,
+  downloadFailed: false,
   emulatorAvailable: false,
   emulatorScan: [],
   emulatorReleaseInfo: null,
@@ -127,6 +129,8 @@ const els = {
   terminalOutput: $('#terminal-output'),
   completionMessage: $('#completion-message'),
   btnCancel: $('#btn-cancel'),
+  btnPause: $('#btn-pause'),
+  nativeAlphaBanner: $('#native-alpha-banner'),
   mhApiKey: $('#mh-apikey'),
   downloadDirInput: $('#download-dir'),
   btnBrowseDir: $('#btn-browse-dir'),
@@ -156,6 +160,8 @@ const els = {
   proxyInput: $('#proxy-input'),
   hubcapApiKeyInput: $('#hubcap-apikey-input'),
   notificationSoundToggle: $('#notification-sound-toggle'),
+  nativeDownloaderToggle: $('#native-downloader-toggle'),
+  cancelKeepFilesToggle: $('#cancel-keep-files-toggle'),
   telemetryModal: $('#telemetry-modal'),
   btnTelemetryAccept: $('#btn-telemetry-accept'),
   btnTelemetryDecline: $('#btn-telemetry-decline'),
@@ -197,7 +203,7 @@ const els = {
   shortcutStartMenu: $('#shortcut-startmenu'),
   shortcutStatus: $('#shortcut-status'),
   btnCreateShortcuts: $('#btn-create-shortcuts'),
-  btnShortcutNew: $('#btn-shortcut-new'),
+  btnShortcutSkip: $('#btn-shortcut-skip'),
   btnShortcutStartOver: $('#btn-shortcut-start-over'),
   stepEmulator: $('#step-emulator'),
   step5Connector: $('#step5-connector'),
@@ -217,6 +223,10 @@ const els = {
   btnEmuDrmCopy: $('#btn-emu-drm-copy'),
   emuBypassSection: $('#emu-bypass-section'),
   emuBypassToggle: $('#emu-bypass-toggle'),
+  emuDlcMergeSection: $('#emu-dlc-merge-section'),
+  emuDlcMergeHint: $('#emu-dlc-merge-hint'),
+  emuDlcMergeStatus: $('#emu-dlc-merge-status'),
+  btnEmuMergeDlcs: $('#btn-emu-merge-dlcs'),
   emuHeader: $('.emu-header'),
   emuDescription: $('.emu-description'),
   emuVariantSection: $('#emu-variant-section'),
@@ -379,7 +389,7 @@ async function handleDepotManifestFile(depotId) {
     const statusEl = document.querySelector(`.depot-manifest-status[data-depot-id="${depotId}"]`);
     const btnEl = document.querySelector(`.depot-manifest-btn[data-depot-id="${depotId}"]`);
     if (statusEl) statusEl.innerHTML = `<span class="manifest-uploaded">${ICONS.check} ${escapeHtml(fileName)}</span>`;
-    if (btnEl) btnEl.innerHTML = `${ICONS.upload} Replace`;
+    if (btnEl) btnEl.classList.add('depot-manifest-action--active');
   } catch (error) {
     console.error('Failed to select manifest file:', error);
     alert('Failed to select manifest file: ' + error);
@@ -392,7 +402,51 @@ function removeDepotManifest(depotId) {
   const statusEl = document.querySelector(`.depot-manifest-status[data-depot-id="${depotId}"]`);
   const btnEl = document.querySelector(`.depot-manifest-btn[data-depot-id="${depotId}"]`);
   if (statusEl) statusEl.innerHTML = '';
-  if (btnEl) btnEl.innerHTML = `${ICONS.upload} Upload .manifest`;
+  if (btnEl) btnEl.classList.remove('depot-manifest-action--active');
+}
+
+async function fetchLatestManifestForDepot(depotId, btnEl) {
+  const appId = state.parsedData && state.parsedData.mainAppId ? String(state.parsedData.mainAppId) : null;
+  if (!appId) return;
+  const input = document.querySelector(`.custom-manifest-input[data-depot-id="${depotId}"]`);
+  const statusEl = document.querySelector(`.depot-manifest-status[data-depot-id="${depotId}"]`);
+  if (statusEl && statusEl._fetchClearTimer) {
+    clearTimeout(statusEl._fetchClearTimer);
+    statusEl._fetchClearTimer = null;
+  }
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.classList.add('depot-manifest-action--loading');
+  }
+  if (statusEl) statusEl.innerHTML = `<span class="manifest-uploading">${window.i18n.t('depots.fetchingLatest')}</span>`;
+  try {
+    const result = await invoke('fetch_latest_manifest_id', { appId, depotId: String(depotId) });
+    const manifestId = result.manifestId;
+    const sourceLabel = result.source === 'steam'
+      ? window.i18n.t('depots.fetchSourceSteam')
+      : window.i18n.t('depots.fetchSourceFallback');
+    if (input) input.value = manifestId;
+    if (statusEl) statusEl.innerHTML = `<span class="manifest-uploaded">${ICONS.check} ${escapeHtml(manifestId)}</span> <span class="manifest-source manifest-source--${escapeHtml(result.source)}">${escapeHtml(sourceLabel)}</span>`;
+  } catch (e) {
+    console.error('fetch_latest_manifest_id failed:', e);
+    if (statusEl) statusEl.innerHTML = `<span class="status-error">${escapeHtml(window.i18n.t('depots.fetchLatestError', { message: String(e) }))}</span>`;
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.classList.remove('depot-manifest-action--loading');
+    }
+    if (statusEl) {
+      statusEl._fetchClearTimer = setTimeout(() => {
+        const uploaded = state.depotManifests[depotId];
+        if (uploaded) {
+          statusEl.innerHTML = `<span class="manifest-uploaded">${ICONS.check} ${escapeHtml(uploaded.originalName)}</span>`;
+        } else {
+          statusEl.innerHTML = '';
+        }
+        statusEl._fetchClearTimer = null;
+      }, 5000);
+    }
+  }
 }
 
 async function handleFilePath(filePath) {
@@ -420,7 +474,8 @@ async function handleFilePath(filePath) {
         manifestId: d.manifest_id || 'N/A',
         depotKey: d.depot_key || null,
         sizeBytes: d.size_bytes || null
-      }))
+      })),
+      allAppIds: Array.isArray(raw.all_app_ids) ? raw.all_app_ids.map(String) : [],
     };
     state.mode = 'upload';
     els.uploadLoading.classList.add('hidden');
@@ -654,7 +709,7 @@ async function performSearch() {
     state.searchRepos = repos;
 
     if (repos.length === 0) {
-      showSearchError('No manifests found for this App ID in any configured depot source. Add or enable more sources in Settings.');
+      showSearchError(window.i18n.t('search.noResults'));
       return;
     }
 
@@ -710,15 +765,19 @@ function renderRepoList(repos) {
     card.className = 'repo-card';
     card.dataset.repoIndex = index;
 
-    const dateHtml = repo.date ? `<div class="repo-card__date">Updated: ${formatRepoDate(repo.date)}</div>` : '';
+    const displayName = repoDisplayName(repo);
+    const badgeText = repoBadgeText(repo);
+    const dateHtml = repo.date
+      ? `<div class="repo-card__date">${window.i18n.t('search.repoUpdated')}: ${formatRepoDate(repo.date)}</div>`
+      : '';
 
     card.innerHTML = `
       <div class="repo-card__radio"></div>
       <div class="repo-card__info">
-        <div class="repo-card__name">${escapeHtml(repo.name)}</div>
+        <div class="repo-card__name">${escapeHtml(displayName)}</div>
         ${dateHtml}
       </div>
-      <span class="repo-card__badge repo-card__badge--archive">${escapeHtml(repo.source || repo.type || 'unknown')}</span>
+      <span class="repo-card__badge repo-card__badge--archive">${escapeHtml(badgeText)}</span>
     `;
     card.addEventListener('click', () => selectRepo(index));
     els.repoList.appendChild(card);
@@ -732,6 +791,28 @@ function renderRepoList(repos) {
     autoRedownloadPending = false;
     selectRepo(0);
     proceedFromSearch();
+  }
+}
+
+function repoDisplayName(repo) {
+  switch (repo.type) {
+    case 'hubcap':
+      return window.i18n.t('search.repoNameHubcap');
+    case 'remote':
+      return window.i18n.t('search.repoNameRemote');
+    default:
+      return repo.name || repo.type || 'Unknown';
+  }
+}
+
+function repoBadgeText(repo) {
+  switch (repo.type) {
+    case 'hubcap':
+      return window.i18n.t('search.repoBadgeHubcap');
+    case 'remote':
+      return window.i18n.t('search.repoBadgeRemote');
+    default:
+      return repo.source || repo.type || 'Source';
   }
 }
 
@@ -956,24 +1037,35 @@ function showSelectionStep() {
     item.innerHTML = `
       <div class="depot-item__checkbox"></div>
       <div class="depot-item__info">
-        <div class="depot-item__depot-id">Depot ${safeDepotId}${safeSize ? `<span class="depot-item__size">${safeSize}</span>` : ''}</div>
-        <div class="depot-item__tags" data-depot-tags="${safeDepotId}"></div>
+        <div class="depot-item__header">
+          <span class="depot-item__depot-id">Depot ${safeDepotId}<span class="depot-item__name" data-depot-name="${safeDepotId}"></span>${safeSize ? `<span class="depot-item__size">${safeSize}</span>` : ''}</span>
+          <span class="depot-item__tags" data-depot-tags="${safeDepotId}"></span>
+        </div>
         <div class="depot-item__manifest-id">Manifest: ${safeManifestId}</div>
-        <div class="depot-item__custom-manifest">
-          <label>Custom:</label>
+        <div class="depot-item__manifest-row">
           <input type="text" data-depot-id="${safeDepotId}" class="custom-manifest-input"
             placeholder="Custom manifest ID (optional)"
             onclick="event.stopPropagation()">
-        </div>
-        <div class="depot-item__manifest-upload">
-          <button type="button" class="btn btn--small btn--outline depot-manifest-btn" data-depot-id="${safeDepotId}">
-            ${ICONS.upload} Upload .manifest
+          <button type="button" class="depot-manifest-action depot-manifest-fetch-btn" data-depot-id="${safeDepotId}"
+            data-i18n-attr="title=depots.fetchLatest,aria-label=depots.fetchLatest" title="Fetch latest manifest ID">
+            ${ICONS.refresh}
           </button>
-          <span class="depot-manifest-status" data-depot-id="${safeDepotId}"></span>
+          <button type="button" class="depot-manifest-action depot-manifest-btn" data-depot-id="${safeDepotId}"
+            data-i18n-attr="title=depots.uploadManifest,aria-label=depots.uploadManifest" title="Upload .manifest file">
+            ${ICONS.upload}
+          </button>
         </div>
+        <span class="depot-manifest-status" data-depot-id="${safeDepotId}"></span>
       </div>
     `;
 
+    const fetchBtn = item.querySelector('.depot-manifest-fetch-btn');
+    if (fetchBtn) {
+      fetchBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fetchLatestManifestForDepot(depot.depotId, fetchBtn);
+      });
+    }
     const manifestBtn = item.querySelector('.depot-manifest-btn');
     if (manifestBtn) {
       manifestBtn.addEventListener('click', (e) => {
@@ -983,9 +1075,8 @@ function showSelectionStep() {
     }
 
     item.addEventListener('click', (e) => {
-      // Don't toggle when clicking input or upload button
       if (e.target.tagName === 'INPUT') return;
-      if (e.target.tagName === 'BUTTON' || e.target.closest('.depot-manifest-btn')) return;
+      if (e.target.closest('button')) return;
       toggleDepot(depot.depotId, item);
     });
     els.depotList.appendChild(item);
@@ -1014,6 +1105,7 @@ function showSelectionStep() {
   goToStep(2);
 
   fetchDepotMetadataAsync(data.mainAppId);
+  fetchDepotNamesFromSteam(data.mainAppId);
 }
 
 async function fetchDepotMetadataAsync(appId) {
@@ -1024,6 +1116,113 @@ async function fetchDepotMetadataAsync(appId) {
   } catch (e) {
     console.warn('fetch_depot_metadata failed:', e);
   }
+}
+
+async function fetchDepotNamesFromSteam(appId) {
+  try {
+    const depots = await invoke('fetch_depot_metadata_steam', { appId: String(appId) });
+    if (!Array.isArray(depots)) return;
+    state.depotNames = state.depotNames || {};
+    state.depotPicsInfo = {};
+    depots.forEach((d) => {
+      if (!d || !d.depotId) return;
+      state.depotPicsInfo[String(d.depotId)] = d;
+      const label = d.name && d.name.trim() ? d.name.trim() : null;
+      if (label) state.depotNames[String(d.depotId)] = label;
+      const el = document.querySelector(`[data-depot-name="${CSS.escape(String(d.depotId))}"]`);
+      if (!el) return;
+      el.innerHTML = '';
+      if (label) {
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'depot-item__name-label';
+        nameSpan.textContent = ` — ${label}`;
+        el.appendChild(nameSpan);
+      }
+      const depotIdContainer = el.closest('.depot-item__depot-id');
+      if (depotIdContainer) {
+        depotIdContainer
+          .querySelectorAll('.depot-tag[data-role-badge]')
+          .forEach(n => n.remove());
+      }
+      const badge = depotRoleBadge(d);
+      if (badge && depotIdContainer) {
+        badge.setAttribute('data-role-badge', '1');
+        depotIdContainer.appendChild(document.createTextNode(' '));
+        depotIdContainer.appendChild(badge);
+      }
+    });
+    reorderDepotCards();
+  } catch (e) {
+    console.warn('fetch_depot_metadata_steam failed:', e);
+  }
+}
+
+function reorderDepotCards() {
+  const list = els.depotList;
+  if (!list) return;
+  const hostOs = navigator.platform.toLowerCase().includes('linux')
+    ? 'linux'
+    : navigator.platform.toLowerCase().includes('mac')
+      ? 'macos'
+      : 'windows';
+  const items = Array.from(list.querySelectorAll('.depot-item'));
+  items.sort((a, b) => depotSortKey(a, hostOs) - depotSortKey(b, hostOs)
+    || depotIdNumeric(a) - depotIdNumeric(b));
+  items.forEach(el => list.appendChild(el));
+}
+
+function depotSortKey(itemEl, hostOs) {
+  const depotId = itemEl.dataset.depotId;
+  const info = state.depotPicsInfo ? state.depotPicsInfo[String(depotId)] : null;
+  if (!info) return 100;
+  switch (info.role) {
+    case 'shared_content':
+      return 10;
+    case 'platform': {
+      const os = (info.oslist || '').toLowerCase();
+      if (os.includes(hostOs)) return 20;
+      if (os.includes('windows')) return 30;
+      if (os.includes('linux')) return 31;
+      if (os.includes('mac')) return 32;
+      return 33;
+    }
+    case 'language':
+      return 50;
+    case 'dlc':
+      return 60;
+    default:
+      return 80;
+  }
+}
+
+function depotIdNumeric(itemEl) {
+  const id = parseInt(itemEl.dataset.depotId, 10);
+  return isNaN(id) ? Number.MAX_SAFE_INTEGER : id;
+}
+
+function depotRoleBadge(d) {
+  const role = d.role;
+  const tag = document.createElement('span');
+  tag.className = 'depot-tag depot-tag--' + role;
+  switch (role) {
+    case 'dlc':
+      tag.textContent = window.i18n.t('depots.roleDlc');
+      break;
+    case 'language':
+      tag.textContent = d.language
+        ? window.i18n.t('depots.roleLanguageWithName', { name: capitalize(d.language) })
+        : window.i18n.t('depots.roleLanguage');
+      break;
+    case 'shared_content':
+      tag.textContent = window.i18n.t('depots.roleContent');
+      break;
+    case 'platform':
+      tag.textContent = window.i18n.t('depots.rolePlatform');
+      break;
+    default:
+      return null;
+  }
+  return tag;
 }
 
 function renderDepotTags(info) {
@@ -1109,21 +1308,36 @@ async function startDownload() {
 
   if (selectedDepots.length === 0) return;
 
+  try {
+    const s = await invoke('get_settings');
+    state.currentEngine = s.use_native_downloader !== false ? 'native' : 'ddm';
+  } catch (_) {
+    state.currentEngine = 'native';
+  }
+
+  const mhApiKey = els.mhApiKey.value.trim();
+  hideMhKeyRequiredHint();
+
   emitEvent('download_started', { depot_count: selectedDepots.length });
 
   requestNotificationPermission();
 
-  const mhApiKey = els.mhApiKey.value.trim();
-  if (mhApiKey) localStorage.setItem(MH_APIKEY_STORAGE_KEY, mhApiKey);
+  if (mhApiKey) {
+    localStorage.setItem(MH_APIKEY_STORAGE_KEY, mhApiKey);
+  } else {
+    localStorage.removeItem(MH_APIKEY_STORAGE_KEY);
+  }
   saveDownloadDir();
 
   const depotsWithCustomManifests = selectedDepots.map(depot => {
     const input = document.querySelector(`.custom-manifest-input[data-depot-id="${depot.depotId}"]`);
     const customManifestId = input ? input.value.trim() : '';
     const depotManifest = state.depotManifests[depot.depotId];
+    const displayName = state.depotNames ? state.depotNames[String(depot.depotId)] : null;
     const result = {
       ...depot,
-      customManifestId: customManifestId || null
+      customManifestId: customManifestId || null,
+      displayName: displayName || null,
     };
     if (depotManifest) {
       result.uploadedManifestPath = depotManifest.storedPath;
@@ -1179,10 +1393,22 @@ function initProgressUI(depots) {
   els.progressStatus.textContent = 'Initializing...';
   els.terminalOutput.innerHTML = '';
   els.completionMessage.classList.add('hidden');
+  state.downloadFailed = false;
   if (els.btnNextStep) els.btnNextStep.classList.add('hidden');
   els.btnCancel.classList.remove('hidden');
   els.btnCancel.disabled = false;
-  els.btnCancel.innerHTML = `${ICONS.x} Cancel Download`;
+  els.btnCancel.innerHTML = `${ICONS.x} <span data-i18n="progress.cancel">${escapeHtml(window.i18n.t('progress.cancel'))}</span>`;
+  state.paused = false;
+  state.lastSkippedShown = 0;
+  const isNative = state.currentEngine === 'native';
+  if (els.btnPause) {
+    els.btnPause.classList.toggle('hidden', !isNative);
+    els.btnPause.textContent = window.i18n.t('progress.pause');
+    els.btnPause.disabled = false;
+  }
+  if (els.nativeAlphaBanner) {
+    els.nativeAlphaBanner.classList.toggle('hidden', !isNative);
+  }
   els.diskSpaceInfo.classList.add('hidden');
   if (els.depotProgressFill) els.depotProgressFill.style.width = '0%';
   if (els.depotProgressText) els.depotProgressText.textContent = '0%';
@@ -1242,6 +1468,10 @@ function handleProgressMessage(msg) {
       updateDepotStatus(msg.depotId, 'done', 'Complete');
       updateOverallProgress(msg.current, msg.total);
       updateDepotDownloadProgress(100);
+      break;
+
+    case 'manifest_source':
+      handleManifestSource(msg);
       break;
 
     case 'complete':
@@ -1305,6 +1535,7 @@ function handleStatusUpdate(msg) {
 
     case 'running_downloader':
       state.speedTracker.samples = [];
+      state.speedTracker.byteSamples = [];
       state.speedTracker.lastTime = 0;
       state.speedTracker.lastPercent = 0;
       state.speedTracker.depotStartTime = Date.now();
@@ -1330,17 +1561,112 @@ function handleStatusUpdate(msg) {
   }
 }
 
+function handleManifestSource(msg) {
+  const labels = {
+    steam: { prefix: 'Steam CDN', cls: 'info' },
+    manifesthub_fallback: { prefix: 'ManifestHub fallback', cls: 'warn' },
+    manifesthub_unavailable: { prefix: 'No fallback', cls: 'stderr' },
+    cached: { prefix: 'Cached', cls: 'info' },
+  };
+  const meta = labels[msg.source] || { prefix: msg.source || 'Source', cls: 'info' };
+  const text = `[${meta.prefix}] depot ${msg.depotId}: ${msg.message}`;
+  appendTerminalLine(text, meta.cls);
+  if (msg.source === 'manifesthub_unavailable') {
+    state.suggestMhKey = true;
+  }
+}
+
 function handleOutput(msg) {
   const cls = msg.stream === 'stderr' ? 'stderr' : 'stdout';
   const text = msg.output || msg.line;
+  if (msg.completedBytes != null && msg.totalBytes != null && msg.totalBytes > 0) {
+    updateDepotDownloadProgressBytes(
+      msg.percent ?? (msg.completedBytes * 100 / msg.totalBytes),
+      msg.completedBytes,
+      msg.totalBytes,
+      msg.networkBytes
+    );
+    if (msg.skippedChunks != null && msg.skippedChunks > 0) {
+      const lastShown = state.lastSkippedShown || 0;
+      const milestone = Math.floor(msg.skippedChunks / 25);
+      if (milestone > lastShown) {
+        state.lastSkippedShown = milestone;
+        const mb = (msg.skippedBytes / (1024 * 1024)).toFixed(1);
+        appendTerminalLine(
+          `✓ ${window.i18n.t('progress.resumedChunks', { count: msg.skippedChunks, mb })}`,
+          'success'
+        );
+      }
+    }
+    return;
+  }
   if (text) {
     appendTerminalLine(text, cls);
-    // Parse depot download percentage from output (e.g. "01.83% depots\...")
     const percentMatch = text.match(/^\s*(\d{1,3}(?:\.\d{1,2})?)%/);
     if (percentMatch) {
       const percent = parseFloat(percentMatch[1]);
       updateDepotDownloadProgress(percent);
     }
+  }
+}
+
+function updateDepotDownloadProgressBytes(percent, completedBytes, totalBytes, networkBytes) {
+  if (els.depotProgressFill) {
+    els.depotProgressFill.style.width = `${Math.min(percent, 100)}%`;
+  }
+  if (els.depotProgressText) {
+    els.depotProgressText.textContent = `${percent.toFixed(1)}%`;
+  }
+  updateSpeedAndEtaBytes(completedBytes, totalBytes, networkBytes);
+}
+
+const SPEED_WINDOW_MS = 3000;
+const SPEED_MIN_WINDOW_MS = 1500;
+
+function updateSpeedAndEtaBytes(completedBytes, totalBytes, networkBytes) {
+  const now = Date.now();
+  const tracker = state.speedTracker;
+  tracker.lastUpdateTime = now;
+
+  if (!tracker.byteSamples) tracker.byteSamples = [];
+  const speedSource = networkBytes != null ? networkBytes : completedBytes;
+  tracker.byteSamples.push({
+    bytes: speedSource,
+    decompressed: completedBytes,
+    time: now,
+  });
+  const cutoff = now - SPEED_WINDOW_MS;
+  while (tracker.byteSamples.length > 2 && tracker.byteSamples[0].time < cutoff) {
+    tracker.byteSamples.shift();
+  }
+  if (tracker.byteSamples.length < 2) return;
+
+  const oldest = tracker.byteSamples[0];
+  const newest = tracker.byteSamples[tracker.byteSamples.length - 1];
+  const timeDelta = newest.time - oldest.time;
+  const networkDelta = newest.bytes - oldest.bytes;
+  const decompressedDelta = newest.decompressed - oldest.decompressed;
+  if (timeDelta < SPEED_MIN_WINDOW_MS || networkDelta <= 0) return;
+
+  const networkBytesPerSecond = networkDelta / (timeDelta / 1000);
+  const decompressedBytesPerSecond = decompressedDelta / (timeDelta / 1000);
+  const remainingBytes = Math.max(0, totalBytes - completedBytes);
+  const etaSeconds =
+    decompressedBytesPerSecond > 0 ? remainingBytes / decompressedBytesPerSecond : Infinity;
+
+  let speedText;
+  const mbps = networkBytesPerSecond / (1024 * 1024);
+  if (mbps >= 1) {
+    speedText = `↓ ${mbps.toFixed(1)} MB/s`;
+  } else {
+    speedText = `↓ ${(networkBytesPerSecond / 1024).toFixed(0)} KB/s`;
+  }
+
+  const infoEl = els.downloadSpeedInfo;
+  if (infoEl) {
+    infoEl.classList.remove('hidden');
+    els.downloadSpeed.textContent = speedText;
+    els.downloadEta.textContent = formatEta(etaSeconds);
   }
 }
 
@@ -1554,10 +1880,15 @@ function handleCancelled(msg) {
   clearInterval(state.speedTracker.staleTimer);
   state.speedTracker.staleTimer = null;
   els.progressBarFill.style.width = '0%';
-  els.progressStatus.textContent = 'Cancelled';
+  els.progressStatus.textContent = window.i18n.t('progress.cancelledStatus');
   if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
-  appendTerminalLine(`\n${msg.message}`, 'error');
-  showCompletion(false, msg.message);
+  const localized = msg.step === 'cancelled_kept'
+    ? window.i18n.t('progress.cancelledKept')
+    : msg.step === 'cancelled_cleanup'
+      ? window.i18n.t('progress.cancelledCleanup')
+      : (msg.message || window.i18n.t('progress.cancelledCleanup'));
+  appendTerminalLine(`\n${localized}`, 'error');
+  showCompletion(false, localized);
   cleanupProgressListener();
 }
 
@@ -1610,9 +1941,54 @@ function showCompletion(success, message) {
   els.completionMessage.classList.add(success ? 'completion-message--success' : 'completion-message--error');
   els.completionMessage.textContent = message;
   els.btnCancel.classList.add('hidden');
+  if (els.btnPause) els.btnPause.classList.add('hidden');
+  state.downloadFailed = !success;
   if (els.btnNextStep) {
-    els.btnNextStep.classList.toggle('hidden', !success);
-    updateNextButtonText();
+    els.btnNextStep.classList.remove('hidden');
+    if (success) {
+      updateNextButtonText();
+    } else {
+      els.btnNextStep.textContent = window.i18n.t('progress.backToSelection');
+    }
+  }
+}
+
+function showMhKeyRequiredHint() {
+  let hint = document.getElementById('mh-apikey-required');
+  if (!hint) {
+    hint = document.createElement('p');
+    hint.id = 'mh-apikey-required';
+    hint.className = 'dd-path__hint dd-path__hint--error';
+    const wrap = els.mhApiKey ? els.mhApiKey.closest('.settings-section') : null;
+    if (wrap) wrap.appendChild(hint);
+  }
+  hint.textContent = window.i18n.t('select.manifestHubRequired');
+  if (els.mhApiKey) {
+    els.mhApiKey.classList.add('dd-path__input--error');
+    els.mhApiKey.focus();
+  }
+}
+
+function hideMhKeyRequiredHint() {
+  const hint = document.getElementById('mh-apikey-required');
+  if (hint) hint.remove();
+  if (els.mhApiKey) els.mhApiKey.classList.remove('dd-path__input--error');
+}
+
+function showMhKeySuggestionHint() {
+  hideMhKeyRequiredHint();
+  let hint = document.getElementById('mh-apikey-required');
+  if (!hint) {
+    hint = document.createElement('p');
+    hint.id = 'mh-apikey-required';
+    hint.className = 'dd-path__hint dd-path__hint--error';
+    const wrap = els.mhApiKey ? els.mhApiKey.closest('.settings-section') : null;
+    if (wrap) wrap.appendChild(hint);
+  }
+  hint.textContent = window.i18n.t('select.manifestHubAfterFailure');
+  if (els.mhApiKey) {
+    els.mhApiKey.classList.add('dd-path__input--error');
+    els.mhApiKey.focus();
   }
 }
 
@@ -1653,7 +2029,9 @@ function resetApp() {
   if (els.shortcutDetectedSection) els.shortcutDetectedSection.classList.add('hidden');
   if (els.shortcutDetectedList) els.shortcutDetectedList.innerHTML = '';
   if (els.shortcutExePath) els.shortcutExePath.value = '';
-  if (els.btnCreateShortcuts) { els.btnCreateShortcuts.disabled = false; els.btnCreateShortcuts.textContent = 'Create Shortcuts'; }
+  state.shortcutsCreated = false;
+  if (els.btnCreateShortcuts) { els.btnCreateShortcuts.disabled = false; els.btnCreateShortcuts.textContent = window.i18n.t('shortcut.createShortcuts'); }
+  if (els.btnShortcutSkip) els.btnShortcutSkip.classList.remove('hidden');
   if (els.btnNextStep) els.btnNextStep.classList.add('hidden');
   if (els.emuApplyStatus) els.emuApplyStatus.classList.add('hidden');
   if (els.emuFileList) els.emuFileList.innerHTML = '';
@@ -1679,6 +2057,8 @@ async function openSettings() {
     els.speedLimitInput.value = settings.download_speed_limit || '';
     els.proxyInput.value = settings.proxy || '';
     if (els.hubcapApiKeyInput) els.hubcapApiKeyInput.value = settings.hubcap_api_key || '';
+    if (els.nativeDownloaderToggle) els.nativeDownloaderToggle.checked = !!settings.use_native_downloader;
+    if (els.cancelKeepFilesToggle) els.cancelKeepFilesToggle.checked = !!settings.cancel_keep_files;
     els.notificationSoundToggle.checked = settings.notification_sound !== false;
     els.telemetryToggle.checked = settings.telemetry_consent === 'accepted';
   } catch (e) {
@@ -1818,6 +2198,12 @@ async function saveSettings() {
     currentSettings.proxy = els.proxyInput.value.trim();
     if (els.hubcapApiKeyInput) {
       currentSettings.hubcap_api_key = els.hubcapApiKeyInput.value.trim();
+    }
+    if (els.nativeDownloaderToggle) {
+      currentSettings.use_native_downloader = els.nativeDownloaderToggle.checked;
+    }
+    if (els.cancelKeepFilesToggle) {
+      currentSettings.cancel_keep_files = els.cancelKeepFilesToggle.checked;
     }
     currentSettings.notification_sound = els.notificationSoundToggle.checked;
 
@@ -2033,13 +2419,25 @@ window.testUpdateModal = function() {
 };
 
 function applyDepotFilters() {
-  const searchText = (els.depotSearch ? els.depotSearch.value.trim() : '');
+  const searchText = (els.depotSearch ? els.depotSearch.value.trim().toLowerCase() : '');
   const showSelectedOnly = els.showSelectedOnly ? els.showSelectedOnly.checked : false;
 
   const items = document.querySelectorAll('.depot-item');
   items.forEach(item => {
     const depotId = item.dataset.depotId || '';
-    const matchesSearch = !searchText || depotId.includes(searchText);
+    const name = (state.depotNames && state.depotNames[depotId]) || '';
+    const info = state.depotPicsInfo && state.depotPicsInfo[depotId];
+    const haystack = [
+      depotId,
+      name,
+      info && info.role,
+      info && info.oslist,
+      info && info.language,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    const matchesSearch = !searchText || haystack.includes(searchText);
     const matchesSelected = !showSelectedOnly || state.selectedDepots.has(depotId);
     item.style.display = (matchesSearch && matchesSelected) ? '' : 'none';
   });
@@ -2068,12 +2466,44 @@ function updateThemeButton(theme) {
   }
 }
 
-function showCancelModal() {
+async function showCancelModal() {
+  let keep = false;
+  try {
+    const settings = await invoke('get_settings');
+    keep = !!settings.cancel_keep_files;
+  } catch (_) {}
+  const body = document.getElementById('cancel-modal-body');
+  if (body) {
+    body.innerHTML = window.i18n.t(keep ? 'modals.cancel.bodyKeep' : 'modals.cancel.body');
+  }
+  if (els.btnCancelYes) {
+    els.btnCancelYes.textContent = window.i18n.t(keep ? 'modals.cancel.yesKeep' : 'modals.cancel.yes');
+  }
   els.cancelModal.classList.remove('hidden');
 }
 
 function hideCancelModal() {
   els.cancelModal.classList.add('hidden');
+}
+
+async function togglePauseDownload() {
+  if (!state.jobId) return;
+  const willPause = !state.paused;
+  try {
+    await invoke('pause_download', { jobId: state.jobId, paused: willPause });
+    state.paused = willPause;
+    if (els.btnPause) {
+      els.btnPause.textContent = willPause
+        ? window.i18n.t('progress.resume')
+        : window.i18n.t('progress.pause');
+    }
+    appendTerminalLine(
+      window.i18n.t(willPause ? 'progress.pausedLine' : 'progress.resumedLine'),
+      'info'
+    );
+  } catch (e) {
+    console.error('pause_download failed:', e);
+  }
 }
 
 async function cancelDownload() {
@@ -2082,7 +2512,7 @@ async function cancelDownload() {
   if (!state.jobId) return;
 
   els.btnCancel.disabled = true;
-  els.btnCancel.innerHTML = 'Cancelling...';
+  els.btnCancel.innerHTML = escapeHtml(window.i18n.t('progress.cancelling'));
   appendTerminalLine('Cancelling download...', 'info');
 
   try {
@@ -2259,7 +2689,15 @@ function initEvents() {
   els.btnDeselectAll.addEventListener('click', deselectAll);
   els.btnBack.addEventListener('click', () => goToStep(1));
   els.btnDownload.addEventListener('click', startDownload);
+  if (els.mhApiKey) {
+    els.mhApiKey.addEventListener('input', () => {
+      if (els.mhApiKey.value.trim()) hideMhKeyRequiredHint();
+    });
+  }
   els.btnCancel.addEventListener('click', showCancelModal);
+  if (els.btnPause) {
+    els.btnPause.addEventListener('click', togglePauseDownload);
+  }
   if (els.btnBrowseDir) {
     els.btnBrowseDir.addEventListener('click', browseDownloadDir);
   }
@@ -2311,6 +2749,15 @@ function initEvents() {
 
   if (els.btnNextStep) {
     els.btnNextStep.addEventListener('click', () => {
+      if (state.downloadFailed) {
+        state.downloadFailed = false;
+        goToStep(2);
+        if (state.suggestMhKey) {
+          state.suggestMhKey = false;
+          showMhKeySuggestionHint();
+        }
+        return;
+      }
       if (state.shortcutSupported) {
         goToShortcutStep();
       } else if (state.steamLibrarySupported) {
@@ -2327,7 +2774,13 @@ function initEvents() {
     els.btnBrowseExe.addEventListener('click', browseExe);
   }
   if (els.btnCreateShortcuts) {
-    els.btnCreateShortcuts.addEventListener('click', createShortcuts);
+    els.btnCreateShortcuts.addEventListener('click', () => {
+      if (state.shortcutsCreated) {
+        advanceFromShortcutStep();
+      } else {
+        createShortcuts();
+      }
+    });
   }
   if (els.shortcutDesktop) {
     els.shortcutDesktop.addEventListener('change', updateCreateShortcutsButton);
@@ -2335,20 +2788,17 @@ function initEvents() {
   if (els.shortcutStartMenu) {
     els.shortcutStartMenu.addEventListener('change', updateCreateShortcutsButton);
   }
-  if (els.btnShortcutNew) {
-    els.btnShortcutNew.addEventListener('click', () => {
-      if (state.emulatorAvailable) {
-        goToEmulatorStep();
-      } else {
-        resetApp();
-      }
-    });
+  if (els.btnShortcutSkip) {
+    els.btnShortcutSkip.addEventListener('click', advanceFromShortcutStep);
   }
   if (els.btnShortcutStartOver) {
-    els.btnShortcutStartOver.addEventListener('click', () => goToStep(2));
+    els.btnShortcutStartOver.addEventListener('click', resetApp);
   }
   if (els.btnEmuApply) {
     els.btnEmuApply.addEventListener('click', applyEmuReplacement);
+  }
+  if (els.btnEmuMergeDlcs) {
+    els.btnEmuMergeDlcs.addEventListener('click', performDlcMerge);
   }
   if (els.btnEmuDrmRemove) {
     els.btnEmuDrmRemove.addEventListener('click', removeDrm);
@@ -2502,14 +2952,17 @@ function renderHistory(entries) {
   const entryById = new Map(entries.map(e => [e.id, e]));
   els.historyList.innerHTML = entries.map(entry => {
     const date = entry.completed_at ? formatHistoryDate(entry.completed_at) : formatHistoryDate(entry.started_at);
+    const isResumable = entry.status === 'cancelled_resumable' && !!entry.resume_payload;
     const badgeClass = entry.status === 'complete' ? 'history-entry__badge--complete'
       : entry.status === 'partial' ? 'history-entry__badge--partial'
+      : isResumable ? 'history-entry__badge--resumable'
       : entry.status === 'cancelled' ? 'history-entry__badge--cancelled'
       : 'history-entry__badge--failed';
-    const statusLabel = entry.status === 'complete' ? 'Complete'
-      : entry.status === 'partial' ? 'Partial'
-      : entry.status === 'cancelled' ? 'Cancelled'
-      : 'Failed';
+    const statusLabel = entry.status === 'complete' ? window.i18n.t('history.statusComplete')
+      : entry.status === 'partial' ? window.i18n.t('history.statusPartial')
+      : isResumable ? window.i18n.t('history.statusResumable')
+      : entry.status === 'cancelled' ? window.i18n.t('history.statusCancelled')
+      : window.i18n.t('history.statusFailed');
     const imgHtml = entry.header_image
       ? `<img class="history-entry__image" src="${escapeHtml(entry.header_image)}" alt="" loading="lazy" onerror="this.style.display='none'">`
       : '<div class="history-entry__image history-entry__image--placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>';
@@ -2530,6 +2983,9 @@ function renderHistory(entries) {
           </div>
         </div>
         <div class="history-entry__actions">
+          ${isResumable
+            ? `<button class="btn btn--small btn--primary history-action-resume" data-entry-id="${escapeHtml(entry.id)}" title="${escapeHtml(window.i18n.t('history.resumeTooltip'))}" aria-label="${escapeHtml(window.i18n.t('history.resumeTooltip'))}">${ICONS.play}</button>`
+            : ''}
           <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" data-depot-ids="${escapeHtml((entry.depot_ids || []).join(','))}" title="Re-download" aria-label="Re-download">${ICONS.refresh}</button>
           <button class="btn btn--small btn--outline history-action-folder" data-path="${escapeHtml(entry.download_dir)}" title="Open Folder" aria-label="Open download folder"${entry.status === 'cancelled' ? ' disabled' : ''}>${ICONS.folderOpen}</button>
           <button class="btn btn--small btn--outline history-action-edit-emu" data-entry-id="${escapeHtml(entry.id)}" title="${escapeHtml(editTip)}" aria-label="${escapeHtml(editTip)}"${entry.status === 'cancelled' || !entry.download_dir ? ' disabled' : ''}>${ICONS.settings}</button>
@@ -2539,6 +2995,42 @@ function renderHistory(entries) {
       </div>
     `;
   }).join('');
+
+  els.historyList.querySelectorAll('.history-action-resume').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const entry = entryById.get(btn.dataset.entryId);
+      if (!entry || !entry.resume_payload) return;
+      closeHistory();
+      cleanupProgressListener();
+      try {
+        const settings = await invoke('get_settings');
+        state.currentEngine = settings.use_native_downloader !== false ? 'native' : 'ddm';
+        const result = await invoke('start_download', { config: entry.resume_payload });
+        state.jobId = result.jobId;
+        state.parsedData = { mainAppId: entry.app_id, depots: [] };
+        state.gameName = entry.game_name || null;
+        state.headerImage = entry.header_image || null;
+        state.downloadDir = result.downloadDir || entry.download_dir;
+        goToStep(3);
+        initProgressUI((entry.resume_payload.selectedDepots || []).map(d => ({
+          depotId: String(d.depotId),
+          manifestId: String(d.manifestId || ''),
+          sizeBytes: null,
+        })));
+        await connectProgressListener();
+        try {
+          await invoke('remove_history_entry', { entryId: entry.id });
+        } catch (rmErr) {
+          console.warn('remove_history_entry failed:', rmErr);
+        }
+      } catch (err) {
+        console.error('resume start_download failed:', err);
+        alert(window.i18n.t('history.resumeError', { message: String(err) }));
+        openHistory();
+      }
+    });
+  });
 
   els.historyList.querySelectorAll('.history-action-redownload').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -2681,11 +3173,24 @@ async function checkSteamLibrarySupport() {
   }
 
   const showLinuxStep = state.steamLibrarySupported && !state.shortcutSupported;
-  const showWindowsToggle = state.steamLibrarySupported && state.shortcutSupported;
+  const showWindowsToggle = state.shortcutSupported;
 
   if (els.step6Connector) els.step6Connector.classList.toggle('hidden', !showLinuxStep);
   if (els.step6Indicator) els.step6Indicator.classList.toggle('hidden', !showLinuxStep);
-  if (els.shortcutSteamRow) els.shortcutSteamRow.classList.toggle('hidden', !showWindowsToggle);
+  if (els.shortcutSteamRow) {
+    els.shortcutSteamRow.classList.toggle('hidden', !showWindowsToggle);
+    const toggle = els.shortcutSteamLibrary;
+    const hint = els.shortcutSteamRow.querySelector('.shortcut-option__hint');
+    if (toggle) {
+      toggle.disabled = !state.steamLibrarySupported;
+      if (!state.steamLibrarySupported) toggle.checked = false;
+    }
+    if (hint) {
+      hint.textContent = state.steamLibrarySupported
+        ? window.i18n.t('steamLibrary.windowsToggleHint')
+        : window.i18n.t('steamLibrary.notDetected');
+    }
+  }
 }
 
 async function goToSteamLibraryStep() {
@@ -2874,12 +3379,29 @@ async function performSteamLibraryAdd() {
 
 async function goToShortcutStep() {
   goToStep(4);
-  if (els.btnShortcutNew) {
-    els.btnShortcutNew.textContent = state.emulatorAvailable
-      ? window.i18n.t('emulator.nextAfterDownload')
-      : window.i18n.t('shortcut.startNewDownload');
-  }
+  state.shortcutsCreated = false;
+  resetShortcutFooter();
+  await checkSteamLibrarySupport();
+  renumberSteps();
   await detectExecutables();
+}
+
+function resetShortcutFooter() {
+  if (els.btnCreateShortcuts) {
+    els.btnCreateShortcuts.disabled = false;
+    els.btnCreateShortcuts.textContent = window.i18n.t('shortcut.createShortcuts');
+  }
+  if (els.btnShortcutSkip) {
+    els.btnShortcutSkip.classList.remove('hidden');
+  }
+}
+
+function advanceFromShortcutStep() {
+  if (state.emulatorAvailable) {
+    goToEmulatorStep();
+  } else {
+    resetApp();
+  }
 }
 
 async function checkEmulatorSupport() {
@@ -2917,8 +3439,121 @@ async function goToEmulatorStep() {
   }
   renderEmuFileList(state.emulatorScan);
   populateEmuSettings(loadLastEmuSettings() || {});
+  applyBypassAvailability();
+  scanForDlcMergeAsync();
   scanForDrmAsync();
   await loadEmuReleaseInfo();
+}
+
+async function scanForDlcMergeAsync() {
+  if (els.emuDlcMergeSection) els.emuDlcMergeSection.classList.add('hidden');
+  if (els.emuDlcMergeStatus) els.emuDlcMergeStatus.classList.add('hidden');
+  if (!state.downloadDir) return;
+  const appId = currentAppIdForEmu();
+  try {
+    const plan = await invoke('emu_scan_for_dlc_merge', {
+      gameDir: state.downloadDir,
+      appId: appId || null,
+    });
+    if (!plan || !plan.toMerge || plan.toMerge.length === 0) return;
+    state.dlcMergePlan = plan;
+    if (els.emuDlcMergeSection) els.emuDlcMergeSection.classList.remove('hidden');
+    if (els.emuDlcMergeHint) {
+      els.emuDlcMergeHint.innerHTML = renderMergePlanHint(plan);
+    }
+    if (els.btnEmuMergeDlcs) els.btnEmuMergeDlcs.disabled = false;
+  } catch (e) {
+    console.warn('emu_scan_for_dlc_merge failed:', e);
+  }
+}
+
+function roleLabel(role) {
+  const key = `depots.role_${role}`;
+  const translated = window.i18n.t(key);
+  return translated && translated !== key ? translated : role;
+}
+
+function renderMergePlanHint(plan) {
+  const mainLabel = plan.mainLabel
+    ? `${plan.mainLabel} (${plan.mainDepotId})`
+    : plan.mainDepotId;
+  const toMergeRows = plan.toMerge
+    .map(d => `<li><strong>${escapeHtml(d.depotId)}</strong> ${d.label ? '— ' + escapeHtml(d.label) : ''} <span class="depot-role-pill depot-role-pill--${escapeHtml(d.role)}">${escapeHtml(roleLabel(d.role))}</span></li>`)
+    .join('');
+  const skippedRows = (plan.skipped || [])
+    .map(d => `<li><strong>${escapeHtml(d.depotId)}</strong> ${d.label ? '— ' + escapeHtml(d.label) : ''} <span class="depot-role-pill depot-role-pill--skipped">${escapeHtml(roleLabel(d.role))} (${escapeHtml(window.i18n.t('emulator.dlcMergeSkippedTag'))})</span></li>`)
+    .join('');
+  const intro = window.i18n.t('emulator.dlcMergeHintDetail', {
+    count: plan.toMerge.length,
+    main: escapeHtml(mainLabel),
+  });
+  const skippedBlock = skippedRows
+    ? `<p class="dd-path__hint">${window.i18n.t('emulator.dlcMergeSkippedNote')}</p><ul class="emu-dlc-merge-list">${skippedRows}</ul>`
+    : '';
+  return `${intro}<ul class="emu-dlc-merge-list">${toMergeRows}</ul>${skippedBlock}`;
+}
+
+async function performDlcMerge() {
+  if (!state.dlcMergePlan) return;
+  const plan = state.dlcMergePlan;
+  if (els.btnEmuMergeDlcs) {
+    els.btnEmuMergeDlcs.disabled = true;
+    els.btnEmuMergeDlcs.textContent = window.i18n.t('emulator.dlcMergeBusy');
+  }
+  if (els.emuDlcMergeStatus) {
+    els.emuDlcMergeStatus.classList.remove('hidden');
+    els.emuDlcMergeStatus.textContent = window.i18n.t('emulator.dlcMergeBusy');
+  }
+  try {
+    await invoke('emu_merge_dlc_depots', {
+      mainDepotDir: plan.mainDepotDir,
+      dlcDepotDirs: plan.dlcDepotDirs,
+    });
+    state.dlcMergePlan = null;
+    if (els.emuDlcMergeStatus) {
+      els.emuDlcMergeStatus.textContent = window.i18n.t('emulator.dlcMergeDone', {
+        count: plan.dlcDepotDirs.length,
+      });
+    }
+    if (els.btnEmuMergeDlcs) {
+      els.btnEmuMergeDlcs.textContent = window.i18n.t('emulator.dlcMergeDoneShort');
+    }
+    setTimeout(() => {
+      if (els.emuDlcMergeSection) els.emuDlcMergeSection.classList.add('hidden');
+    }, 4000);
+  } catch (e) {
+    console.error('emu_merge_dlc_depots failed:', e);
+    if (els.emuDlcMergeStatus) {
+      els.emuDlcMergeStatus.textContent = window.i18n.t('emulator.dlcMergeError', {
+        message: String(e),
+      });
+    }
+    if (els.btnEmuMergeDlcs) {
+      els.btnEmuMergeDlcs.disabled = false;
+      els.btnEmuMergeDlcs.textContent = window.i18n.t('emulator.dlcMergeButton');
+    }
+  }
+}
+
+function applyBypassAvailability() {
+  const hasWindowsTarget = (state.emulatorScan || []).some(t => t.platform === 'windows');
+  const toggle = els.emuBypassToggle;
+  const section = els.emuBypassSection;
+  if (!section) return;
+  section.classList.toggle('emu-bypass-section--disabled', !hasWindowsTarget);
+  if (!toggle) return;
+  if (!hasWindowsTarget) {
+    toggle.checked = false;
+    toggle.disabled = true;
+  } else {
+    toggle.disabled = false;
+  }
+  const hintEl = section.querySelector('.emu-bypass-row__hint');
+  if (hintEl) {
+    hintEl.innerHTML = hasWindowsTarget
+      ? window.i18n.t('emulator.bypassHint')
+      : window.i18n.t('emulator.bypassLinuxNote');
+  }
 }
 
 async function scanForDrmAsync() {
@@ -3123,6 +3758,14 @@ async function applySteamApiBypass() {
   }
 }
 
+function collectInstalledAppIds(mainAppId) {
+  const list = (state.parsedData && Array.isArray(state.parsedData.allAppIds))
+    ? state.parsedData.allAppIds.slice()
+    : [];
+  const main = mainAppId != null ? String(mainAppId) : null;
+  return list.filter(id => id && id !== main);
+}
+
 async function applyEmuReplacement() {
   if (state.emuApplyComplete) {
     resetApp();
@@ -3144,11 +3787,12 @@ async function applyEmuReplacement() {
   try {
     const variant = selectedEmuVariant();
     const gathered = gatherEmuSettings();
+    const installedAppIds = collectInstalledAppIds(appId);
     const results = await invoke('emu_apply_replacement', {
       targets: state.emulatorScan,
       variant,
       appId,
-      installedAppIds: [],
+      installedAppIds,
       emuSettings: gathered,
     });
     const total = results.length;
@@ -3168,9 +3812,37 @@ async function applyEmuReplacement() {
     }
   } catch (e) {
     console.error('emu_apply_replacement failed:', e);
-    setEmuApplyStatus('error', window.i18n.t('emulator.applyError', { message: String(e) }));
+    const msg = String(e);
+    if (msg.includes('AV_BLOCKED')) {
+      setEmuApplyAntivirusBlocked();
+    } else {
+      setEmuApplyStatus('error', window.i18n.t('emulator.applyError', { message: msg }));
+    }
   } finally {
     if (els.btnEmuApply) els.btnEmuApply.disabled = false;
+  }
+}
+
+function setEmuApplyAntivirusBlocked() {
+  if (!els.emuApplyStatus) return;
+  els.emuApplyStatus.classList.remove('hidden', 'completion-message--success');
+  els.emuApplyStatus.classList.add('completion-message--error');
+  const title = window.i18n.t('emulator.avBlockedTitle');
+  const hint = window.i18n.t('emulator.avBlockedHint');
+  const retry = window.i18n.t('emulator.avBlockedRetry');
+  els.emuApplyStatus.innerHTML = `
+    <div class="av-blocked">
+      <div class="av-blocked__title">${escapeHtml(title)}</div>
+      <p class="av-blocked__hint">${escapeHtml(hint)}</p>
+      <button type="button" id="btn-av-retry" class="btn btn--primary av-blocked__retry">${escapeHtml(retry)}</button>
+    </div>
+  `;
+  const retryBtn = document.getElementById('btn-av-retry');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      setEmuApplyStatus('busy', window.i18n.t('emulator.applying'));
+      applyEmuReplacement();
+    });
   }
 }
 
@@ -3604,11 +4276,13 @@ async function createShortcuts() {
     showShortcutStatus(allGood, messages.join('. ') + '.');
 
     if (allGood) {
-      els.btnCreateShortcuts.disabled = true;
-      els.btnCreateShortcuts.textContent = 'Shortcuts Created';
+      state.shortcutsCreated = true;
+      els.btnCreateShortcuts.disabled = false;
+      els.btnCreateShortcuts.textContent = window.i18n.t('common.next');
+      if (els.btnShortcutSkip) els.btnShortcutSkip.classList.add('hidden');
     } else {
       els.btnCreateShortcuts.disabled = false;
-      els.btnCreateShortcuts.textContent = 'Create Shortcuts';
+      els.btnCreateShortcuts.textContent = window.i18n.t('shortcut.createShortcuts');
     }
 
     if (els.shortcutSteamLibrary && els.shortcutSteamLibrary.checked && state.steamLibrarySupported) {

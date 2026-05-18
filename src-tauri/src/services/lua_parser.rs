@@ -15,6 +15,8 @@ pub struct DepotInfo {
 pub struct LuaParseResult {
     pub main_app_id: Option<u64>,
     pub depots: Vec<DepotInfo>,
+    #[serde(default)]
+    pub all_app_ids: Vec<u64>,
 }
 
 // Matches `addappid(id)` (main app) or `addappid(id, 0, "hexKey")` (depot with key).
@@ -44,9 +46,11 @@ pub fn parse_lua_file(content: &str) -> Result<LuaParseResult, String> {
     let mut result = LuaParseResult {
         main_app_id: None,
         depots: Vec::new(),
+        all_app_ids: Vec::new(),
     };
 
     let mut depot_map: HashMap<u64, DepotInfo> = HashMap::new();
+    let mut seen_app_ids: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
 
     for cap in add_app_id_pattern().captures_iter(content) {
         let id: u64 = match cap[1].parse() {
@@ -56,6 +60,9 @@ pub fn parse_lua_file(content: &str) -> Result<LuaParseResult, String> {
         let has_key = cap.get(3).is_some();
 
         if !has_key {
+            if seen_app_ids.insert(id) {
+                result.all_app_ids.push(id);
+            }
             if result.main_app_id.is_none() {
                 result.main_app_id = Some(id);
             }

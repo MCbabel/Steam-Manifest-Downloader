@@ -41,6 +41,284 @@ pub async fn emu_scan_game_dir(game_dir: String) -> Result<Vec<ScannedFile>, Str
     Ok(emulator::scan_game_dir(&path))
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct MergeCandidate {
+    #[serde(rename = "depotId")]
+    pub depot_id: String,
+    pub path: String,
+    pub role: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct DlcMergePlan {
+    #[serde(rename = "mainDepotDir")]
+    pub main_depot_dir: String,
+    #[serde(rename = "mainDepotId")]
+    pub main_depot_id: String,
+    #[serde(rename = "mainLabel", skip_serializing_if = "Option::is_none")]
+    pub main_label: Option<String>,
+    #[serde(rename = "toMerge")]
+    pub to_merge: Vec<MergeCandidate>,
+    pub skipped: Vec<MergeCandidate>,
+    #[serde(rename = "dlcDepotDirs")]
+    pub dlc_depot_dirs: Vec<String>,
+}
+
+#[command]
+pub async fn emu_scan_for_dlc_merge(
+    state: tauri::State<'_, crate::services::AppState>,
+    game_dir: String,
+    app_id: Option<String>,
+) -> Result<Option<DlcMergePlan>, String> {
+    let work = PathBuf::from(&game_dir);
+    let depots_root = work.join("depots");
+    if !depots_root.exists() {
+        return Ok(None);
+    }
+    let mut entries = tokio::fs::read_dir(&depots_root)
+        .await
+        .map_err(|e| format!("read depots dir: {}", e))?;
+    let mut depot_dirs: Vec<PathBuf> = Vec::new();
+    while let Some(entry) = entries
+        .next_entry()
+        .await
+        .map_err(|e| format!("walk depots dir: {}", e))?
+    {
+        let p = entry.path();
+        if !p.is_dir() {
+            continue;
+        }
+        if let Some(name) = p.file_name().and_then(|n| n.to_str()) {
+            if name.starts_with('.') {
+                continue;
+            }
+        }
+        depot_dirs.push(p);
+    }
+    if depot_dirs.len() < 2 {
+        return Ok(None);
+    }
+
+    let mut candidates: Vec<(PathBuf, crate::services::emulator::Platform)> = Vec::new();
+    for d in &depot_dirs {
+        if let Some(first) = emulator::scan_game_dir(d).into_iter().next() {
+            candidates.push((d.clone(), first.platform));
+        }
+    }
+    if candidates.is_empty() {
+        return Ok(None);
+    }
+    let host_os = std::env::consts::OS;
+    let host_preferred = candidates
+        .iter()
+        .find(|(_, p)| match (p, host_os) {
+            (crate::services::emulator::Platform::Windows, "windows") => true,
+            (crate::services::emulator::Platform::Linux, "linux") => true,
+            _ => false,
+        })
+        .cloned();
+    let (main_dir, main_platform) = host_preferred.unwrap_or_else(|| candidates[0].clone());
+    let main_os = match main_platform {
+        crate::services::emulator::Platform::Windows => "windows",
+        crate::services::emulator::Platform::Linux => "linux",
+    };
+
+    let pics_map = if let Some(app_str) = app_id.as_deref() {
+        if let Ok(app_id_u) = app_str.parse::<u32>() {
+            match crate::services::steam_pics::fetch_depots_with_names(
+                state.steam_session.clone(),
+                app_id_u,
+            )
+            .await
+            {
+                Ok(list) => list
+                    .into_iter()
+                    .map(|d| (d.depot_id.clone(), d))
+                    .collect::<std::collections::HashMap<_, _>>(),
+                Err(e) => {
+                    eprintln!("[merge-scan] PICS lookup failed: {}", e);
+                    std::collections::HashMap::new()
+                }
+            }
+        } else {
+            std::collections::HashMap::new()
+        }
+    } else {
+        std::collections::HashMap::new()
+    };
+
+    let main_depot_id = extract_depot_id_from_folder(&main_dir).unwrap_or_default();
+    let main_label = pics_map
+        .get(&main_depot_id)
+        .and_then(|d| d.name.clone());
+
+    let mut to_merge: Vec<MergeCandidate> = Vec::new();
+    let mut skipped: Vec<MergeCandidate> = Vec::new();
+    for d in &depot_dirs {
+        if d == &main_dir {
+            continue;
+        }
+        let depot_id = extract_depot_id_from_folder(d).unwrap_or_default();
+        let info = pics_map.get(&depot_id);
+        let path_str = d.to_string_lossy().to_string();
+        let label = info.and_then(|m| m.name.clone());
+
+        if let Some(meta) = info {
+            let role_str = match meta.role {
+                crate::services::steam_pics::DepotRole::Platform => "platform",
+                crate::services::steam_pics::DepotRole::SharedContent => "shared_content",
+                crate::services::steam_pics::DepotRole::Dlc => "dlc",
+                crate::services::steam_pics::DepotRole::Language => "language",
+                crate::services::steam_pics::DepotRole::Other => "other",
+            }
+            .to_string();
+
+            let same_platform_as_main = meta
+                .oslist
+                .as_deref()
+                .map(|os| os.to_ascii_lowercase().contains(main_os))
+                .unwrap_or(false);
+
+            let should_merge = match meta.role {
+                crate::services::steam_pics::DepotRole::SharedContent => true,
+                crate::services::steam_pics::DepotRole::Dlc => meta
+                    .oslist
+                    .as_deref()
+                    .map(|os| same_platform(os, main_os))
+                    .unwrap_or(true),
+                crate::services::steam_pics::DepotRole::Language => true,
+                crate::services::steam_pics::DepotRole::Platform => same_platform_as_main,
+                crate::services::steam_pics::DepotRole::Other => true,
+            };
+
+            let cand = MergeCandidate {
+                depot_id: depot_id.clone(),
+                path: path_str,
+                role: role_str,
+                label,
+            };
+            if should_merge {
+                to_merge.push(cand);
+            } else {
+                skipped.push(cand);
+            }
+        } else {
+            to_merge.push(MergeCandidate {
+                depot_id: depot_id.clone(),
+                path: path_str,
+                role: "unknown".to_string(),
+                label,
+            });
+        }
+    }
+
+    if to_merge.is_empty() && skipped.is_empty() {
+        return Ok(None);
+    }
+
+    let dlc_depot_dirs: Vec<String> = to_merge.iter().map(|c| c.path.clone()).collect();
+
+    Ok(Some(DlcMergePlan {
+        main_depot_dir: main_dir.to_string_lossy().to_string(),
+        main_depot_id,
+        main_label,
+        to_merge,
+        skipped,
+        dlc_depot_dirs,
+    }))
+}
+
+fn extract_depot_id_from_folder(p: &Path) -> Option<String> {
+    let name = p.file_name()?.to_str()?;
+    let last_token = name.rsplit(" - ").next()?.trim();
+    if last_token.chars().all(|c| c.is_ascii_digit()) && !last_token.is_empty() {
+        Some(last_token.to_string())
+    } else if name.chars().all(|c| c.is_ascii_digit()) {
+        Some(name.to_string())
+    } else {
+        None
+    }
+}
+
+fn same_platform(depot_os: &str, main_os: &str) -> bool {
+    if main_os.is_empty() {
+        return true;
+    }
+    depot_os.to_ascii_lowercase().contains(main_os)
+}
+
+#[command]
+pub async fn emu_merge_dlc_depots(
+    main_depot_dir: String,
+    dlc_depot_dirs: Vec<String>,
+) -> Result<u64, String> {
+    let main = PathBuf::from(&main_depot_dir);
+    if !main.is_dir() {
+        return Err(format!("Main depot dir not a directory: {}", main_depot_dir));
+    }
+    let mut moved: u64 = 0;
+    for src in dlc_depot_dirs {
+        let src_path = PathBuf::from(&src);
+        if !src_path.is_dir() {
+            continue;
+        }
+        moved += merge_dir_into(&src_path, &main).await?;
+        if let Err(e) = tokio::fs::remove_dir_all(&src_path).await {
+            eprintln!("[Merge] Failed to remove drained DLC dir {:?}: {}", src_path, e);
+        }
+    }
+    Ok(moved)
+}
+
+fn merge_dir_into<'a>(
+    src: &'a Path,
+    dst: &'a Path,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<u64, String>> + Send + 'a>> {
+    Box::pin(async move {
+        tokio::fs::create_dir_all(dst)
+            .await
+            .map_err(|e| format!("create dst {}: {}", dst.display(), e))?;
+        let mut moved: u64 = 0;
+        let mut entries = tokio::fs::read_dir(src)
+            .await
+            .map_err(|e| format!("read {}: {}", src.display(), e))?;
+        while let Some(entry) = entries
+            .next_entry()
+            .await
+            .map_err(|e| format!("walk {}: {}", src.display(), e))?
+        {
+            let path = entry.path();
+            let name = entry.file_name();
+            let target = dst.join(&name);
+            if path.is_dir() {
+                moved += merge_dir_into(&path, &target).await?;
+            } else {
+                if target.exists() {
+                    continue;
+                }
+                if let Err(e) = tokio::fs::rename(&path, &target).await {
+                    let bytes = tokio::fs::copy(&path, &target).await.map_err(|copy_err| {
+                        format!(
+                            "rename + copy failed ({} / {}): {} / {}",
+                            path.display(),
+                            target.display(),
+                            e,
+                            copy_err
+                        )
+                    })?;
+                    let _ = tokio::fs::remove_file(&path).await;
+                    moved += bytes;
+                } else {
+                    moved += 1;
+                }
+            }
+        }
+        Ok(moved)
+    })
+}
+
 #[command]
 pub async fn emu_apply_replacement(
     state: tauri::State<'_, AppState>,

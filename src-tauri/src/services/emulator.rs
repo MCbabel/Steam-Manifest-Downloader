@@ -444,7 +444,12 @@ pub async fn ensure_cached(
         fs::rename(&tmp_path, &archive_path).map_err(|e| format!("finalize archive: {}", e))?;
     }
 
-    extract_archive(&archive_path, &platform_dir, platform)?;
+    if let Err(e) = extract_archive(&archive_path, &platform_dir, platform) {
+        if e.starts_with("AV_BLOCKED") {
+            let _ = fs::remove_file(&archive_path);
+        }
+        return Err(e);
+    }
     fs::write(&extracted_marker, info.tag.as_bytes())
         .map_err(|e| format!("write extracted marker: {}", e))?;
 
@@ -471,7 +476,22 @@ fn extract_tar_bz2(archive: &Path, dst: &Path) -> Result<(), String> {
 }
 
 fn extract_7z(archive: &Path, dst: &Path) -> Result<(), String> {
-    sevenz_rust::decompress_file(archive, dst).map_err(|e| format!("7z decompress: {}", e))
+    sevenz_rust::decompress_file(archive, dst).map_err(|e| {
+        let msg = e.to_string();
+        if is_antivirus_block(&msg) {
+            format!("AV_BLOCKED: {}", msg)
+        } else {
+            format!("7z decompress: {}", msg)
+        }
+    })
+}
+
+fn is_antivirus_block(msg: &str) -> bool {
+    let lower = msg.to_lowercase();
+    msg.contains("code: 225")
+        || lower.contains("virus")
+        || lower.contains("unerwünschte software")
+        || lower.contains("unwanted software")
 }
 
 fn release_root(platform_cache: &Path) -> PathBuf {

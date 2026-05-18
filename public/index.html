@@ -41,15 +41,15 @@
       </h1>
       <p class="header__subtitle" data-i18n="header.subtitle">Upload a .lua/.st file, select manifests, and download automatically</p>
       <div class="header__actions">
-        <button id="btn-history" class="btn btn--outline header__history-btn" data-i18n-attr="title=header.history,aria-label=header.history">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-        </button>
         <button id="btn-settings" class="btn btn--outline header__settings-btn" data-i18n-attr="title=header.settings,aria-label=header.settings">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
             <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+        <button id="btn-history" class="btn btn--outline header__history-btn" data-i18n-attr="title=header.history,aria-label=header.history">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
         </button>
         <button id="btn-theme-toggle" class="btn btn--outline header__theme-btn" data-i18n-attr="title=header.themeToggle,aria-label=header.themeToggle">
@@ -308,6 +308,10 @@
 
     <section id="step-progress" class="step hidden">
       <div class="card">
+        <div id="native-alpha-banner" class="native-alpha-banner hidden">
+          <strong data-i18n="progress.nativeAlphaTitle">Native downloader (alpha)</strong>
+          <p data-i18n-html="progress.nativeAlphaBody">This is experimental. If anything fails, please copy the console errors below and <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/issues" target="_blank" rel="noopener" class="link">open an issue on GitHub</a> — or turn the native engine off in Settings to fall back to DepotDownloaderMod.</p>
+        </div>
         <div id="disk-space-info" class="disk-space-info hidden">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="22" y1="12" x2="2" y2="12"/>
@@ -359,6 +363,9 @@
                 <line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
               <span data-i18n="progress.cancel">Cancel Download</span>
+            </button>
+            <button id="btn-pause" class="btn btn--outline" data-i18n="progress.pause">
+              Pause
             </button>
           </div>
           <button id="btn-next-step" class="btn btn--primary hidden" data-i18n="progress.next">
@@ -422,15 +429,17 @@
         <div class="card__footer">
           <div class="card__footer-left">
             <button id="btn-shortcut-start-over" class="btn btn--outline">
-              &#8617; <span data-i18n="shortcut.startOver">Start Over</span>
-            </button>
-            <button id="btn-shortcut-new" class="btn btn--outline" data-i18n="shortcut.startNewDownload">
-              Start New Download
+              &#8617; <span data-i18n="shortcut.goHome">Go Home</span>
             </button>
           </div>
-          <button id="btn-create-shortcuts" class="btn btn--primary" data-i18n="shortcut.createShortcuts">
-            Create Shortcuts
-          </button>
+          <div class="card__footer-right">
+            <button id="btn-shortcut-skip" class="btn btn--outline" data-i18n="shortcut.skip">
+              Skip
+            </button>
+            <button id="btn-create-shortcuts" class="btn btn--primary" data-i18n="shortcut.createShortcuts">
+              Create Shortcuts
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -517,6 +526,19 @@
           <div class="emu-drm-actions">
             <button id="btn-emu-drm-remove" class="btn btn--danger" data-i18n="emulator.drmRemove">Remove DRM (via Steamless)</button>
             <span class="emu-drm-attribution" data-i18n="emulator.drmAttribution">Powered by Steamless by atom0s</span>
+          </div>
+        </div>
+
+        <div id="emu-dlc-merge-section" class="emu-section emu-dlc-merge-section hidden">
+          <div class="emu-bypass-row">
+            <div class="emu-bypass-row__text">
+              <span class="emu-bypass-row__label" data-i18n="emulator.dlcMergeLabel">DLC depots detected</span>
+              <p id="emu-dlc-merge-hint" class="emu-bypass-row__hint" data-i18n="emulator.dlcMergeHint">Multiple depot folders found. Many games expect DLC content next to the main game files. Merge the DLC depots into the main game folder?</p>
+              <p id="emu-dlc-merge-status" class="dd-path__hint hidden"></p>
+            </div>
+            <button id="btn-emu-merge-dlcs" type="button" class="btn btn--primary btn--small" data-i18n="emulator.dlcMergeButton">
+              Merge DLC depots
+            </button>
           </div>
         </div>
 
@@ -749,11 +771,11 @@
             <button id="btn-emu-start-over" class="btn btn--outline">
               &#8617; <span data-i18n="emulator.startOver">Start Over</span>
             </button>
-            <button id="btn-emu-revert" class="btn btn--danger hidden" data-i18n="emulator.revert">
-              Revert Patch
-            </button>
             <button id="btn-emu-new" class="btn btn--outline" data-i18n="emulator.goToHome">
               Go to Home
+            </button>
+            <button id="btn-emu-revert" class="btn btn--danger hidden" data-i18n="emulator.revert">
+              Revert Patch
             </button>
           </div>
           <button id="btn-emu-apply" class="btn btn--primary" data-i18n="emulator.apply">
@@ -776,7 +798,7 @@
         </svg>
       </div>
       <h3 class="modal__title" id="cancel-modal-title" data-i18n="modals.cancel.title">Cancel Download?</h3>
-      <p class="modal__text" data-i18n-html="modals.cancel.body">
+      <p class="modal__text" id="cancel-modal-body" data-i18n-html="modals.cancel.body">
         Are you sure you want to cancel? All downloaded files for this App ID will be <strong>permanently deleted</strong>.
       </p>
       <div class="modal__actions">
@@ -1024,6 +1046,30 @@
             <label for="hubcap-apikey-input" class="settings-field__label" data-i18n="settings.hubcapApiKey">Hubcap API Key</label>
             <input type="text" id="hubcap-apikey-input" class="dd-path__input" data-i18n-attr="placeholder=settings.hubcapApiKeyPlaceholder" autocomplete="off">
             <p class="dd-path__hint" data-i18n-html="settings.hubcapApiKeyHint">When set, App ID searches try <a href="https://hubcapmanifest.com/" target="_blank" rel="noopener" class="link">hubcapmanifest.com</a> first and fall back to the configured depot sources.</p>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-field__label" data-i18n="settings.cancelKeepFiles">Cancel behaviour</label>
+            <div class="settings-field__toggle-wrap">
+              <label class="toggle-switch">
+                <input type="checkbox" id="cancel-keep-files-toggle">
+                <span class="toggle-switch__slider"></span>
+              </label>
+              <span class="settings-field__toggle-text" data-i18n="settings.cancelKeepFilesToggle">Keep downloaded files when cancelling</span>
+            </div>
+            <p class="dd-path__hint" data-i18n="settings.cancelKeepFilesHint">When enabled, cancelling a download keeps the partial files on disk. Restarting the same download will resume from where it stopped (already-downloaded chunks are skipped).</p>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-field__label" data-i18n="settings.nativeDownloader">Download engine</label>
+            <div class="settings-field__toggle-wrap">
+              <label class="toggle-switch">
+                <input type="checkbox" id="native-downloader-toggle" checked>
+                <span class="toggle-switch__slider"></span>
+              </label>
+              <span class="settings-field__toggle-text" data-i18n="settings.nativeDownloaderToggle">Download directly from Steam (native, recommended)</span>
+            </div>
+            <p class="dd-path__hint" data-i18n="settings.nativeDownloaderHint">Default. Anonymous Steam login fetches manifests + chunks from Steam's CDN directly. ManifestHub is used only as a fallback if Steam-direct fails. Turn this off to force the legacy DepotDownloaderMod path.</p>
           </div>
 
           <div class="settings-field">

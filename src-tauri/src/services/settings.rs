@@ -46,6 +46,18 @@ pub struct Settings {
     pub pristine_default_sources: Vec<String>,
     #[serde(default)]
     pub hubcap_api_key: String,
+    #[serde(default = "default_use_native_downloader")]
+    pub use_native_downloader: bool,
+    #[serde(default = "default_cancel_keep_files")]
+    pub cancel_keep_files: bool,
+}
+
+fn default_use_native_downloader() -> bool {
+    true
+}
+
+fn default_cancel_keep_files() -> bool {
+    false
 }
 
 fn default_download_location() -> String {
@@ -104,6 +116,8 @@ impl Default for Settings {
             auto_seeded: false,
             pristine_default_sources: Vec::new(),
             hubcap_api_key: String::new(),
+            use_native_downloader: default_use_native_downloader(),
+            cancel_keep_files: default_cancel_keep_files(),
         }
     }
 }

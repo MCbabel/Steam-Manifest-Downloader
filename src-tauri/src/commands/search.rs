@@ -100,6 +100,75 @@ pub async fn fetch_depot_metadata(
 }
 
 #[command]
+pub async fn fetch_depot_metadata_steam(
+    state: tauri::State<'_, AppState>,
+    app_id: String,
+) -> Result<Vec<crate::services::steam_pics::DepotMetadata>, String> {
+    let app_id_u: u32 = app_id
+        .parse()
+        .map_err(|_| format!("Invalid app id '{}'", app_id))?;
+    crate::services::steam_pics::fetch_depots_with_names(state.steam_session.clone(), app_id_u)
+        .await
+}
+
+#[derive(serde::Serialize)]
+pub struct LatestManifestResult {
+    #[serde(rename = "manifestId")]
+    pub manifest_id: String,
+    pub source: String,
+}
+
+#[command]
+pub async fn fetch_latest_manifest_id(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    app_id: String,
+    depot_id: String,
+) -> Result<LatestManifestResult, String> {
+    let app_id_u: u32 = app_id
+        .parse()
+        .map_err(|_| format!("Invalid app id '{}'", app_id))?;
+    let depot_id_u: u32 = depot_id
+        .parse()
+        .map_err(|_| format!("Invalid depot id '{}'", depot_id))?;
+
+    match crate::services::steam_pics::fetch_public_manifest_gid(
+        state.steam_session.clone(),
+        app_id_u,
+        depot_id_u,
+    )
+    .await
+    {
+        Ok(gid) => {
+            return Ok(LatestManifestResult {
+                manifest_id: gid,
+                source: "steam".to_string(),
+            });
+        }
+        Err(e) => {
+            eprintln!(
+                "[fetch_latest_manifest_id] Steam PICS failed ({}), falling back to api.steamcmd.net",
+                e
+            );
+        }
+    }
+
+    let dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let depots = depot_info::fetch_depot_info_fresh(&state.http_client, &dir, &app_id).await?;
+    let depot = depots
+        .into_iter()
+        .find(|d| d.depot_id == depot_id)
+        .ok_or_else(|| format!("depot {} not listed for app {}", depot_id, app_id))?;
+    let gid = depot
+        .manifest_gid
+        .ok_or_else(|| format!("depot {} has no public manifest", depot_id))?;
+    Ok(LatestManifestResult {
+        manifest_id: gid,
+        source: "steamcmd".to_string(),
+    })
+}
+
+#[command]
 pub async fn search_steam_games(
     state: tauri::State<'_, AppState>,
     query: String,

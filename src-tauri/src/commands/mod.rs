@@ -12,6 +12,7 @@ mod emulator;
 mod steam_library;
 mod steamless;
 mod steam_api_bypass;
+mod native_download;
 
 pub use file_ops::*;
 pub use search::*;
@@ -27,3 +28,4 @@ pub use emulator::*;
 pub use steam_library::*;
 pub use steamless::*;
 pub use steam_api_bypass::*;
+pub use native_download::*;

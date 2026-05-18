@@ -17,37 +17,49 @@ pub mod depot_info;
 pub mod steam_library;
 pub mod steamless;
 pub mod steam_api_bypass;
+pub mod steam_pics;
+pub mod steam_session;
+pub mod steam_manifest;
+pub mod steam_cdn;
+pub mod steam_chunks;
+pub mod steam_downloader;
+pub mod manifest_code_provider;
 
 use std::collections::HashMap;
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tauri::AppHandle;
-
 pub struct AppState {
-    #[allow(dead_code)]
-    pub app_handle: AppHandle,
     pub active_jobs: Arc<Mutex<HashMap<String, JobInfo>>>,
     pub http_client: reqwest::Client,
     pub steam_cache: Arc<Mutex<HashMap<String, serde_json::Value>>>,
     pub telemetry: Option<telemetry::Telemetry>,
+    pub steam_session: Arc<steam_session::SteamSession>,
 }
 
 pub struct JobInfo {
     pub status: String,
     pub child_pid: Option<u32>,
-    pub download_dir: Option<String>,
+    pub depot_dirs: Vec<String>,
+    pub cancel_flag: Arc<AtomicBool>,
+    pub pause_flag: Arc<AtomicBool>,
+    pub config_snapshot: Option<serde_json::Value>,
+    pub started_at: Option<String>,
+    pub game_name: Option<String>,
+    pub header_image: Option<String>,
+    pub work_dir: Option<String>,
     #[cfg(target_os = "windows")]
     pub job_object: Option<Arc<depot_runner::win_job::JobObject>>,
 }
 
 impl AppState {
-    pub fn new(app_handle: AppHandle) -> Self {
+    pub fn new() -> Self {
         Self {
-            app_handle,
             active_jobs: Arc::new(Mutex::new(HashMap::new())),
             http_client: reqwest::Client::new(),
             steam_cache: Arc::new(Mutex::new(HashMap::new())),
             telemetry: None,
+            steam_session: Arc::new(steam_session::SteamSession::new()),
         }
     }
 
