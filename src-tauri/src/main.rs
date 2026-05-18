@@ -24,7 +24,7 @@ fn main() {
             );
             telemetry.clone().spawn_background_flush();
 
-            let mut state = services::AppState::new(app.handle().clone());
+            let mut state = services::AppState::new();
             state.telemetry = Some(telemetry);
             app.manage(state);
 
@@ -39,11 +39,14 @@ fn main() {
             commands::get_repo_manifests,
             commands::search_steam_games,
             commands::fetch_depot_metadata,
+            commands::fetch_depot_metadata_steam,
+            commands::fetch_latest_manifest_id,
             // Steam
             commands::get_steam_app_info,
             // Download
             commands::start_download,
             commands::cancel_download,
+            commands::pause_download,
             // Settings
             commands::get_settings,
             commands::save_settings,
@@ -78,6 +81,8 @@ fn main() {
             commands::emu_release_info,
             commands::emu_ensure_cached,
             commands::emu_scan_game_dir,
+            commands::emu_scan_for_dlc_merge,
+            commands::emu_merge_dlc_depots,
             commands::emu_apply_replacement,
             commands::emu_revert_replacement,
             commands::emu_launch_lobby_connect,
@@ -93,6 +98,8 @@ fn main() {
             commands::steam_api_bypass_apply,
             commands::steam_api_bypass_revert,
             commands::steam_api_bypass_status,
+            // Native (pure-Rust) downloader — experimental, side-by-side with DepotDownloaderMod
+            commands::native_download_depot,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

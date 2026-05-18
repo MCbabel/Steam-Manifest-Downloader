@@ -12,7 +12,6 @@ pub struct HistoryEntry {
     pub header_image: Option<String>,
     pub depot_count: usize,
     pub depots_downloaded: usize,
-    /// "complete", "partial", "failed"
     pub status: String,
     pub download_dir: String,
     pub started_at: String,
@@ -20,6 +19,8 @@ pub struct HistoryEntry {
     pub source_repo: Option<String>,
     #[serde(default)]
     pub depot_ids: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resume_payload: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

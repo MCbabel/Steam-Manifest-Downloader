@@ -58,11 +58,30 @@ pub async fn fetch_depot_info(
     app_data_dir: &Path,
     app_id: &str,
 ) -> Result<Vec<DepotInfo>, String> {
+    fetch_depot_info_inner(client, app_data_dir, app_id, false).await
+}
+
+pub async fn fetch_depot_info_fresh(
+    client: &Client,
+    app_data_dir: &Path,
+    app_id: &str,
+) -> Result<Vec<DepotInfo>, String> {
+    fetch_depot_info_inner(client, app_data_dir, app_id, true).await
+}
+
+async fn fetch_depot_info_inner(
+    client: &Client,
+    app_data_dir: &Path,
+    app_id: &str,
+    bypass_cache: bool,
+) -> Result<Vec<DepotInfo>, String> {
     let cache_file = cache_path(app_data_dir, app_id);
-    if let Some(cached) = read_cache(&cache_file).await {
-        let age = Utc::now().timestamp() - cached.fetched_at;
-        if age >= 0 && age < CACHE_TTL_SECONDS {
-            return Ok(cached.depots);
+    if !bypass_cache {
+        if let Some(cached) = read_cache(&cache_file).await {
+            let age = Utc::now().timestamp() - cached.fetched_at;
+            if age >= 0 && age < CACHE_TTL_SECONDS {
+                return Ok(cached.depots);
+            }
         }
     }
 

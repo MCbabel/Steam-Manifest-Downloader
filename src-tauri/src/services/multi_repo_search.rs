@@ -59,36 +59,33 @@ pub async fn search_repos(
                     date: None,
                     sha: None,
                     source_type: "hubcap".to_string(),
-                    source: Some("Hubcap".to_string()),
+                    source: Some("hubcap".to_string()),
                 });
-                return Ok(SearchResult { repos: found });
             }
             Err(e) => {
                 eprintln!(
-                    "[Search] Hubcap lookup failed, falling back to depot sources: {}",
+                    "[Search] Hubcap lookup failed: {}",
                     e
                 );
             }
         }
     }
 
-    if sources.is_empty() {
-        return Ok(SearchResult { repos: found });
-    }
-
-    match depot_sources::check_app_exists(client, sources, app_id).await {
-        Ok(true) => {
-            found.push(RepoResult {
-                repo: "User-configured source".to_string(),
-                date: None,
-                sha: None,
-                source_type: "remote".to_string(),
-                source: Some("Configured manifest source".to_string()),
-            });
-        }
-        Ok(false) => {}
-        Err(e) => {
-            eprintln!("[Search] manifest source check failed: {}", e);
+    if !sources.is_empty() {
+        match depot_sources::check_app_exists(client, sources, app_id).await {
+            Ok(true) => {
+                found.push(RepoResult {
+                    repo: "configured".to_string(),
+                    date: None,
+                    sha: None,
+                    source_type: "remote".to_string(),
+                    source: Some("remote".to_string()),
+                });
+            }
+            Ok(false) => {}
+            Err(e) => {
+                eprintln!("[Search] manifest source check failed: {}", e);
+            }
         }
     }
 
