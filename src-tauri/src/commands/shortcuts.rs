@@ -146,23 +146,19 @@ async fn is_executable_candidate(path: &std::path::Path, name: &str) -> bool {
 
 #[cfg(unix)]
 async fn is_native_executable(path: &std::path::Path) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    let Ok(meta) = tokio::fs::metadata(path).await else {
-        return false;
-    };
-    let mode = meta.permissions().mode();
-    if mode & 0o111 == 0 {
-        return false;
-    }
     let Ok(mut file) = tokio::fs::File::open(path).await else {
         return false;
     };
     use tokio::io::AsyncReadExt;
-    let mut header = [0u8; 4];
+    let mut header = [0u8; 20];
     if file.read_exact(&mut header).await.is_err() {
         return false;
     }
-    &header == b"\x7fELF"
+    if &header[..4] != b"\x7fELF" {
+        return false;
+    }
+    let e_type = u16::from_le_bytes([header[16], header[17]]);
+    e_type == 2 || e_type == 3
 }
 
 #[cfg(not(unix))]
