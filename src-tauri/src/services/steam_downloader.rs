@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::time::Instant;
 
 use futures::stream::{FuturesUnordered, StreamExt};
 use reqwest::Client;
@@ -147,6 +148,11 @@ async fn download_chunks_from_manifest(
     pause: Arc<AtomicBool>,
     progress: impl Fn(NativeDownloadProgress) + Send + Sync + 'static,
 ) -> Result<NativeDownloadOutcome, String> {
+    crate::dlog!(
+        "native",
+        "depot {} download_chunks_with_manifest: pre-creating file structure",
+        depot_id
+    );
     pre_create_files(&manifest, &out_dir).await?;
 
     let total_chunks: u64 = manifest
@@ -162,6 +168,13 @@ async fn download_chunks_from_manifest(
         .flat_map(|m| m.chunks.iter())
         .map(|c| c.cb_original.unwrap_or(0) as u64)
         .sum();
+    crate::dlog!(
+        "native",
+        "depot {} manifest decoded: {} chunks, {:.2} GiB total uncompressed",
+        depot_id,
+        total_chunks,
+        total_bytes as f64 / (1024.0 * 1024.0 * 1024.0)
+    );
 
     let progress = Arc::new(progress);
     let completed_chunks = Arc::new(Mutex::new(0u64));
@@ -172,6 +185,31 @@ async fn download_chunks_from_manifest(
     let semaphore = Arc::new(Semaphore::new(CHUNK_CONCURRENCY));
     let token_cache: Arc<Mutex<HashMap<String, Option<String>>>> =
         Arc::new(Mutex::new(HashMap::new()));
+    let last_emit_ms = Arc::new(AtomicU64::new(0));
+    let start_instant = Instant::now();
+
+    let verified_chunks = run_verify_phase(
+        &manifest,
+        &out_dir,
+        depot_id,
+        total_chunks,
+        total_bytes,
+        cancel.clone(),
+        progress.clone(),
+        completed_chunks.clone(),
+        completed_bytes.clone(),
+        skipped_chunks.clone(),
+        skipped_bytes.clone(),
+        last_emit_ms.clone(),
+        start_instant,
+    )
+    .await;
+    crate::dlog!(
+        "native",
+        "depot {} verify phase done: {} chunks pre-validated",
+        depot_id,
+        verified_chunks.len()
+    );
 
     let mut tasks = FuturesUnordered::new();
     for mapping in &manifest.payload.mappings {
@@ -208,8 +246,26 @@ async fn download_chunks_from_manifest(
             let token_cache = token_cache.clone();
             let cancel = cancel.clone();
             let pause = pause.clone();
+            let last_emit_ms = last_emit_ms.clone();
+            let verified_chunks = verified_chunks.clone();
+
+            if cancel.load(Ordering::SeqCst) {
+                break;
+            }
 
             tasks.push(tokio::spawn(async move {
+                if cancel.load(Ordering::SeqCst) {
+                    return Err("cancelled".to_string());
+                }
+                if verified_chunks.contains(&chunk_meta.sha) {
+                    return Ok(ChunkOutcome {
+                        file_path: chunk_meta.file_path,
+                        bytes_written: chunk_meta.cb_original as u64,
+                        network_bytes: 0,
+                        from_cache: true,
+                        pre_accounted: true,
+                    });
+                }
                 let _permit = permit.acquire_owned().await;
                 if cancel.load(Ordering::SeqCst) {
                     return Err("cancelled".to_string());
@@ -232,47 +288,78 @@ async fn download_chunks_from_manifest(
                 )
                 .await;
                 if let Ok(ref outcome) = res {
-                    let mut cc = completed_chunks.lock().await;
-                    *cc += 1;
-                    let cc_val = *cc;
-                    drop(cc);
-                    let mut cb = completed_bytes.lock().await;
-                    *cb += outcome.bytes_written;
-                    let cb_val = *cb;
-                    drop(cb);
-                    let mut nb = network_bytes.lock().await;
-                    *nb += outcome.network_bytes;
-                    let nb_val = *nb;
-                    drop(nb);
-                    if outcome.from_cache {
-                        let mut sc = skipped_chunks.lock().await;
-                        *sc += 1;
-                        let mut sb = skipped_bytes.lock().await;
-                        *sb += outcome.bytes_written;
-                    }
-                    let skipped_chunks_val = *skipped_chunks.lock().await;
-                    let skipped_bytes_val = *skipped_bytes.lock().await;
-                    let percent = if total_bytes > 0 {
-                        (cb_val as f64) * 100.0 / (total_bytes as f64)
+                    let (cc_val, cb_val, nb_val) = if outcome.pre_accounted {
+                        let cc_val = *completed_chunks.lock().await;
+                        let cb_val = *completed_bytes.lock().await;
+                        let nb_val = *network_bytes.lock().await;
+                        (cc_val, cb_val, nb_val)
                     } else {
-                        0.0
+                        let mut cc = completed_chunks.lock().await;
+                        *cc += 1;
+                        let cc_val = *cc;
+                        drop(cc);
+                        let mut cb = completed_bytes.lock().await;
+                        *cb += outcome.bytes_written;
+                        let cb_val = *cb;
+                        drop(cb);
+                        let mut nb = network_bytes.lock().await;
+                        *nb += outcome.network_bytes;
+                        let nb_val = *nb;
+                        drop(nb);
+                        if outcome.from_cache {
+                            let mut sc = skipped_chunks.lock().await;
+                            *sc += 1;
+                            let mut sb = skipped_bytes.lock().await;
+                            *sb += outcome.bytes_written;
+                        }
+                        (cc_val, cb_val, nb_val)
                     };
-                    progress(NativeDownloadProgress {
-                        depot_id,
-                        total_chunks,
-                        completed_chunks: cc_val,
-                        total_bytes,
-                        completed_bytes: cb_val,
-                        network_bytes: nb_val,
-                        skipped_chunks: skipped_chunks_val,
-                        skipped_bytes: skipped_bytes_val,
-                        percent,
-                    });
+
+                    let elapsed_ms = start_instant.elapsed().as_millis() as u64;
+                    let last = last_emit_ms.load(Ordering::Relaxed);
+                    let is_final = cc_val == total_chunks;
+                    let should_emit = is_final
+                        || elapsed_ms.saturating_sub(last) >= 150
+                            && last_emit_ms
+                                .compare_exchange(
+                                    last,
+                                    elapsed_ms,
+                                    Ordering::Relaxed,
+                                    Ordering::Relaxed,
+                                )
+                                .is_ok();
+
+                    if should_emit {
+                        let skipped_chunks_val = *skipped_chunks.lock().await;
+                        let skipped_bytes_val = *skipped_bytes.lock().await;
+                        let percent = if total_bytes > 0 {
+                            (cb_val as f64) * 100.0 / (total_bytes as f64)
+                        } else {
+                            0.0
+                        };
+                        progress(NativeDownloadProgress {
+                            depot_id,
+                            total_chunks,
+                            completed_chunks: cc_val,
+                            total_bytes,
+                            completed_bytes: cb_val,
+                            network_bytes: nb_val,
+                            skipped_chunks: skipped_chunks_val,
+                            skipped_bytes: skipped_bytes_val,
+                            percent,
+                        });
+                    }
                 }
                 res
             }));
         }
     }
+
+    crate::dlog!(
+        "native",
+        "depot {} chunk task queue built; awaiting completion",
+        depot_id
+    );
 
     let mut files_written_unique = std::collections::HashSet::new();
     let mut bytes_written = 0u64;
@@ -282,6 +369,14 @@ async fn download_chunks_from_manifest(
         bytes_written += chunk_outcome.bytes_written;
         files_written_unique.insert(chunk_outcome.file_path);
     }
+
+    crate::dlog!(
+        "native",
+        "depot {} chunks complete: {} files touched, {} bytes written",
+        depot_id,
+        files_written_unique.len(),
+        bytes_written
+    );
 
     Ok(NativeDownloadOutcome {
         files_written: files_written_unique.len(),
@@ -302,6 +397,7 @@ struct ChunkOutcome {
     bytes_written: u64,
     network_bytes: u64,
     from_cache: bool,
+    pre_accounted: bool,
 }
 
 async fn process_chunk(
@@ -315,22 +411,6 @@ async fn process_chunk(
     token_cache: Arc<Mutex<HashMap<String, Option<String>>>>,
 ) -> Result<ChunkOutcome, String> {
     let sha_hex = hex::encode(&job.sha);
-
-    if job.cb_original > 0 {
-        if let Ok(existing) = read_existing_chunk(&job.file_path, job.offset, job.cb_original).await
-        {
-            let mut hasher = Sha1::new();
-            hasher.update(&existing);
-            if hasher.finalize().to_vec() == job.sha {
-                return Ok(ChunkOutcome {
-                    file_path: job.file_path,
-                    bytes_written: job.cb_original as u64,
-                    network_bytes: 0,
-                    from_cache: true,
-                });
-            }
-        }
-    }
 
     let mut last_err: Option<String> = None;
     for attempt in 0..CHUNK_RETRY_COUNT {
@@ -422,33 +502,201 @@ async fn process_chunk(
             bytes_written: decoded.len() as u64,
             network_bytes,
             from_cache: false,
+            pre_accounted: false,
         });
     }
     Err(last_err.unwrap_or_else(|| "chunk download exhausted retries".to_string()))
 }
 
-async fn read_existing_chunk(path: &Path, offset: u64, len: u32) -> Result<Vec<u8>, String> {
+const VERIFY_FILE_CONCURRENCY: usize = 8;
+
+async fn run_verify_phase(
+    manifest: &DecodedManifest,
+    out_dir: &Path,
+    depot_id: u32,
+    total_chunks: u64,
+    total_bytes: u64,
+    cancel: Arc<AtomicBool>,
+    progress: Arc<dyn Fn(NativeDownloadProgress) + Send + Sync>,
+    completed_chunks: Arc<Mutex<u64>>,
+    completed_bytes: Arc<Mutex<u64>>,
+    skipped_chunks: Arc<Mutex<u64>>,
+    skipped_bytes: Arc<Mutex<u64>>,
+    last_emit_ms: Arc<AtomicU64>,
+    start_instant: Instant,
+) -> Arc<std::collections::HashSet<Vec<u8>>> {
+    let mut by_file: HashMap<PathBuf, Vec<(u64, u32, Vec<u8>)>> = HashMap::new();
+    for mapping in &manifest.payload.mappings {
+        let Some(rel) = mapping.filename.as_ref() else {
+            continue;
+        };
+        if mapping.flags.unwrap_or(0) & 0x40 != 0 {
+            continue;
+        }
+        let file_path = out_dir.join(sanitise_relative_path(rel));
+        for chunk in &mapping.chunks {
+            let Some(sha) = chunk.sha.as_ref() else {
+                continue;
+            };
+            by_file.entry(file_path.clone()).or_default().push((
+                chunk.offset.unwrap_or(0),
+                chunk.cb_original.unwrap_or(0),
+                sha.clone(),
+            ));
+        }
+    }
+
+    let verified: Arc<Mutex<std::collections::HashSet<Vec<u8>>>> =
+        Arc::new(Mutex::new(std::collections::HashSet::new()));
+    let sem = Arc::new(Semaphore::new(VERIFY_FILE_CONCURRENCY));
+    let mut tasks: FuturesUnordered<tokio::task::JoinHandle<()>> = FuturesUnordered::new();
+
+    for (path, chunks) in by_file {
+        if !path.exists() {
+            continue;
+        }
+        let cancel = cancel.clone();
+        let progress = progress.clone();
+        let completed_chunks = completed_chunks.clone();
+        let completed_bytes = completed_bytes.clone();
+        let skipped_chunks = skipped_chunks.clone();
+        let skipped_bytes = skipped_bytes.clone();
+        let last_emit_ms = last_emit_ms.clone();
+        let verified = verified.clone();
+        let sem_clone = sem.clone();
+
+        if cancel.load(Ordering::SeqCst) {
+            break;
+        }
+
+        tasks.push(tokio::spawn(async move {
+            let _permit = sem_clone.acquire_owned().await;
+            if cancel.load(Ordering::SeqCst) {
+                return;
+            }
+            verify_one_file(
+                path,
+                chunks,
+                depot_id,
+                total_chunks,
+                total_bytes,
+                cancel,
+                progress,
+                completed_chunks,
+                completed_bytes,
+                skipped_chunks,
+                skipped_bytes,
+                last_emit_ms,
+                start_instant,
+                verified,
+            )
+            .await;
+        }));
+    }
+
+    while tasks.next().await.is_some() {}
+
+    let inner: std::collections::HashSet<Vec<u8>> = match Arc::try_unwrap(verified) {
+        Ok(mutex) => mutex.into_inner(),
+        Err(arc) => arc.lock().await.clone(),
+    };
+    Arc::new(inner)
+}
+
+async fn verify_one_file(
+    path: PathBuf,
+    chunks: Vec<(u64, u32, Vec<u8>)>,
+    depot_id: u32,
+    total_chunks: u64,
+    total_bytes: u64,
+    cancel: Arc<AtomicBool>,
+    progress: Arc<dyn Fn(NativeDownloadProgress) + Send + Sync>,
+    completed_chunks: Arc<Mutex<u64>>,
+    completed_bytes: Arc<Mutex<u64>>,
+    skipped_chunks: Arc<Mutex<u64>>,
+    skipped_bytes: Arc<Mutex<u64>>,
+    last_emit_ms: Arc<AtomicU64>,
+    start_instant: Instant,
+    verified: Arc<Mutex<std::collections::HashSet<Vec<u8>>>>,
+) {
     use tokio::io::AsyncReadExt;
-    if !path.exists() {
-        return Err("file missing".to_string());
+    let Ok(mut file) = tokio::fs::File::open(&path).await else {
+        return;
+    };
+    let Ok(meta) = file.metadata().await else {
+        return;
+    };
+    let file_len = meta.len();
+    let mut sorted = chunks;
+    sorted.sort_by_key(|(off, _, _)| *off);
+
+    for (offset, len, expected_sha) in sorted {
+        if cancel.load(Ordering::SeqCst) {
+            return;
+        }
+        if offset + len as u64 > file_len {
+            continue;
+        }
+        if file.seek(std::io::SeekFrom::Start(offset)).await.is_err() {
+            continue;
+        }
+        let mut buf = vec![0u8; len as usize];
+        if file.read_exact(&mut buf).await.is_err() {
+            continue;
+        }
+        let mut hasher = Sha1::new();
+        hasher.update(&buf);
+        if hasher.finalize().to_vec() != expected_sha {
+            continue;
+        }
+
+        {
+            let mut set = verified.lock().await;
+            set.insert(expected_sha);
+        }
+
+        let mut cc = completed_chunks.lock().await;
+        *cc += 1;
+        let cc_val = *cc;
+        drop(cc);
+        let mut cb = completed_bytes.lock().await;
+        *cb += len as u64;
+        let cb_val = *cb;
+        drop(cb);
+        let mut sc = skipped_chunks.lock().await;
+        *sc += 1;
+        drop(sc);
+        let mut sb = skipped_bytes.lock().await;
+        *sb += len as u64;
+        drop(sb);
+
+        let elapsed_ms = start_instant.elapsed().as_millis() as u64;
+        let last = last_emit_ms.load(Ordering::Relaxed);
+        if elapsed_ms.saturating_sub(last) >= 150
+            && last_emit_ms
+                .compare_exchange(last, elapsed_ms, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+        {
+            let skipped_chunks_val = *skipped_chunks.lock().await;
+            let skipped_bytes_val = *skipped_bytes.lock().await;
+            let percent = if total_bytes > 0 {
+                (cb_val as f64) * 100.0 / (total_bytes as f64)
+            } else {
+                0.0
+            };
+            progress(NativeDownloadProgress {
+                depot_id,
+                total_chunks,
+                completed_chunks: cc_val,
+                total_bytes,
+                completed_bytes: cb_val,
+                network_bytes: 0,
+                skipped_chunks: skipped_chunks_val,
+                skipped_bytes: skipped_bytes_val,
+                percent,
+            });
+        }
     }
-    let metadata = tokio::fs::metadata(path)
-        .await
-        .map_err(|e| format!("metadata: {}", e))?;
-    if metadata.len() < offset + len as u64 {
-        return Err("file too short".to_string());
-    }
-    let mut file = tokio::fs::File::open(path)
-        .await
-        .map_err(|e| format!("open: {}", e))?;
-    file.seek(std::io::SeekFrom::Start(offset))
-        .await
-        .map_err(|e| format!("seek: {}", e))?;
-    let mut buf = vec![0u8; len as usize];
-    file.read_exact(&mut buf)
-        .await
-        .map_err(|e| format!("read: {}", e))?;
-    Ok(buf)
 }
 
 async fn get_or_fetch_token(

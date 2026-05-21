@@ -54,6 +54,7 @@ fn main() {
             commands::check_dotnet,
             commands::get_disk_space,
             commands::get_build_info,
+            commands::get_debug_log_path,
             // Window
             commands::minimize_window,
             commands::maximize_window,

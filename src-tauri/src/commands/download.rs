@@ -92,6 +92,13 @@ pub async fn start_download(
     validate_download_ids(&config)?;
 
     let job_id = Uuid::new_v4().to_string();
+    crate::dlog!(
+        "ipc",
+        "start_download(app_id={}, depots={}) -> job {}",
+        config.app_id,
+        config.depots.len(),
+        job_id
+    );
 
     let base_dir = resolve_download_dir(config.download_location.as_deref())
         .unwrap_or_else(|| {
@@ -820,6 +827,7 @@ pub async fn cancel_download(
     state: tauri::State<'_, AppState>,
     job_id: String,
 ) -> Result<(), String> {
+    crate::dlog!("ipc", "cancel_download({}) entry", job_id);
     let (
         depot_dirs,
         cancel_flag,
@@ -849,8 +857,14 @@ pub async fn cancel_download(
     };
 
     if !claim_ok {
+        crate::dlog!(
+            "ipc",
+            "cancel_download({}) early-return: not running or already claimed",
+            job_id
+        );
         return Ok(());
     }
+    crate::dlog!("ipc", "cancel_download({}) claim acquired, setting flags", job_id);
 
     cancel_flag.store(true, std::sync::atomic::Ordering::SeqCst);
     depot_runner::kill_job(&state, &job_id).await;
@@ -972,6 +986,7 @@ pub async fn pause_download(
     job_id: String,
     paused: bool,
 ) -> Result<(), String> {
+    crate::dlog!("ipc", "pause_download({}, paused={}) entry", job_id, paused);
     let pause_flag = {
         let jobs = state.active_jobs.lock().await;
         let job = jobs.get(&job_id).ok_or_else(|| "Job not found".to_string())?;

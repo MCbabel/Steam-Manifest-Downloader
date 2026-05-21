@@ -1452,6 +1452,9 @@ function cleanupProgressListener() {
 }
 
 function handleProgressMessage(msg) {
+  if (msg.jobId && msg.jobId !== state.jobId) {
+    return;
+  }
   switch (msg.type) {
     case 'status':
       if (msg.step === 'disk_space') {
@@ -1616,13 +1619,17 @@ function updateDepotDownloadProgressBytes(percent, completedBytes, totalBytes, n
     els.depotProgressFill.style.width = `${Math.min(percent, 100)}%`;
   }
   if (els.depotProgressText) {
-    els.depotProgressText.textContent = `${percent.toFixed(1)}%`;
+    const sizePart = (completedBytes != null && totalBytes != null && totalBytes > 0)
+      ? ` — ${formatBytes(completedBytes)} / ${formatBytes(totalBytes)}`
+      : '';
+    els.depotProgressText.textContent = `${percent.toFixed(1)}%${sizePart}`;
   }
   updateSpeedAndEtaBytes(completedBytes, totalBytes, networkBytes);
 }
 
 const SPEED_WINDOW_MS = 3000;
 const SPEED_MIN_WINDOW_MS = 1500;
+const ETA_DISPLAY_INTERVAL_MS = 1500;
 
 function updateSpeedAndEtaBytes(completedBytes, totalBytes, networkBytes) {
   const now = Date.now();
@@ -1654,6 +1661,10 @@ function updateSpeedAndEtaBytes(completedBytes, totalBytes, networkBytes) {
   const remainingBytes = Math.max(0, totalBytes - completedBytes);
   const etaSeconds =
     decompressedBytesPerSecond > 0 ? remainingBytes / decompressedBytesPerSecond : Infinity;
+
+  const lastDisplay = tracker.lastDisplayMs || 0;
+  if (now - lastDisplay < ETA_DISPLAY_INTERVAL_MS) return;
+  tracker.lastDisplayMs = now;
 
   let speedText;
   const mbps = networkBytesPerSecond / (1024 * 1024);
@@ -1711,6 +1722,10 @@ function updateSpeedAndEta(percent) {
   const percentPerSecond = percentDelta / timeDelta;
   const remainingPercent = 100 - percent;
   const etaSeconds = remainingPercent / percentPerSecond;
+
+  const lastDisplay = tracker.lastDisplayMs || 0;
+  if (now - lastDisplay < ETA_DISPLAY_INTERVAL_MS) return;
+  tracker.lastDisplayMs = now;
 
   let speedText = '';
   if (tracker.currentDepotSize > 0) {
@@ -1995,6 +2010,12 @@ function showMhKeySuggestionHint() {
 
 function resetApp() {
   commitPendingHistory();
+  if (state.jobId) {
+    const orphanJob = state.jobId;
+    invoke('cancel_download', { jobId: orphanJob }).catch((e) => {
+      console.warn('orphan cancel_download failed:', e);
+    });
+  }
   state.parsedData = null;
   state.selectedDepots.clear();
   state.jobId = null;
@@ -3908,10 +3929,15 @@ async function applyEmuReplacement() {
     return;
   }
   if (state.emuEditMode) {
-    await saveEmuEditSettings();
+    state.emulatorScan = state.emuEditTargets || [];
+    state.emuSelectedFiles = new Set((state.emuEditTargets || []).map(t => t.path));
+  }
+  if (!state.emulatorScan || state.emulatorScan.length === 0) {
+    if (state.emuEditMode) {
+      await saveEmuEditSettings();
+    }
     return;
   }
-  if (!state.emulatorScan || state.emulatorScan.length === 0) return;
   const selectedTargets = getSelectedEmuTargets();
   if (selectedTargets.length === 0) {
     setEmuApplyStatus('error', window.i18n.t('emulator.applyNoSelection') || 'No files selected');
@@ -4111,7 +4137,6 @@ function hideHistoryBanner() {
 function setEmuEditMode(on) {
   state.emuEditMode = !!on;
   document.body.classList.toggle('emu-edit-mode', state.emuEditMode);
-  if (els.emuVariantSection) els.emuVariantSection.classList.toggle('hidden', state.emuEditMode);
   if (els.emuReleaseStatus) els.emuReleaseStatus.classList.toggle('hidden', state.emuEditMode);
   if (els.emuDrmSection && state.emuEditMode) els.emuDrmSection.classList.add('hidden');
   if (els.btnEmuStartOver) els.btnEmuStartOver.classList.toggle('hidden', state.emuEditMode);

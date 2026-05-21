@@ -2,6 +2,11 @@ use tauri::command;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
+#[command]
+pub fn get_debug_log_path() -> Option<String> {
+    crate::services::debug_log::log_path().map(|p| p.to_string_lossy().to_string())
+}
+
 // SMD_BUILD_CHANNEL / SMD_GIT_SHA / SMD_BUILD_DATE are injected by CI
 // (dev-build.yml → "dev", release.yml → "stable"). Unset → "dev-local".
 #[command]

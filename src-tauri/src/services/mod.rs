@@ -25,6 +25,7 @@ pub mod steam_cdn;
 pub mod steam_chunks;
 pub mod steam_downloader;
 pub mod manifest_code_provider;
+pub mod debug_log;
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
