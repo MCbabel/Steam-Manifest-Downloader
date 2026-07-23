@@ -295,10 +295,6 @@
     "saveError": "Einstellungen konnten nicht gespeichert werden: {message}",
     "editNoPatches": "Keine gepatchten Steam-API-Dateien im Ordner dieses Spiels gefunden.",
     "backToHistory": "Zurück zum Verlauf",
-    "lobbyLaunching": "Starte lobby_connect...",
-    "lobbyLaunched": "lobby_connect gestartet (PID {pid}).",
-    "lobbyError": "lobby_connect konnte nicht gestartet werden: {message}",
-    "lobbyNotPatched": "Keine gepatchten Binärdateien im Spiel-Ordner.",
     "patchedBadge": "Gepatcht",
     "drmTitle": "Steam-DRM erkannt",
     "drmDescription": "Diese Programme sind mit Steam-DRM (SteamStub) geschützt. Sie funktionieren mit dem Emulator nicht, bis das DRM entfernt wurde.",
@@ -334,8 +330,7 @@
     "revertPartial": "Patch-Zurücksetzung: {success} erfolgreich, {failed} fehlgeschlagen.",
     "revertError": "Patch konnte nicht zurückgesetzt werden: {message}",
     "history": {
-      "editTooltip": "Emulator-Einstellungen bearbeiten",
-      "lobbyTooltip": "lobby_connect starten (Multiplayer)"
+      "editTooltip": "Emulator-Einstellungen bearbeiten"
     }
   },
   "steamLibrary": {

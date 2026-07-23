@@ -295,10 +295,6 @@
     "saveError": "Failed to save settings: {message}",
     "editNoPatches": "No patched Steam API files found in this game's folder.",
     "backToHistory": "Back to History",
-    "lobbyLaunching": "Launching lobby_connect...",
-    "lobbyLaunched": "lobby_connect started (pid {pid}).",
-    "lobbyError": "Failed to launch lobby_connect: {message}",
-    "lobbyNotPatched": "No patched binaries in this game folder.",
     "patchedBadge": "Patched",
     "drmTitle": "Steam DRM detected",
     "drmDescription": "These executables are protected by Steam DRM (SteamStub). They won't run with the emulator until the DRM is removed.",
@@ -334,8 +330,7 @@
     "revertPartial": "Patch revert: {success} succeeded, {failed} failed.",
     "revertError": "Failed to revert patch: {message}",
     "history": {
-      "editTooltip": "Edit emulator settings",
-      "lobbyTooltip": "Launch lobby_connect (multiplayer)"
+      "editTooltip": "Edit emulator settings"
     }
   },
   "steamLibrary": {

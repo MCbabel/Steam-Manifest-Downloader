@@ -509,32 +509,3 @@ pub async fn emu_revert_replacement(targets: Vec<String>) -> Result<Vec<ReplaceR
     }
     Ok(results)
 }
-
-#[command]
-pub async fn emu_launch_lobby_connect(
-    state: tauri::State<'_, AppState>,
-    app: AppHandle,
-    game_dir: String,
-    app_id: String,
-    platform: Platform,
-    x64: bool,
-) -> Result<u32, String> {
-    let data_dir = app_data_dir(&app);
-    let info = emulator::fetch_release_info(&state.http_client, &data_dir).await?;
-    emulator::ensure_cached(&state.http_client, &info, platform).await?;
-    let platform_cache = PathBuf::from(&info.cache_root).join(platform.cache_subdir());
-    let tool = emulator::lobby_connect_tool(&platform_cache, x64, platform)?;
-
-    let game_path = PathBuf::from(&game_dir);
-    if !game_path.exists() {
-        return Err(format!("game_dir does not exist: {}", game_dir));
-    }
-
-    let child = std::process::Command::new(&tool)
-        .current_dir(&game_path)
-        .env("SteamAppId", &app_id)
-        .env("SteamGameId", &app_id)
-        .spawn()
-        .map_err(|e| format!("spawn lobby_connect: {}", e))?;
-    Ok(child.id())
-}

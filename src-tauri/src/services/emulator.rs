@@ -55,14 +55,6 @@ impl Platform {
             (Platform::Linux, _) => "libsteam_api.so",
         }
     }
-    fn lobby_connect_binary(self, x64: bool) -> &'static str {
-        match (self, x64) {
-            (Platform::Windows, true) => "lobby_connect_x64.exe",
-            (Platform::Windows, false) => "lobby_connect_x32.exe",
-            (Platform::Linux, true) => "lobby_connect_x64",
-            (Platform::Linux, false) => "lobby_connect_x32",
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -511,20 +503,6 @@ pub fn dll_source(
         Ok(p)
     } else {
         Err(format!("emulator binary not found at {}", p.display()))
-    }
-}
-
-pub fn lobby_connect_tool(
-    platform_cache: &Path,
-    x64: bool,
-    platform: Platform,
-) -> Result<PathBuf, String> {
-    let root = release_root(platform_cache).join("tools").join("lobby_connect");
-    let p = root.join(platform.lobby_connect_binary(x64));
-    if p.exists() {
-        Ok(p)
-    } else {
-        Err(format!("lobby_connect not found at {}", p.display()))
     }
 }
 

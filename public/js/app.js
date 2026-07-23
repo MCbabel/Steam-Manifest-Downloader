@@ -2982,7 +2982,6 @@ function renderHistory(entries) {
 
   els.btnHistoryClear.style.display = '';
   const editTip = window.i18n.t('emulator.history.editTooltip');
-  const lobbyTip = window.i18n.t('emulator.history.lobbyTooltip');
   const entryById = new Map(entries.map(e => [e.id, e]));
   els.historyList.innerHTML = entries.map(entry => {
     const date = entry.completed_at ? formatHistoryDate(entry.completed_at) : formatHistoryDate(entry.started_at);
@@ -3024,7 +3023,6 @@ function renderHistory(entries) {
           <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" data-depot-ids="${escapeHtml((entry.depot_ids || []).join(','))}" title="Re-download" aria-label="Re-download">${ICONS.refresh}</button>
           <button class="btn btn--small btn--outline history-action-folder" data-path="${escapeHtml(entry.download_dir)}" title="Open Folder" aria-label="Open download folder"${entry.status === 'cancelled' ? ' disabled' : ''}>${ICONS.folderOpen}</button>
           <button class="btn btn--small btn--outline history-action-edit-emu" data-entry-id="${escapeHtml(entry.id)}" title="${escapeHtml(editTip)}" aria-label="${escapeHtml(editTip)}"${entry.status === 'cancelled' || !entry.download_dir ? ' disabled' : ''}>${ICONS.settings}</button>
-          <button class="btn btn--small btn--outline history-action-lobby" data-entry-id="${escapeHtml(entry.id)}" title="${escapeHtml(lobbyTip)}" aria-label="${escapeHtml(lobbyTip)}"${entry.status === 'cancelled' || !entry.download_dir ? ' disabled' : ''}>${ICONS.play}</button>
           <button class="btn btn--small btn--outline history-action-remove" data-entry-id="${escapeHtml(entry.id)}" title="Remove" aria-label="Remove entry">${ICONS.trash}</button>
         </div>
       </div>
@@ -3129,13 +3127,6 @@ function renderHistory(entries) {
     });
   });
 
-  els.historyList.querySelectorAll('.history-action-lobby').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const entry = entryById.get(btn.dataset.entryId);
-      if (entry) launchLobbyConnect(entry);
-    });
-  });
 }
 
 function formatHistoryDate(dateStr) {
@@ -4214,36 +4205,6 @@ async function openEmuEditFromHistory(entry) {
   goToStep(5);
   renderEmuFileList(patched);
   if (els.emuApplyStatus) els.emuApplyStatus.classList.add('hidden');
-}
-
-async function launchLobbyConnect(entry) {
-  if (!entry || !entry.download_dir) return;
-  let scanned;
-  try {
-    scanned = await invoke('emu_scan_game_dir', { gameDir: entry.download_dir });
-  } catch (e) {
-    console.error('emu_scan_game_dir failed:', e);
-    showFolderMissing();
-    return;
-  }
-  try {
-    const patched = (scanned || []).filter(f => f.is_patched);
-    if (patched.length === 0) {
-      showHistoryBanner(window.i18n.t('emulator.lobbyNotPatched'));
-      return;
-    }
-    const target = patched.find(t => t.arch === 'x64') || patched[0];
-    const pid = await invoke('emu_launch_lobby_connect', {
-      gameDir: entry.download_dir,
-      appId: entry.app_id,
-      platform: target.platform,
-      x64: target.arch === 'x64',
-    });
-    showHistoryBanner(window.i18n.t('emulator.lobbyLaunched', { pid }), 6000, 'success');
-  } catch (e) {
-    console.error('emu_launch_lobby_connect failed:', e);
-    showHistoryBanner(window.i18n.t('emulator.lobbyError', { message: String(e) }));
-  }
 }
 
 function setEmuApplyStatus(kind, text) {
