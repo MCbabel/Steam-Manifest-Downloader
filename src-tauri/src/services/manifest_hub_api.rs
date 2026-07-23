@@ -11,7 +11,7 @@ pub async fn download_from_manifest_hub(
     api_key: &str,
 ) -> Result<PathBuf, String> {
     let url = format!(
-        "https://api.manifesthub1.filegear-sg.me/manifest?apikey={}&depotid={}&manifestid={}",
+        "https://api.manifesthub2.filegear-sg.me/manifest?apikey={}&depotid={}&manifestid={}",
         api_key, depot_id, manifest_id
     );
 

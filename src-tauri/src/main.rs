@@ -24,7 +24,7 @@ fn main() {
             );
             telemetry.clone().spawn_background_flush();
 
-            let mut state = services::AppState::new(app.handle().clone());
+            let mut state = services::AppState::new();
             state.telemetry = Some(telemetry);
             app.manage(state);
 
@@ -38,11 +38,15 @@ fn main() {
             commands::search_repos,
             commands::get_repo_manifests,
             commands::search_steam_games,
+            commands::fetch_depot_metadata,
+            commands::fetch_depot_metadata_steam,
+            commands::fetch_latest_manifest_id,
             // Steam
             commands::get_steam_app_info,
             // Download
             commands::start_download,
             commands::cancel_download,
+            commands::pause_download,
             // Settings
             commands::get_settings,
             commands::save_settings,
@@ -50,6 +54,7 @@ fn main() {
             commands::check_dotnet,
             commands::get_disk_space,
             commands::get_build_info,
+            commands::get_debug_log_path,
             // Window
             commands::minimize_window,
             commands::maximize_window,
@@ -63,6 +68,7 @@ fn main() {
             commands::get_history,
             commands::remove_history_entry,
             commands::clear_history,
+            commands::record_history_entry,
             commands::open_folder,
             // Shortcuts
             commands::is_shortcut_supported,
@@ -72,6 +78,28 @@ fn main() {
             commands::get_telemetry_status,
             commands::set_telemetry_consent,
             commands::emit_telemetry_event,
+            // Emulator (gbe_fork)
+            commands::emu_release_info,
+            commands::emu_ensure_cached,
+            commands::emu_scan_game_dir,
+            commands::emu_scan_for_dlc_merge,
+            commands::emu_merge_dlc_depots,
+            commands::emu_apply_replacement,
+            commands::emu_revert_replacement,
+            commands::emu_read_emu_settings,
+            commands::emu_write_emu_settings,
+            // Steam library (non-Steam shortcut + grid art)
+            commands::steam_library_detect,
+            commands::steam_library_add,
+            // Steamless (DRM detection + removal)
+            commands::steamless_scan,
+            commands::steamless_unpack,
+            // Steam API Check Bypass (version.dll DLL-hijack)
+            commands::steam_api_bypass_apply,
+            commands::steam_api_bypass_revert,
+            commands::steam_api_bypass_status,
+            // Native (pure-Rust) downloader — experimental, side-by-side with DepotDownloaderMod
+            commands::native_download_depot,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

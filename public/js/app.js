@@ -12,6 +12,22 @@ const state = {
   headerImage: null,
   downloadDir: null,
   shortcutSupported: false,
+  shortcutsCreated: false,
+  downloadFailed: false,
+  emulatorAvailable: false,
+  emulatorScan: [],
+  emulatorReleaseInfo: null,
+  drmTargets: [],
+  emuEditMode: false,
+  emuEditTargets: [],
+  emuApplyComplete: false,
+  bypassInitialState: false,
+  pendingHistoryRemoveId: null,
+  steamLibrarySupported: false,
+  steamLibraryUser: null,
+  steamLibraryDetectedExes: [],
+  downloadStartedAt: null,
+  pendingHistoryEntry: null,
   notificationsEnabled: false,
   notificationSoundEnabled: true,
   depotManifests: {}, // depotId -> { originalName, storedPath }
@@ -44,6 +60,8 @@ const ICONS = {
   checkCircle: `<svg class="btn-icon" ${SVG_BASE}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
   sun: `<svg class="theme-icon theme-icon--sun" id="theme-icon" width="16" height="16" ${SVG_BASE}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
   moon: `<svg class="theme-icon theme-icon--moon" id="theme-icon" width="16" height="16" ${SVG_BASE}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
+  settings: `<svg class="btn-icon" ${SVG_BASE}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
+  play: `<svg class="btn-icon" ${SVG_BASE}><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
 };
 
 const MH_APIKEY_STORAGE_KEY = 'manifestHubApiKey';
@@ -111,6 +129,8 @@ const els = {
   terminalOutput: $('#terminal-output'),
   completionMessage: $('#completion-message'),
   btnCancel: $('#btn-cancel'),
+  btnPause: $('#btn-pause'),
+  nativeAlphaBanner: $('#native-alpha-banner'),
   mhApiKey: $('#mh-apikey'),
   downloadDirInput: $('#download-dir'),
   btnBrowseDir: $('#btn-browse-dir'),
@@ -138,7 +158,11 @@ const els = {
   maxRetriesInput: $('#max-retries-input'),
   speedLimitInput: $('#speed-limit-input'),
   proxyInput: $('#proxy-input'),
+  hubcapApiKeyInput: $('#hubcap-apikey-input'),
+  ryuuApiKeyInput: $('#ryuu-apikey-input'),
   notificationSoundToggle: $('#notification-sound-toggle'),
+  nativeDownloaderToggle: $('#native-downloader-toggle'),
+  cancelKeepFilesToggle: $('#cancel-keep-files-toggle'),
   telemetryModal: $('#telemetry-modal'),
   btnTelemetryAccept: $('#btn-telemetry-accept'),
   btnTelemetryDecline: $('#btn-telemetry-decline'),
@@ -180,31 +204,106 @@ const els = {
   shortcutStartMenu: $('#shortcut-startmenu'),
   shortcutStatus: $('#shortcut-status'),
   btnCreateShortcuts: $('#btn-create-shortcuts'),
-  btnShortcutNew: $('#btn-shortcut-new'),
+  btnShortcutSkip: $('#btn-shortcut-skip'),
   btnShortcutStartOver: $('#btn-shortcut-start-over'),
+  stepEmulator: $('#step-emulator'),
+  step5Connector: $('#step5-connector'),
+  step5Indicator: $('#step5-indicator'),
+  emuReleaseStatus: $('#emu-release-status'),
+  emuFileList: $('#emu-file-list'),
+  emuFileEmpty: $('#emu-file-empty'),
+  emuApplyStatus: $('#emu-apply-status'),
+  btnEmuApply: $('#btn-emu-apply'),
+  btnEmuNew: $('#btn-emu-new'),
+  btnEmuStartOver: $('#btn-emu-start-over'),
+  emuDrmSection: $('#emu-drm-section'),
+  emuDrmList: $('#emu-drm-list'),
+  emuDrmStatusWrap: $('#emu-drm-status-wrap'),
+  emuDrmStatus: $('#emu-drm-status'),
+  btnEmuDrmRemove: $('#btn-emu-drm-remove'),
+  btnEmuDrmCopy: $('#btn-emu-drm-copy'),
+  emuBypassSection: $('#emu-bypass-section'),
+  emuBypassToggle: $('#emu-bypass-toggle'),
+  emuDlcMergeSection: $('#emu-dlc-merge-section'),
+  emuDlcMergeHint: $('#emu-dlc-merge-hint'),
+  emuDlcMergeStatus: $('#emu-dlc-merge-status'),
+  btnEmuMergeDlcs: $('#btn-emu-merge-dlcs'),
+  emuHeader: $('.emu-header'),
+  emuDescription: $('.emu-description'),
+  emuVariantSection: $('#emu-variant-section'),
+  btnEmuRevert: $('#btn-emu-revert'),
+  emuRevertModal: $('#emu-revert-modal'),
+  btnEmuRevertYes: $('#btn-emu-revert-yes'),
+  btnEmuRevertNo: $('#btn-emu-revert-no'),
+  historyRemoveModal: $('#history-remove-modal'),
+  btnHistoryRemoveYes: $('#btn-history-remove-yes'),
+  btnHistoryRemoveNo: $('#btn-history-remove-no'),
+  historyClearModal: $('#history-clear-modal'),
+  btnHistoryClearYes: $('#btn-history-clear-yes'),
+  btnHistoryClearNo: $('#btn-history-clear-no'),
+  stepSteamLibrary: $('#step-steam-library'),
+  step6Connector: $('#step6-connector'),
+  step6Indicator: $('#step6-indicator'),
+  steamLibraryStatus: $('#steam-library-status'),
+  steamExePath: $('#steam-exe-path'),
+  btnSteamBrowseExe: $('#btn-steam-browse-exe'),
+  steamDetectedSection: $('#steam-detected-section'),
+  btnSteamToggleDetected: $('#btn-steam-toggle-detected'),
+  steamDetectedList: $('#steam-detected-list'),
+  steamGameName: $('#steam-game-name'),
+  steamLaunchOptions: $('#steam-launch-options'),
+  steamLibraryResult: $('#steam-library-result'),
+  btnSteamAdd: $('#btn-steam-add'),
+  btnSteamSkip: $('#btn-steam-skip'),
+  shortcutSteamRow: $('#shortcut-steam-row'),
+  shortcutSteamLibrary: $('#shortcut-steam-library'),
 };
 
 function goToStep(step) {
   state.currentStep = step;
 
-  [els.stepUpload, els.stepSelect, els.stepProgress, els.stepShortcut].forEach((el, i) => {
+  const stepMap = {
+    1: els.stepUpload,
+    2: els.stepSelect,
+    3: els.stepProgress,
+    4: els.stepShortcut,
+    5: els.stepEmulator,
+    6: els.stepSteamLibrary,
+  };
+  Object.entries(stepMap).forEach(([n, el]) => {
     if (!el) return;
-    el.classList.toggle('active', i + 1 === step);
-    el.classList.toggle('hidden', i + 1 !== step);
+    const match = parseInt(n) === step;
+    el.classList.toggle('active', match);
+    el.classList.toggle('hidden', !match);
   });
 
+  const visibleItems = Array.from($$('.steps__item:not(.hidden)'));
+  const currentPos = visibleItems.findIndex(el => parseInt(el.dataset.step) === step);
   $$('.steps__item').forEach((el) => {
     const s = parseInt(el.dataset.step);
+    const myPos = visibleItems.findIndex(it => parseInt(it.dataset.step) === s);
     el.classList.toggle('active', s === step);
-    el.classList.toggle('completed', s < step);
+    el.classList.toggle('completed', currentPos >= 0 && myPos >= 0 && myPos < currentPos);
   });
 
   const stepsIndicator = document.getElementById('steps-indicator');
   if (stepsIndicator) {
-    const visibleMax = document.getElementById('step4-indicator')?.classList.contains('hidden') === false ? 4 : 3;
-    stepsIndicator.setAttribute('aria-valuemax', String(visibleMax));
-    stepsIndicator.setAttribute('aria-valuenow', String(Math.min(step, visibleMax)));
+    const visibleItems = $$('.steps__item:not(.hidden)');
+    const max = Math.max(3, visibleItems.length);
+    const positionOfStep = Array.from(visibleItems)
+      .findIndex(el => parseInt(el.dataset.step) === step);
+    const valueNow = positionOfStep >= 0 ? positionOfStep + 1 : Math.min(step, max);
+    stepsIndicator.setAttribute('aria-valuemax', String(max));
+    stepsIndicator.setAttribute('aria-valuenow', String(valueNow));
   }
+}
+
+function renumberSteps() {
+  const visible = $$('.steps__item:not(.hidden)');
+  visible.forEach((el, i) => {
+    const numberEl = el.querySelector('.steps__number');
+    if (numberEl) numberEl.textContent = String(i + 1);
+  });
 }
 
 function switchTab(tabName) {
@@ -291,7 +390,7 @@ async function handleDepotManifestFile(depotId) {
     const statusEl = document.querySelector(`.depot-manifest-status[data-depot-id="${depotId}"]`);
     const btnEl = document.querySelector(`.depot-manifest-btn[data-depot-id="${depotId}"]`);
     if (statusEl) statusEl.innerHTML = `<span class="manifest-uploaded">${ICONS.check} ${escapeHtml(fileName)}</span>`;
-    if (btnEl) btnEl.innerHTML = `${ICONS.upload} Replace`;
+    if (btnEl) btnEl.classList.add('depot-manifest-action--active');
   } catch (error) {
     console.error('Failed to select manifest file:', error);
     alert('Failed to select manifest file: ' + error);
@@ -304,7 +403,51 @@ function removeDepotManifest(depotId) {
   const statusEl = document.querySelector(`.depot-manifest-status[data-depot-id="${depotId}"]`);
   const btnEl = document.querySelector(`.depot-manifest-btn[data-depot-id="${depotId}"]`);
   if (statusEl) statusEl.innerHTML = '';
-  if (btnEl) btnEl.innerHTML = `${ICONS.upload} Upload .manifest`;
+  if (btnEl) btnEl.classList.remove('depot-manifest-action--active');
+}
+
+async function fetchLatestManifestForDepot(depotId, btnEl) {
+  const appId = state.parsedData && state.parsedData.mainAppId ? String(state.parsedData.mainAppId) : null;
+  if (!appId) return;
+  const input = document.querySelector(`.custom-manifest-input[data-depot-id="${depotId}"]`);
+  const statusEl = document.querySelector(`.depot-manifest-status[data-depot-id="${depotId}"]`);
+  if (statusEl && statusEl._fetchClearTimer) {
+    clearTimeout(statusEl._fetchClearTimer);
+    statusEl._fetchClearTimer = null;
+  }
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.classList.add('depot-manifest-action--loading');
+  }
+  if (statusEl) statusEl.innerHTML = `<span class="manifest-uploading">${window.i18n.t('depots.fetchingLatest')}</span>`;
+  try {
+    const result = await invoke('fetch_latest_manifest_id', { appId, depotId: String(depotId) });
+    const manifestId = result.manifestId;
+    const sourceLabel = result.source === 'steam'
+      ? window.i18n.t('depots.fetchSourceSteam')
+      : window.i18n.t('depots.fetchSourceFallback');
+    if (input) input.value = manifestId;
+    if (statusEl) statusEl.innerHTML = `<span class="manifest-uploaded">${ICONS.check} ${escapeHtml(manifestId)}</span> <span class="manifest-source manifest-source--${escapeHtml(result.source)}">${escapeHtml(sourceLabel)}</span>`;
+  } catch (e) {
+    console.error('fetch_latest_manifest_id failed:', e);
+    if (statusEl) statusEl.innerHTML = `<span class="status-error">${escapeHtml(window.i18n.t('depots.fetchLatestError', { message: String(e) }))}</span>`;
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.classList.remove('depot-manifest-action--loading');
+    }
+    if (statusEl) {
+      statusEl._fetchClearTimer = setTimeout(() => {
+        const uploaded = state.depotManifests[depotId];
+        if (uploaded) {
+          statusEl.innerHTML = `<span class="manifest-uploaded">${ICONS.check} ${escapeHtml(uploaded.originalName)}</span>`;
+        } else {
+          statusEl.innerHTML = '';
+        }
+        statusEl._fetchClearTimer = null;
+      }, 5000);
+    }
+  }
 }
 
 async function handleFilePath(filePath) {
@@ -332,7 +475,8 @@ async function handleFilePath(filePath) {
         manifestId: d.manifest_id || 'N/A',
         depotKey: d.depot_key || null,
         sizeBytes: d.size_bytes || null
-      }))
+      })),
+      allAppIds: Array.isArray(raw.all_app_ids) ? raw.all_app_ids.map(String) : [],
     };
     state.mode = 'upload';
     els.uploadLoading.classList.add('hidden');
@@ -566,7 +710,7 @@ async function performSearch() {
     state.searchRepos = repos;
 
     if (repos.length === 0) {
-      showSearchError('No manifests found for this App ID in any configured depot source. Add or enable more sources in Settings.');
+      showSearchError(window.i18n.t('search.noResults'));
       return;
     }
 
@@ -622,15 +766,19 @@ function renderRepoList(repos) {
     card.className = 'repo-card';
     card.dataset.repoIndex = index;
 
-    const dateHtml = repo.date ? `<div class="repo-card__date">Updated: ${formatRepoDate(repo.date)}</div>` : '';
+    const displayName = repoDisplayName(repo);
+    const badgeText = repoBadgeText(repo);
+    const dateHtml = repo.date
+      ? `<div class="repo-card__date">${window.i18n.t('search.repoUpdated')}: ${formatRepoDate(repo.date)}</div>`
+      : '';
 
     card.innerHTML = `
       <div class="repo-card__radio"></div>
       <div class="repo-card__info">
-        <div class="repo-card__name">${escapeHtml(repo.name)}</div>
+        <div class="repo-card__name">${escapeHtml(displayName)}</div>
         ${dateHtml}
       </div>
-      <span class="repo-card__badge repo-card__badge--archive">${escapeHtml(repo.source || repo.type || 'unknown')}</span>
+      <span class="repo-card__badge repo-card__badge--archive">${escapeHtml(badgeText)}</span>
     `;
     card.addEventListener('click', () => selectRepo(index));
     els.repoList.appendChild(card);
@@ -644,6 +792,28 @@ function renderRepoList(repos) {
     autoRedownloadPending = false;
     selectRepo(0);
     proceedFromSearch();
+  }
+}
+
+function repoDisplayName(repo) {
+  switch (repo.type) {
+    case 'hubcap':
+      return window.i18n.t('search.repoNameHubcap');
+    case 'remote':
+      return window.i18n.t('search.repoNameRemote');
+    default:
+      return repo.name || repo.type || 'Unknown';
+  }
+}
+
+function repoBadgeText(repo) {
+  switch (repo.type) {
+    case 'hubcap':
+      return window.i18n.t('search.repoBadgeHubcap');
+    case 'remote':
+      return window.i18n.t('search.repoBadgeRemote');
+    default:
+      return repo.source || repo.type || 'Source';
   }
 }
 
@@ -868,23 +1038,35 @@ function showSelectionStep() {
     item.innerHTML = `
       <div class="depot-item__checkbox"></div>
       <div class="depot-item__info">
-        <div class="depot-item__depot-id">Depot ${safeDepotId}${safeSize ? `<span class="depot-item__size">${safeSize}</span>` : ''}</div>
+        <div class="depot-item__header">
+          <span class="depot-item__depot-id">Depot ${safeDepotId}<span class="depot-item__name" data-depot-name="${safeDepotId}"></span>${safeSize ? `<span class="depot-item__size">${safeSize}</span>` : ''}</span>
+          <span class="depot-item__tags" data-depot-tags="${safeDepotId}"></span>
+        </div>
         <div class="depot-item__manifest-id">Manifest: ${safeManifestId}</div>
-        <div class="depot-item__custom-manifest">
-          <label>Custom:</label>
+        <div class="depot-item__manifest-row">
           <input type="text" data-depot-id="${safeDepotId}" class="custom-manifest-input"
             placeholder="Custom manifest ID (optional)"
             onclick="event.stopPropagation()">
-        </div>
-        <div class="depot-item__manifest-upload">
-          <button type="button" class="btn btn--small btn--outline depot-manifest-btn" data-depot-id="${safeDepotId}">
-            ${ICONS.upload} Upload .manifest
+          <button type="button" class="depot-manifest-action depot-manifest-fetch-btn" data-depot-id="${safeDepotId}"
+            data-i18n-attr="title=depots.fetchLatest,aria-label=depots.fetchLatest" title="Fetch latest manifest ID">
+            ${ICONS.refresh}
           </button>
-          <span class="depot-manifest-status" data-depot-id="${safeDepotId}"></span>
+          <button type="button" class="depot-manifest-action depot-manifest-btn" data-depot-id="${safeDepotId}"
+            data-i18n-attr="title=depots.uploadManifest,aria-label=depots.uploadManifest" title="Upload .manifest file">
+            ${ICONS.upload}
+          </button>
         </div>
+        <span class="depot-manifest-status" data-depot-id="${safeDepotId}"></span>
       </div>
     `;
 
+    const fetchBtn = item.querySelector('.depot-manifest-fetch-btn');
+    if (fetchBtn) {
+      fetchBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fetchLatestManifestForDepot(depot.depotId, fetchBtn);
+      });
+    }
     const manifestBtn = item.querySelector('.depot-manifest-btn');
     if (manifestBtn) {
       manifestBtn.addEventListener('click', (e) => {
@@ -894,9 +1076,8 @@ function showSelectionStep() {
     }
 
     item.addEventListener('click', (e) => {
-      // Don't toggle when clicking input or upload button
       if (e.target.tagName === 'INPUT') return;
-      if (e.target.tagName === 'BUTTON' || e.target.closest('.depot-manifest-btn')) return;
+      if (e.target.closest('button')) return;
       toggleDepot(depot.depotId, item);
     });
     els.depotList.appendChild(item);
@@ -923,6 +1104,150 @@ function showSelectionStep() {
 
   updateDownloadButton();
   goToStep(2);
+
+  fetchDepotMetadataAsync(data.mainAppId);
+  fetchDepotNamesFromSteam(data.mainAppId);
+}
+
+async function fetchDepotMetadataAsync(appId) {
+  try {
+    const depots = await invoke('fetch_depot_metadata', { appId: String(appId) });
+    if (!Array.isArray(depots)) return;
+    depots.forEach((d) => renderDepotTags(d));
+  } catch (e) {
+    console.warn('fetch_depot_metadata failed:', e);
+  }
+}
+
+async function fetchDepotNamesFromSteam(appId) {
+  try {
+    const depots = await invoke('fetch_depot_metadata_steam', { appId: String(appId) });
+    if (!Array.isArray(depots)) return;
+    state.depotNames = state.depotNames || {};
+    state.depotPicsInfo = {};
+    depots.forEach((d) => {
+      if (!d || !d.depotId) return;
+      state.depotPicsInfo[String(d.depotId)] = d;
+      const label = d.name && d.name.trim() ? d.name.trim() : null;
+      if (label) state.depotNames[String(d.depotId)] = label;
+      const el = document.querySelector(`[data-depot-name="${CSS.escape(String(d.depotId))}"]`);
+      if (!el) return;
+      el.innerHTML = '';
+      if (label) {
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'depot-item__name-label';
+        nameSpan.textContent = ` — ${label}`;
+        el.appendChild(nameSpan);
+      }
+      const depotIdContainer = el.closest('.depot-item__depot-id');
+      if (depotIdContainer) {
+        depotIdContainer
+          .querySelectorAll('.depot-tag[data-role-badge]')
+          .forEach(n => n.remove());
+      }
+      const badge = depotRoleBadge(d);
+      if (badge && depotIdContainer) {
+        badge.setAttribute('data-role-badge', '1');
+        depotIdContainer.appendChild(document.createTextNode(' '));
+        depotIdContainer.appendChild(badge);
+      }
+    });
+    reorderDepotCards();
+  } catch (e) {
+    console.warn('fetch_depot_metadata_steam failed:', e);
+  }
+}
+
+function reorderDepotCards() {
+  const list = els.depotList;
+  if (!list) return;
+  const hostOs = navigator.platform.toLowerCase().includes('linux')
+    ? 'linux'
+    : navigator.platform.toLowerCase().includes('mac')
+      ? 'macos'
+      : 'windows';
+  const items = Array.from(list.querySelectorAll('.depot-item'));
+  items.sort((a, b) => depotSortKey(a, hostOs) - depotSortKey(b, hostOs)
+    || depotIdNumeric(a) - depotIdNumeric(b));
+  items.forEach(el => list.appendChild(el));
+}
+
+function depotSortKey(itemEl, hostOs) {
+  const depotId = itemEl.dataset.depotId;
+  const info = state.depotPicsInfo ? state.depotPicsInfo[String(depotId)] : null;
+  if (!info) return 100;
+  switch (info.role) {
+    case 'shared_content':
+      return 10;
+    case 'platform': {
+      const os = (info.oslist || '').toLowerCase();
+      if (os.includes(hostOs)) return 20;
+      if (os.includes('windows')) return 30;
+      if (os.includes('linux')) return 31;
+      if (os.includes('mac')) return 32;
+      return 33;
+    }
+    case 'language':
+      return 50;
+    case 'dlc':
+      return 60;
+    default:
+      return 80;
+  }
+}
+
+function depotIdNumeric(itemEl) {
+  const id = parseInt(itemEl.dataset.depotId, 10);
+  return isNaN(id) ? Number.MAX_SAFE_INTEGER : id;
+}
+
+function depotRoleBadge(d) {
+  const role = d.role;
+  const tag = document.createElement('span');
+  tag.className = 'depot-tag depot-tag--' + role;
+  switch (role) {
+    case 'dlc':
+      tag.textContent = window.i18n.t('depots.roleDlc');
+      break;
+    case 'language':
+      tag.textContent = d.language
+        ? window.i18n.t('depots.roleLanguageWithName', { name: capitalize(d.language) })
+        : window.i18n.t('depots.roleLanguage');
+      break;
+    case 'shared_content':
+      tag.textContent = window.i18n.t('depots.roleContent');
+      break;
+    case 'platform':
+      tag.textContent = window.i18n.t('depots.rolePlatform');
+      break;
+    default:
+      return null;
+  }
+  return tag;
+}
+
+function renderDepotTags(info) {
+  if (!info || !info.depot_id) return;
+  const container = document.querySelector(`[data-depot-tags="${CSS.escape(String(info.depot_id))}"]`);
+  if (!container) return;
+
+  const tags = [];
+  const osList = (info.oslist || '').toLowerCase();
+  if (osList.includes('windows')) tags.push(['windows', window.i18n.t('depotTags.windows')]);
+  if (osList.includes('linux')) tags.push(['linux', window.i18n.t('depotTags.linux')]);
+  if (osList.includes('macos') || osList.includes('mac')) tags.push(['mac', window.i18n.t('depotTags.macos')]);
+  if (info.osarch === '64') tags.push(['arch', window.i18n.t('depotTags.arch64')]);
+  else if (info.osarch === '32') tags.push(['arch', window.i18n.t('depotTags.arch32')]);
+  if (info.language) tags.push(['lang', capitalize(info.language)]);
+
+  container.innerHTML = tags.map(([cls, label]) =>
+    `<span class="depot-tag depot-tag--${cls}">${escapeHtml(label)}</span>`
+  ).join('');
+}
+
+function capitalize(s) {
+  if (!s) return '';
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function toggleDepot(depotId, element) {
@@ -984,21 +1309,36 @@ async function startDownload() {
 
   if (selectedDepots.length === 0) return;
 
+  try {
+    const s = await invoke('get_settings');
+    state.currentEngine = s.use_native_downloader !== false ? 'native' : 'ddm';
+  } catch (_) {
+    state.currentEngine = 'native';
+  }
+
+  const mhApiKey = els.mhApiKey.value.trim();
+  hideMhKeyRequiredHint();
+
   emitEvent('download_started', { depot_count: selectedDepots.length });
 
   requestNotificationPermission();
 
-  const mhApiKey = els.mhApiKey.value.trim();
-  if (mhApiKey) localStorage.setItem(MH_APIKEY_STORAGE_KEY, mhApiKey);
+  if (mhApiKey) {
+    localStorage.setItem(MH_APIKEY_STORAGE_KEY, mhApiKey);
+  } else {
+    localStorage.removeItem(MH_APIKEY_STORAGE_KEY);
+  }
   saveDownloadDir();
 
   const depotsWithCustomManifests = selectedDepots.map(depot => {
     const input = document.querySelector(`.custom-manifest-input[data-depot-id="${depot.depotId}"]`);
     const customManifestId = input ? input.value.trim() : '';
     const depotManifest = state.depotManifests[depot.depotId];
+    const displayName = state.depotNames ? state.depotNames[String(depot.depotId)] : null;
     const result = {
       ...depot,
-      customManifestId: customManifestId || null
+      customManifestId: customManifestId || null,
+      displayName: displayName || null,
     };
     if (depotManifest) {
       result.uploadedManifestPath = depotManifest.storedPath;
@@ -1015,6 +1355,8 @@ async function startDownload() {
 
   goToStep(3);
   initProgressUI(depotsWithCustomManifests);
+  await commitPendingHistory();
+  state.downloadStartedAt = new Date().toISOString();
 
   try {
     const downloadConfig = {
@@ -1030,6 +1372,9 @@ async function startDownload() {
       if (state.searchRepo) downloadConfig.repo = state.searchRepo;
       if (state.searchSha) downloadConfig.sha = state.searchSha;
       if (state.searchKeyVdfKeys) downloadConfig.keyVdfKeys = state.searchKeyVdfKeys;
+      if (state.selectedRepo && state.selectedRepo.type) {
+        downloadConfig.sourceType = state.selectedRepo.type;
+      }
     }
 
     const result = await invoke('start_download', { config: downloadConfig });
@@ -1049,10 +1394,22 @@ function initProgressUI(depots) {
   els.progressStatus.textContent = 'Initializing...';
   els.terminalOutput.innerHTML = '';
   els.completionMessage.classList.add('hidden');
+  state.downloadFailed = false;
   if (els.btnNextStep) els.btnNextStep.classList.add('hidden');
   els.btnCancel.classList.remove('hidden');
   els.btnCancel.disabled = false;
-  els.btnCancel.innerHTML = `${ICONS.x} Cancel Download`;
+  els.btnCancel.innerHTML = `${ICONS.x} <span data-i18n="progress.cancel">${escapeHtml(window.i18n.t('progress.cancel'))}</span>`;
+  state.paused = false;
+  state.lastSkippedShown = 0;
+  const isNative = state.currentEngine === 'native';
+  if (els.btnPause) {
+    els.btnPause.classList.toggle('hidden', !isNative);
+    els.btnPause.textContent = window.i18n.t('progress.pause');
+    els.btnPause.disabled = false;
+  }
+  if (els.nativeAlphaBanner) {
+    els.nativeAlphaBanner.classList.toggle('hidden', !isNative);
+  }
   els.diskSpaceInfo.classList.add('hidden');
   if (els.depotProgressFill) els.depotProgressFill.style.width = '0%';
   if (els.depotProgressText) els.depotProgressText.textContent = '0%';
@@ -1095,6 +1452,9 @@ function cleanupProgressListener() {
 }
 
 function handleProgressMessage(msg) {
+  if (msg.jobId && msg.jobId !== state.jobId) {
+    return;
+  }
   switch (msg.type) {
     case 'status':
       if (msg.step === 'disk_space') {
@@ -1112,6 +1472,10 @@ function handleProgressMessage(msg) {
       updateDepotStatus(msg.depotId, 'done', 'Complete');
       updateOverallProgress(msg.current, msg.total);
       updateDepotDownloadProgress(100);
+      break;
+
+    case 'manifest_source':
+      handleManifestSource(msg);
       break;
 
     case 'complete':
@@ -1175,6 +1539,7 @@ function handleStatusUpdate(msg) {
 
     case 'running_downloader':
       state.speedTracker.samples = [];
+      state.speedTracker.byteSamples = [];
       state.speedTracker.lastTime = 0;
       state.speedTracker.lastPercent = 0;
       state.speedTracker.depotStartTime = Date.now();
@@ -1200,17 +1565,120 @@ function handleStatusUpdate(msg) {
   }
 }
 
+function handleManifestSource(msg) {
+  const labels = {
+    steam: { prefix: 'Steam CDN', cls: 'info' },
+    manifesthub_fallback: { prefix: 'ManifestHub fallback', cls: 'warn' },
+    manifesthub_unavailable: { prefix: 'No fallback', cls: 'stderr' },
+    cached: { prefix: 'Cached', cls: 'info' },
+  };
+  const meta = labels[msg.source] || { prefix: msg.source || 'Source', cls: 'info' };
+  const text = `[${meta.prefix}] depot ${msg.depotId}: ${msg.message}`;
+  appendTerminalLine(text, meta.cls);
+  if (msg.source === 'manifesthub_unavailable') {
+    state.suggestMhKey = true;
+  }
+}
+
 function handleOutput(msg) {
   const cls = msg.stream === 'stderr' ? 'stderr' : 'stdout';
   const text = msg.output || msg.line;
+  if (msg.completedBytes != null && msg.totalBytes != null && msg.totalBytes > 0) {
+    updateDepotDownloadProgressBytes(
+      msg.percent ?? (msg.completedBytes * 100 / msg.totalBytes),
+      msg.completedBytes,
+      msg.totalBytes,
+      msg.networkBytes
+    );
+    if (msg.skippedChunks != null && msg.skippedChunks > 0) {
+      const lastShown = state.lastSkippedShown || 0;
+      const milestone = Math.floor(msg.skippedChunks / 25);
+      if (milestone > lastShown) {
+        state.lastSkippedShown = milestone;
+        const mb = (msg.skippedBytes / (1024 * 1024)).toFixed(1);
+        appendTerminalLine(
+          `✓ ${window.i18n.t('progress.resumedChunks', { count: msg.skippedChunks, mb })}`,
+          'success'
+        );
+      }
+    }
+    return;
+  }
   if (text) {
     appendTerminalLine(text, cls);
-    // Parse depot download percentage from output (e.g. "01.83% depots\...")
     const percentMatch = text.match(/^\s*(\d{1,3}(?:\.\d{1,2})?)%/);
     if (percentMatch) {
       const percent = parseFloat(percentMatch[1]);
       updateDepotDownloadProgress(percent);
     }
+  }
+}
+
+function updateDepotDownloadProgressBytes(percent, completedBytes, totalBytes, networkBytes) {
+  if (els.depotProgressFill) {
+    els.depotProgressFill.style.width = `${Math.min(percent, 100)}%`;
+  }
+  if (els.depotProgressText) {
+    const sizePart = (completedBytes != null && totalBytes != null && totalBytes > 0)
+      ? ` — ${formatBytes(completedBytes)} / ${formatBytes(totalBytes)}`
+      : '';
+    els.depotProgressText.textContent = `${percent.toFixed(1)}%${sizePart}`;
+  }
+  updateSpeedAndEtaBytes(completedBytes, totalBytes, networkBytes);
+}
+
+const SPEED_WINDOW_MS = 3000;
+const SPEED_MIN_WINDOW_MS = 1500;
+const ETA_DISPLAY_INTERVAL_MS = 1500;
+
+function updateSpeedAndEtaBytes(completedBytes, totalBytes, networkBytes) {
+  const now = Date.now();
+  const tracker = state.speedTracker;
+  tracker.lastUpdateTime = now;
+
+  if (!tracker.byteSamples) tracker.byteSamples = [];
+  const speedSource = networkBytes != null ? networkBytes : completedBytes;
+  tracker.byteSamples.push({
+    bytes: speedSource,
+    decompressed: completedBytes,
+    time: now,
+  });
+  const cutoff = now - SPEED_WINDOW_MS;
+  while (tracker.byteSamples.length > 2 && tracker.byteSamples[0].time < cutoff) {
+    tracker.byteSamples.shift();
+  }
+  if (tracker.byteSamples.length < 2) return;
+
+  const oldest = tracker.byteSamples[0];
+  const newest = tracker.byteSamples[tracker.byteSamples.length - 1];
+  const timeDelta = newest.time - oldest.time;
+  const networkDelta = newest.bytes - oldest.bytes;
+  const decompressedDelta = newest.decompressed - oldest.decompressed;
+  if (timeDelta < SPEED_MIN_WINDOW_MS || networkDelta <= 0) return;
+
+  const networkBytesPerSecond = networkDelta / (timeDelta / 1000);
+  const decompressedBytesPerSecond = decompressedDelta / (timeDelta / 1000);
+  const remainingBytes = Math.max(0, totalBytes - completedBytes);
+  const etaSeconds =
+    decompressedBytesPerSecond > 0 ? remainingBytes / decompressedBytesPerSecond : Infinity;
+
+  const lastDisplay = tracker.lastDisplayMs || 0;
+  if (now - lastDisplay < ETA_DISPLAY_INTERVAL_MS) return;
+  tracker.lastDisplayMs = now;
+
+  let speedText;
+  const mbps = networkBytesPerSecond / (1024 * 1024);
+  if (mbps >= 1) {
+    speedText = `↓ ${mbps.toFixed(1)} MB/s`;
+  } else {
+    speedText = `↓ ${(networkBytesPerSecond / 1024).toFixed(0)} KB/s`;
+  }
+
+  const infoEl = els.downloadSpeedInfo;
+  if (infoEl) {
+    infoEl.classList.remove('hidden');
+    els.downloadSpeed.textContent = speedText;
+    els.downloadEta.textContent = formatEta(etaSeconds);
   }
 }
 
@@ -1254,6 +1722,10 @@ function updateSpeedAndEta(percent) {
   const percentPerSecond = percentDelta / timeDelta;
   const remainingPercent = 100 - percent;
   const etaSeconds = remainingPercent / percentPerSecond;
+
+  const lastDisplay = tracker.lastDisplayMs || 0;
+  if (now - lastDisplay < ETA_DISPLAY_INTERVAL_MS) return;
+  tracker.lastDisplayMs = now;
 
   let speedText = '';
   if (tracker.currentDepotSize > 0) {
@@ -1321,6 +1793,58 @@ function formatElapsed(seconds) {
   return `${s}s`;
 }
 
+function newEntryId() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function buildPendingHistoryEntry(msg) {
+  if (!state.downloadDir) return;
+  const results = Array.isArray(msg && msg.results) ? msg.results : [];
+  const total = results.length || (state.parsedData ? state.selectedDepots.size : 0);
+  const successCount = results.length
+    ? results.filter(r => r.success).length
+    : total;
+  const status = total > 0 && successCount === total ? 'complete' : 'partial';
+  const appId = state.parsedData && state.parsedData.mainAppId
+    ? String(state.parsedData.mainAppId)
+    : (state.searchAppId ? String(state.searchAppId) : '');
+  const depotIds = results.length
+    ? results.map(r => String(r.depotId)).filter(Boolean)
+    : Array.from(state.selectedDepots);
+  state.pendingHistoryEntry = {
+    id: newEntryId(),
+    app_id: appId,
+    game_name: state.gameName || null,
+    header_image: state.headerImage || null,
+    depot_count: total,
+    depots_downloaded: successCount,
+    status,
+    download_dir: state.downloadDir,
+    started_at: state.downloadStartedAt || new Date().toISOString(),
+    completed_at: new Date().toISOString(),
+    source_repo: state.searchRepo || null,
+    depot_ids: depotIds.map(String),
+  };
+}
+
+async function commitPendingHistory() {
+  const entry = state.pendingHistoryEntry;
+  if (!entry) return;
+  state.pendingHistoryEntry = null;
+  try {
+    await invoke('record_history_entry', { entry });
+  } catch (e) {
+    console.error('record_history_entry failed:', e);
+  }
+}
+
 function handleComplete(msg) {
   clearInterval(state.speedTracker.staleTimer);
   state.speedTracker.staleTimer = null;
@@ -1329,6 +1853,7 @@ function handleComplete(msg) {
   updateDepotDownloadProgress(100);
   if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
   emitEvent('download_completed', { success: true });
+  buildPendingHistoryEntry(msg);
   showCompletion(true, msg.message);
 
   if (msg.results) {
@@ -1345,6 +1870,7 @@ function handleComplete(msg) {
   playNotificationSound();
 
   cleanupProgressListener();
+  checkEmulatorSupport();
 }
 
 function handleError(msg) {
@@ -1370,10 +1896,15 @@ function handleCancelled(msg) {
   clearInterval(state.speedTracker.staleTimer);
   state.speedTracker.staleTimer = null;
   els.progressBarFill.style.width = '0%';
-  els.progressStatus.textContent = 'Cancelled';
+  els.progressStatus.textContent = window.i18n.t('progress.cancelledStatus');
   if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
-  appendTerminalLine(`\n${msg.message}`, 'error');
-  showCompletion(false, msg.message);
+  const localized = msg.step === 'cancelled_kept'
+    ? window.i18n.t('progress.cancelledKept')
+    : msg.step === 'cancelled_cleanup'
+      ? window.i18n.t('progress.cancelledCleanup')
+      : (msg.message || window.i18n.t('progress.cancelledCleanup'));
+  appendTerminalLine(`\n${localized}`, 'error');
+  showCompletion(false, localized);
   cleanupProgressListener();
 }
 
@@ -1426,13 +1957,65 @@ function showCompletion(success, message) {
   els.completionMessage.classList.add(success ? 'completion-message--success' : 'completion-message--error');
   els.completionMessage.textContent = message;
   els.btnCancel.classList.add('hidden');
+  if (els.btnPause) els.btnPause.classList.add('hidden');
+  state.downloadFailed = !success;
   if (els.btnNextStep) {
-    els.btnNextStep.classList.toggle('hidden', !success);
-    els.btnNextStep.textContent = state.shortcutSupported ? 'Next' : 'Start New Download';
+    els.btnNextStep.classList.remove('hidden');
+    if (success) {
+      updateNextButtonText();
+    } else {
+      els.btnNextStep.textContent = window.i18n.t('progress.backToSelection');
+    }
+  }
+}
+
+function showMhKeyRequiredHint() {
+  let hint = document.getElementById('mh-apikey-required');
+  if (!hint) {
+    hint = document.createElement('p');
+    hint.id = 'mh-apikey-required';
+    hint.className = 'dd-path__hint dd-path__hint--error';
+    const wrap = els.mhApiKey ? els.mhApiKey.closest('.settings-section') : null;
+    if (wrap) wrap.appendChild(hint);
+  }
+  hint.textContent = window.i18n.t('select.manifestHubRequired');
+  if (els.mhApiKey) {
+    els.mhApiKey.classList.add('dd-path__input--error');
+    els.mhApiKey.focus();
+  }
+}
+
+function hideMhKeyRequiredHint() {
+  const hint = document.getElementById('mh-apikey-required');
+  if (hint) hint.remove();
+  if (els.mhApiKey) els.mhApiKey.classList.remove('dd-path__input--error');
+}
+
+function showMhKeySuggestionHint() {
+  hideMhKeyRequiredHint();
+  let hint = document.getElementById('mh-apikey-required');
+  if (!hint) {
+    hint = document.createElement('p');
+    hint.id = 'mh-apikey-required';
+    hint.className = 'dd-path__hint dd-path__hint--error';
+    const wrap = els.mhApiKey ? els.mhApiKey.closest('.settings-section') : null;
+    if (wrap) wrap.appendChild(hint);
+  }
+  hint.textContent = window.i18n.t('select.manifestHubAfterFailure');
+  if (els.mhApiKey) {
+    els.mhApiKey.classList.add('dd-path__input--error');
+    els.mhApiKey.focus();
   }
 }
 
 function resetApp() {
+  commitPendingHistory();
+  if (state.jobId) {
+    const orphanJob = state.jobId;
+    invoke('cancel_download', { jobId: orphanJob }).catch((e) => {
+      console.warn('orphan cancel_download failed:', e);
+    });
+  }
   state.parsedData = null;
   state.selectedDepots.clear();
   state.jobId = null;
@@ -1445,13 +2028,37 @@ function resetApp() {
   state.searchAppId = null;
   state.searchSha = null;
   state.searchKeyVdfKeys = null;
+  state.emulatorAvailable = false;
+  state.emulatorScan = [];
+  state.emuSelectedFiles = new Set();
+  state.emuEditTargets = [];
+  state.emuApplyComplete = false;
+  state.bypassInitialState = false;
+  state.drmTargets = [];
+  if (els.emuDrmSection) els.emuDrmSection.classList.add('hidden');
+  if (els.emuDrmStatusWrap) els.emuDrmStatusWrap.classList.add('hidden');
+  if (els.emuBypassToggle) els.emuBypassToggle.checked = false;
+  setEmuEditMode(false);
+  state.steamLibraryDetectedExes = [];
+  if (els.steamExePath) els.steamExePath.value = '';
+  if (els.steamGameName) els.steamGameName.value = '';
+  if (els.steamLaunchOptions) els.steamLaunchOptions.value = '';
+  if (els.steamLibraryResult) els.steamLibraryResult.classList.add('hidden');
+  if (els.steamDetectedSection) els.steamDetectedSection.classList.add('hidden');
+  resetSteamButtons();
+  if (els.shortcutSteamLibrary) els.shortcutSteamLibrary.checked = false;
   cleanupProgressListener();
   if (els.shortcutStatus) els.shortcutStatus.classList.add('hidden');
   if (els.shortcutDetectedSection) els.shortcutDetectedSection.classList.add('hidden');
   if (els.shortcutDetectedList) els.shortcutDetectedList.innerHTML = '';
   if (els.shortcutExePath) els.shortcutExePath.value = '';
-  if (els.btnCreateShortcuts) { els.btnCreateShortcuts.disabled = false; els.btnCreateShortcuts.textContent = 'Create Shortcuts'; }
+  state.shortcutsCreated = false;
+  if (els.btnCreateShortcuts) { els.btnCreateShortcuts.disabled = false; els.btnCreateShortcuts.textContent = window.i18n.t('shortcut.createShortcuts'); }
+  if (els.btnShortcutSkip) els.btnShortcutSkip.classList.remove('hidden');
   if (els.btnNextStep) els.btnNextStep.classList.add('hidden');
+  if (els.emuApplyStatus) els.emuApplyStatus.classList.add('hidden');
+  if (els.emuFileList) els.emuFileList.innerHTML = '';
+  populateEmuSettings(null);
   els.gameInfoBanner.classList.add('hidden');
   els.gameInfoLoading.classList.add('hidden');
   els.searchResults.classList.add('hidden');
@@ -1472,6 +2079,10 @@ async function openSettings() {
     els.maxRetriesInput.value = settings.max_retries ?? 3;
     els.speedLimitInput.value = settings.download_speed_limit || '';
     els.proxyInput.value = settings.proxy || '';
+    if (els.hubcapApiKeyInput) els.hubcapApiKeyInput.value = settings.hubcap_api_key || '';
+    if (els.ryuuApiKeyInput) els.ryuuApiKeyInput.value = settings.ryuu_api_key || '';
+    if (els.nativeDownloaderToggle) els.nativeDownloaderToggle.checked = !!settings.use_native_downloader;
+    if (els.cancelKeepFilesToggle) els.cancelKeepFilesToggle.checked = !!settings.cancel_keep_files;
     els.notificationSoundToggle.checked = settings.notification_sound !== false;
     els.telemetryToggle.checked = settings.telemetry_consent === 'accepted';
   } catch (e) {
@@ -1609,6 +2220,18 @@ async function saveSettings() {
     currentSettings.max_retries = parseInt(els.maxRetriesInput.value) || 3;
     currentSettings.download_speed_limit = els.speedLimitInput.value.trim();
     currentSettings.proxy = els.proxyInput.value.trim();
+    if (els.hubcapApiKeyInput) {
+      currentSettings.hubcap_api_key = els.hubcapApiKeyInput.value.trim();
+    }
+    if (els.ryuuApiKeyInput) {
+      currentSettings.ryuu_api_key = els.ryuuApiKeyInput.value.trim();
+    }
+    if (els.nativeDownloaderToggle) {
+      currentSettings.use_native_downloader = els.nativeDownloaderToggle.checked;
+    }
+    if (els.cancelKeepFilesToggle) {
+      currentSettings.cancel_keep_files = els.cancelKeepFilesToggle.checked;
+    }
     currentSettings.notification_sound = els.notificationSoundToggle.checked;
 
     await invoke('save_settings', { settings: currentSettings });
@@ -1706,8 +2329,7 @@ function showUpdateModal(info) {
   if (systemHint) {
     systemHint.classList.toggle('hidden', !externallyManaged);
     if (externallyManaged) {
-      const cmdEl = document.getElementById('update-system-cmd');
-      if (cmdEl) cmdEl.textContent = updateCommandFor(info.installMethod);
+      renderUpdateCommands(info.installMethod);
     }
   }
   els.btnUpdateNow.classList.toggle('hidden', externallyManaged);
@@ -1716,30 +2338,54 @@ function showUpdateModal(info) {
   els.updateModal.classList.remove('hidden');
 }
 
-function updateCommandFor(method) {
+function updateCommandsFor(method) {
   switch (method) {
-    case 'flatpak': return 'flatpak update de.mcbabel.SteamManifestDownloader';
-    case 'snap':    return 'sudo snap refresh steam-manifest-downloader';
+    case 'flatpak':
+      return [{ label: '', cmd: 'flatpak update de.mcbabel.SteamManifestDownloader' }];
+    case 'snap':
+      return [{ label: '', cmd: 'sudo snap refresh steam-manifest-downloader' }];
     case 'system':
-    default:        return 'yay -Syu steam-manifest-downloader';
+    default:
+      return [
+        { label: i18n.t('modals.update.aurBinLabel'), cmd: 'paru -Syu steam-manifest-downloader-bin' },
+        { label: i18n.t('modals.update.aurSourceLabel'), cmd: 'paru -Syu steam-manifest-downloader' },
+      ];
   }
 }
 
-async function copyUpdateCommand() {
-  const cmdEl = document.getElementById('update-system-cmd');
-  const cmd = cmdEl ? cmdEl.textContent : '';
-  if (!cmd) return;
-  try {
-    await navigator.clipboard.writeText(cmd);
-    const btn = document.getElementById('btn-update-copy-cmd');
-    if (btn) {
-      const original = btn.textContent;
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = original; }, 1500);
-    }
-  } catch (e) {
-    console.error('Clipboard write failed:', e);
-  }
+function renderUpdateCommands(method) {
+  const list = document.getElementById('update-system-cmd-list');
+  if (!list) return;
+  const commands = updateCommandsFor(method);
+  const copyLabel = i18n.t('modals.update.copyCmd');
+  list.innerHTML = commands.map((c, i) => {
+    const labelHtml = c.label
+      ? `<div class="update-system-cmd__label">${escapeHtml(c.label)}</div>`
+      : '';
+    return `
+      <div class="update-system-cmd__row">
+        ${labelHtml}
+        <div class="update-system-cmd__inner">
+          <pre><code>${escapeHtml(c.cmd)}</code></pre>
+          <button type="button" class="btn btn--outline btn--small update-system-cmd__copy" data-cmd-idx="${i}">${escapeHtml(copyLabel)}</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.update-system-cmd__copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.cmdIdx, 10);
+      const cmd = commands[idx]?.cmd;
+      if (!cmd) return;
+      try {
+        await navigator.clipboard.writeText(cmd);
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+      } catch {}
+    });
+  });
 }
 
 function hideUpdateModal() {
@@ -1800,13 +2446,25 @@ window.testUpdateModal = function() {
 };
 
 function applyDepotFilters() {
-  const searchText = (els.depotSearch ? els.depotSearch.value.trim() : '');
+  const searchText = (els.depotSearch ? els.depotSearch.value.trim().toLowerCase() : '');
   const showSelectedOnly = els.showSelectedOnly ? els.showSelectedOnly.checked : false;
 
   const items = document.querySelectorAll('.depot-item');
   items.forEach(item => {
     const depotId = item.dataset.depotId || '';
-    const matchesSearch = !searchText || depotId.includes(searchText);
+    const name = (state.depotNames && state.depotNames[depotId]) || '';
+    const info = state.depotPicsInfo && state.depotPicsInfo[depotId];
+    const haystack = [
+      depotId,
+      name,
+      info && info.role,
+      info && info.oslist,
+      info && info.language,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    const matchesSearch = !searchText || haystack.includes(searchText);
     const matchesSelected = !showSelectedOnly || state.selectedDepots.has(depotId);
     item.style.display = (matchesSearch && matchesSelected) ? '' : 'none';
   });
@@ -1835,12 +2493,44 @@ function updateThemeButton(theme) {
   }
 }
 
-function showCancelModal() {
+async function showCancelModal() {
+  let keep = false;
+  try {
+    const settings = await invoke('get_settings');
+    keep = !!settings.cancel_keep_files;
+  } catch (_) {}
+  const body = document.getElementById('cancel-modal-body');
+  if (body) {
+    body.innerHTML = window.i18n.t(keep ? 'modals.cancel.bodyKeep' : 'modals.cancel.body');
+  }
+  if (els.btnCancelYes) {
+    els.btnCancelYes.textContent = window.i18n.t(keep ? 'modals.cancel.yesKeep' : 'modals.cancel.yes');
+  }
   els.cancelModal.classList.remove('hidden');
 }
 
 function hideCancelModal() {
   els.cancelModal.classList.add('hidden');
+}
+
+async function togglePauseDownload() {
+  if (!state.jobId) return;
+  const willPause = !state.paused;
+  try {
+    await invoke('pause_download', { jobId: state.jobId, paused: willPause });
+    state.paused = willPause;
+    if (els.btnPause) {
+      els.btnPause.textContent = willPause
+        ? window.i18n.t('progress.resume')
+        : window.i18n.t('progress.pause');
+    }
+    appendTerminalLine(
+      window.i18n.t(willPause ? 'progress.pausedLine' : 'progress.resumedLine'),
+      'info'
+    );
+  } catch (e) {
+    console.error('pause_download failed:', e);
+  }
 }
 
 async function cancelDownload() {
@@ -1849,7 +2539,7 @@ async function cancelDownload() {
   if (!state.jobId) return;
 
   els.btnCancel.disabled = true;
-  els.btnCancel.innerHTML = 'Cancelling...';
+  els.btnCancel.innerHTML = escapeHtml(window.i18n.t('progress.cancelling'));
   appendTerminalLine('Cancelling download...', 'info');
 
   try {
@@ -1961,10 +2651,10 @@ function showDotNetWarning() {
     installLink.addEventListener('click', (e) => {
       e.preventDefault();
       try {
-        window.__TAURI__.shell.open('https://dotnet.microsoft.com/en-us/download/dotnet/9.0');
+        window.__TAURI__.shell.open('https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer');
       } catch {
         // Fallback: just let the link work normally
-        window.open('https://dotnet.microsoft.com/en-us/download/dotnet/9.0', '_blank');
+        window.open('https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer', '_blank');
       }
     });
   }
@@ -2026,7 +2716,15 @@ function initEvents() {
   els.btnDeselectAll.addEventListener('click', deselectAll);
   els.btnBack.addEventListener('click', () => goToStep(1));
   els.btnDownload.addEventListener('click', startDownload);
+  if (els.mhApiKey) {
+    els.mhApiKey.addEventListener('input', () => {
+      if (els.mhApiKey.value.trim()) hideMhKeyRequiredHint();
+    });
+  }
   els.btnCancel.addEventListener('click', showCancelModal);
+  if (els.btnPause) {
+    els.btnPause.addEventListener('click', togglePauseDownload);
+  }
   if (els.btnBrowseDir) {
     els.btnBrowseDir.addEventListener('click', browseDownloadDir);
   }
@@ -2036,7 +2734,13 @@ function initEvents() {
 
   els.btnHistory.addEventListener('click', openHistory);
   els.btnHistoryClose.addEventListener('click', closeHistory);
-  els.btnHistoryClear.addEventListener('click', clearHistory);
+  els.btnHistoryClear.addEventListener('click', showHistoryClearConfirm);
+  if (els.btnHistoryClearYes) els.btnHistoryClearYes.addEventListener('click', confirmHistoryClear);
+  if (els.btnHistoryClearNo) els.btnHistoryClearNo.addEventListener('click', () => els.historyClearModal.classList.add('hidden'));
+  if (els.historyClearModal) els.historyClearModal.querySelector('.modal__backdrop').addEventListener('click', () => els.historyClearModal.classList.add('hidden'));
+  if (els.btnHistoryRemoveYes) els.btnHistoryRemoveYes.addEventListener('click', confirmHistoryRemove);
+  if (els.btnHistoryRemoveNo) els.btnHistoryRemoveNo.addEventListener('click', () => els.historyRemoveModal.classList.add('hidden'));
+  if (els.historyRemoveModal) els.historyRemoveModal.querySelector('.modal__backdrop').addEventListener('click', () => els.historyRemoveModal.classList.add('hidden'));
   els.historyModal.querySelector('.modal__backdrop').addEventListener('click', closeHistory);
 
   els.btnSettings.addEventListener('click', openSettings);
@@ -2060,8 +2764,6 @@ function initEvents() {
   els.btnUpdateLater.addEventListener('click', hideUpdateModal);
   els.btnUpdateSkip.addEventListener('click', skipUpdateVersion);
   els.updateModal.querySelector('.modal__backdrop').addEventListener('click', hideUpdateModal);
-  const btnCopyCmd = document.getElementById('btn-update-copy-cmd');
-  if (btnCopyCmd) btnCopyCmd.addEventListener('click', copyUpdateCommand);
 
   els.btnThemeToggle.addEventListener('click', toggleTheme);
 
@@ -2074,8 +2776,21 @@ function initEvents() {
 
   if (els.btnNextStep) {
     els.btnNextStep.addEventListener('click', () => {
+      if (state.downloadFailed) {
+        state.downloadFailed = false;
+        goToStep(2);
+        if (state.suggestMhKey) {
+          state.suggestMhKey = false;
+          showMhKeySuggestionHint();
+        }
+        return;
+      }
       if (state.shortcutSupported) {
         goToShortcutStep();
+      } else if (state.steamLibrarySupported) {
+        goToSteamLibraryStep();
+      } else if (state.emulatorAvailable) {
+        goToEmulatorStep();
       } else {
         resetApp();
       }
@@ -2086,7 +2801,13 @@ function initEvents() {
     els.btnBrowseExe.addEventListener('click', browseExe);
   }
   if (els.btnCreateShortcuts) {
-    els.btnCreateShortcuts.addEventListener('click', createShortcuts);
+    els.btnCreateShortcuts.addEventListener('click', () => {
+      if (state.shortcutsCreated) {
+        advanceFromShortcutStep();
+      } else {
+        createShortcuts();
+      }
+    });
   }
   if (els.shortcutDesktop) {
     els.shortcutDesktop.addEventListener('change', updateCreateShortcutsButton);
@@ -2094,12 +2815,70 @@ function initEvents() {
   if (els.shortcutStartMenu) {
     els.shortcutStartMenu.addEventListener('change', updateCreateShortcutsButton);
   }
-  if (els.btnShortcutNew) {
-    els.btnShortcutNew.addEventListener('click', resetApp);
+  if (els.btnShortcutSkip) {
+    els.btnShortcutSkip.addEventListener('click', advanceFromShortcutStep);
   }
   if (els.btnShortcutStartOver) {
-    els.btnShortcutStartOver.addEventListener('click', () => goToStep(2));
+    els.btnShortcutStartOver.addEventListener('click', resetApp);
   }
+  if (els.btnEmuApply) {
+    els.btnEmuApply.addEventListener('click', applyEmuReplacement);
+  }
+  if (els.btnEmuMergeDlcs) {
+    els.btnEmuMergeDlcs.addEventListener('click', performDlcMerge);
+  }
+  if (els.btnEmuDrmRemove) {
+    els.btnEmuDrmRemove.addEventListener('click', removeDrm);
+  }
+  if (els.btnEmuDrmCopy) {
+    els.btnEmuDrmCopy.addEventListener('click', copyDrmLog);
+  }
+  if (els.btnEmuNew) {
+    els.btnEmuNew.addEventListener('click', () => {
+      resetApp();
+    });
+  }
+  if (els.btnEmuStartOver) {
+    els.btnEmuStartOver.addEventListener('click', () => goToStep(2));
+  }
+  if (els.btnSteamAdd) {
+    els.btnSteamAdd.addEventListener('click', async () => {
+      if (els.btnSteamAdd.dataset.mode === 'next') {
+        steamLibraryContinue();
+        return;
+      }
+      const ok = await performSteamLibraryAdd();
+      if (ok) switchSteamButtonToNext();
+    });
+  }
+  if (els.btnSteamBrowseExe) {
+    els.btnSteamBrowseExe.addEventListener('click', browseSteamExe);
+  }
+  if (els.btnSteamSkip) {
+    els.btnSteamSkip.addEventListener('click', steamLibraryContinue);
+  }
+  if (els.btnSteamToggleDetected) {
+    els.btnSteamToggleDetected.addEventListener('click', () => {
+      const list = els.steamDetectedList;
+      const arrow = els.btnSteamToggleDetected.querySelector('.settings-advanced__arrow');
+      if (!list) return;
+      list.classList.toggle('hidden');
+      if (arrow) arrow.textContent = list.classList.contains('hidden') ? '▶' : '▼';
+    });
+  }
+  if (els.btnEmuRevert) {
+    els.btnEmuRevert.addEventListener('click', showEmuRevertConfirm);
+  }
+  if (els.btnEmuRevertYes) {
+    els.btnEmuRevertYes.addEventListener('click', confirmEmuRevert);
+  }
+  if (els.btnEmuRevertNo) {
+    els.btnEmuRevertNo.addEventListener('click', () => els.emuRevertModal.classList.add('hidden'));
+  }
+  if (els.emuRevertModal) {
+    els.emuRevertModal.querySelector('.modal__backdrop').addEventListener('click', () => els.emuRevertModal.classList.add('hidden'));
+  }
+  initEmuAccordion();
   if (els.btnToggleDetected) {
     els.btnToggleDetected.addEventListener('click', () => {
       const list = els.shortcutDetectedList;
@@ -2166,6 +2945,7 @@ function initTauri() {
 }
 
 async function openHistory() {
+  hideHistoryBanner();
   els.historyModal.classList.remove('hidden');
   await loadHistory();
 }
@@ -2178,6 +2958,12 @@ async function loadHistory() {
   els.historyList.innerHTML = '<div class="history-loading"><div class="spinner"></div><span>Loading history...</span></div>';
 
   try {
+    try {
+      const s = await invoke('get_settings');
+      state.useNativeDownloader = s.use_native_downloader !== false;
+    } catch (_) {
+      state.useNativeDownloader = true;
+    }
     const entries = await invoke('get_history');
     renderHistory(entries);
   } catch (e) {
@@ -2187,6 +2973,7 @@ async function loadHistory() {
 }
 
 function renderHistory(entries) {
+  state.cachedHistory = entries || [];
   if (!entries || entries.length === 0) {
     els.historyList.innerHTML = '<div class="history-empty">No downloads yet. Your download history will appear here.</div>';
     els.btnHistoryClear.style.display = 'none';
@@ -2194,16 +2981,22 @@ function renderHistory(entries) {
   }
 
   els.btnHistoryClear.style.display = '';
+  const editTip = window.i18n.t('emulator.history.editTooltip');
+  const entryById = new Map(entries.map(e => [e.id, e]));
   els.historyList.innerHTML = entries.map(entry => {
     const date = entry.completed_at ? formatHistoryDate(entry.completed_at) : formatHistoryDate(entry.started_at);
+    const isResumable = entry.status === 'cancelled_resumable' && !!entry.resume_payload;
+    const canResumeNow = isResumable && state.useNativeDownloader !== false;
     const badgeClass = entry.status === 'complete' ? 'history-entry__badge--complete'
       : entry.status === 'partial' ? 'history-entry__badge--partial'
+      : isResumable ? 'history-entry__badge--resumable'
       : entry.status === 'cancelled' ? 'history-entry__badge--cancelled'
       : 'history-entry__badge--failed';
-    const statusLabel = entry.status === 'complete' ? 'Complete'
-      : entry.status === 'partial' ? 'Partial'
-      : entry.status === 'cancelled' ? 'Cancelled'
-      : 'Failed';
+    const statusLabel = entry.status === 'complete' ? window.i18n.t('history.statusComplete')
+      : entry.status === 'partial' ? window.i18n.t('history.statusPartial')
+      : isResumable ? window.i18n.t('history.statusResumable')
+      : entry.status === 'cancelled' ? window.i18n.t('history.statusCancelled')
+      : window.i18n.t('history.statusFailed');
     const imgHtml = entry.header_image
       ? `<img class="history-entry__image" src="${escapeHtml(entry.header_image)}" alt="" loading="lazy" onerror="this.style.display='none'">`
       : '<div class="history-entry__image history-entry__image--placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>';
@@ -2217,18 +3010,60 @@ function renderHistory(entries) {
           <div class="history-entry__meta">
             <span class="history-entry__appid">App ${escapeHtml(entry.app_id)}</span>
             <span class="history-entry__date">${date}</span>
-            <span class="history-entry__badge ${badgeClass}">${statusLabel}</span>
           </div>
           <div class="history-entry__depots">${entry.depots_downloaded}/${entry.depot_count} depots downloaded</div>
+          <div class="history-entry__status">
+            <span class="history-entry__badge ${badgeClass}">${statusLabel}</span>
+          </div>
         </div>
         <div class="history-entry__actions">
+          ${canResumeNow
+            ? `<button class="btn btn--small btn--primary history-action-resume" data-entry-id="${escapeHtml(entry.id)}" title="${escapeHtml(window.i18n.t('history.resumeTooltip'))}" aria-label="${escapeHtml(window.i18n.t('history.resumeTooltip'))}">${ICONS.play}</button>`
+            : ''}
           <button class="btn btn--small btn--outline history-action-redownload" data-app-id="${escapeHtml(entry.app_id)}" data-depot-ids="${escapeHtml((entry.depot_ids || []).join(','))}" title="Re-download" aria-label="Re-download">${ICONS.refresh}</button>
           <button class="btn btn--small btn--outline history-action-folder" data-path="${escapeHtml(entry.download_dir)}" title="Open Folder" aria-label="Open download folder"${entry.status === 'cancelled' ? ' disabled' : ''}>${ICONS.folderOpen}</button>
+          <button class="btn btn--small btn--outline history-action-edit-emu" data-entry-id="${escapeHtml(entry.id)}" title="${escapeHtml(editTip)}" aria-label="${escapeHtml(editTip)}"${entry.status === 'cancelled' || !entry.download_dir ? ' disabled' : ''}>${ICONS.settings}</button>
           <button class="btn btn--small btn--outline history-action-remove" data-entry-id="${escapeHtml(entry.id)}" title="Remove" aria-label="Remove entry">${ICONS.trash}</button>
         </div>
       </div>
     `;
   }).join('');
+
+  els.historyList.querySelectorAll('.history-action-resume').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const entry = entryById.get(btn.dataset.entryId);
+      if (!entry || !entry.resume_payload) return;
+      closeHistory();
+      cleanupProgressListener();
+      try {
+        const settings = await invoke('get_settings');
+        state.currentEngine = settings.use_native_downloader !== false ? 'native' : 'ddm';
+        const result = await invoke('start_download', { config: entry.resume_payload });
+        state.jobId = result.jobId;
+        state.parsedData = { mainAppId: entry.app_id, depots: [] };
+        state.gameName = entry.game_name || null;
+        state.headerImage = entry.header_image || null;
+        state.downloadDir = result.downloadDir || entry.download_dir;
+        goToStep(3);
+        initProgressUI((entry.resume_payload.selectedDepots || []).map(d => ({
+          depotId: String(d.depotId),
+          manifestId: String(d.manifestId || ''),
+          sizeBytes: null,
+        })));
+        await connectProgressListener();
+        try {
+          await invoke('remove_history_entry', { entryId: entry.id });
+        } catch (rmErr) {
+          console.warn('remove_history_entry failed:', rmErr);
+        }
+      } catch (err) {
+        console.error('resume start_download failed:', err);
+        alert(window.i18n.t('history.resumeError', { message: String(err) }));
+        openHistory();
+      }
+    });
+  });
 
   els.historyList.querySelectorAll('.history-action-redownload').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -2270,21 +3105,28 @@ function renderHistory(entries) {
         await invoke('open_folder', { path: btn.dataset.path });
       } catch (err) {
         console.error('Failed to open folder:', err);
+        showFolderMissing();
       }
     });
   });
 
   els.historyList.querySelectorAll('.history-action-remove').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      try {
-        await invoke('remove_history_entry', { entryId: btn.dataset.entryId });
-        await loadHistory();
-      } catch (err) {
-        console.error('Failed to remove history entry:', err);
-      }
+      const entry = entryById.get(btn.dataset.entryId);
+      const resumable = !!(entry && entry.status === 'cancelled_resumable' && entry.resume_payload);
+      showHistoryRemoveConfirm(btn.dataset.entryId, resumable);
     });
   });
+
+  els.historyList.querySelectorAll('.history-action-edit-emu').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const entry = entryById.get(btn.dataset.entryId);
+      if (entry) openEmuEditFromHistory(entry);
+    });
+  });
+
 }
 
 function formatHistoryDate(dateStr) {
@@ -2297,12 +3139,81 @@ function formatHistoryDate(dateStr) {
   }
 }
 
-async function clearHistory() {
+async function clearHistory(deleteResumableFiles = false) {
   try {
-    await invoke('clear_history');
+    await invoke('clear_history', { deleteResumableFiles });
     await loadHistory();
   } catch (e) {
     console.error('Failed to clear history:', e);
+    alert(String(e));
+    await loadHistory();
+  }
+}
+
+function showHistoryClearConfirm() {
+  if (!els.historyClearModal) return;
+  const warningEl = document.getElementById('history-clear-resumable-warning');
+  const warningTextEl = document.getElementById('history-clear-resumable-text');
+  const checkbox = document.getElementById('history-clear-delete-files');
+  const bodyEl = els.historyClearModal.querySelector('.modal__text[data-i18n-html="modals.historyClear.body"]');
+  const resumableCount = (state.cachedHistory || []).filter(
+    e => e.status === 'cancelled_resumable' && e.resume_payload
+  ).length;
+  if (warningEl && warningTextEl && checkbox) {
+    if (resumableCount > 0) {
+      warningEl.classList.remove('hidden');
+      warningTextEl.innerHTML = window.i18n.t('modals.historyClear.resumableWarning', { count: resumableCount });
+      checkbox.checked = false;
+      if (bodyEl) bodyEl.innerHTML = window.i18n.t('modals.historyClear.bodyShort');
+    } else {
+      warningEl.classList.add('hidden');
+      checkbox.checked = false;
+      if (bodyEl) bodyEl.innerHTML = window.i18n.t('modals.historyClear.body');
+    }
+  }
+  els.historyClearModal.classList.remove('hidden');
+}
+
+async function confirmHistoryClear() {
+  const checkbox = document.getElementById('history-clear-delete-files');
+  const deleteFiles = !!(checkbox && checkbox.checked);
+  if (els.historyClearModal) els.historyClearModal.classList.add('hidden');
+  await clearHistory(deleteFiles);
+}
+
+function showHistoryRemoveConfirm(entryId, resumable = false) {
+  state.pendingHistoryRemoveId = entryId;
+  state.pendingHistoryRemoveResumable = !!resumable;
+  if (!els.historyRemoveModal) return;
+  const titleEl = els.historyRemoveModal.querySelector('#history-remove-modal-title');
+  const bodyEl = els.historyRemoveModal.querySelector('.modal__text');
+  const yesBtn = els.historyRemoveModal.querySelector('#btn-history-remove-yes');
+  if (resumable) {
+    if (titleEl) titleEl.innerHTML = window.i18n.t('modals.historyRemove.titleResumable');
+    if (bodyEl) bodyEl.innerHTML = window.i18n.t('modals.historyRemove.bodyResumable');
+    if (yesBtn) yesBtn.textContent = window.i18n.t('modals.historyRemove.yesResumable');
+  } else {
+    if (titleEl) titleEl.innerHTML = window.i18n.t('modals.historyRemove.title');
+    if (bodyEl) bodyEl.innerHTML = window.i18n.t('modals.historyRemove.body');
+    if (yesBtn) yesBtn.textContent = window.i18n.t('modals.historyRemove.yes');
+  }
+  els.historyRemoveModal.classList.remove('hidden');
+}
+
+async function confirmHistoryRemove() {
+  const id = state.pendingHistoryRemoveId;
+  const deleteFiles = !!state.pendingHistoryRemoveResumable;
+  state.pendingHistoryRemoveId = null;
+  state.pendingHistoryRemoveResumable = false;
+  if (els.historyRemoveModal) els.historyRemoveModal.classList.add('hidden');
+  if (!id) return;
+  try {
+    await invoke('remove_history_entry', { entryId: id, deleteFiles });
+    await loadHistory();
+  } catch (err) {
+    console.error('Failed to remove history entry:', err);
+    alert(String(err));
+    await loadHistory();
   }
 }
 
@@ -2317,11 +3228,1075 @@ async function checkShortcutSupport() {
   } catch (e) {
     console.error('Failed to check shortcut support:', e);
   }
+  await checkSteamLibrarySupport();
+  renumberSteps();
+}
+
+async function checkSteamLibrarySupport() {
+  try {
+    const install = await invoke('steam_library_detect');
+    state.steamLibrarySupported = true;
+    state.steamLibraryUser = install;
+  } catch (e) {
+    state.steamLibrarySupported = false;
+    state.steamLibraryUser = null;
+  }
+
+  const showLinuxStep = state.steamLibrarySupported && !state.shortcutSupported;
+  const showWindowsToggle = state.shortcutSupported;
+
+  if (els.step6Connector) els.step6Connector.classList.toggle('hidden', !showLinuxStep);
+  if (els.step6Indicator) els.step6Indicator.classList.toggle('hidden', !showLinuxStep);
+  if (els.shortcutSteamRow) {
+    els.shortcutSteamRow.classList.toggle('hidden', !showWindowsToggle);
+    const toggle = els.shortcutSteamLibrary;
+    const hint = els.shortcutSteamRow.querySelector('.shortcut-option__hint');
+    if (toggle) {
+      toggle.disabled = !state.steamLibrarySupported;
+      if (!state.steamLibrarySupported) toggle.checked = false;
+    }
+    if (hint) {
+      hint.textContent = state.steamLibrarySupported
+        ? window.i18n.t('steamLibrary.windowsToggleHint')
+        : window.i18n.t('steamLibrary.notDetected');
+    }
+  }
+}
+
+async function goToSteamLibraryStep() {
+  goToStep(6);
+  resetSteamButtons();
+  if (els.steamLibraryStatus) {
+    if (state.steamLibraryUser) {
+      els.steamLibraryStatus.classList.remove('emu-release-status--busy');
+      els.steamLibraryStatus.classList.add('emu-release-status--ready');
+      els.steamLibraryStatus.textContent = window.i18n.t('steamLibrary.detected', {
+        name: state.steamLibraryUser.persona_name || state.steamLibraryUser.user_id3,
+      });
+    } else {
+      els.steamLibraryStatus.classList.remove('emu-release-status--ready');
+      els.steamLibraryStatus.textContent = window.i18n.t('steamLibrary.notDetected');
+    }
+  }
+  if (els.steamGameName) {
+    els.steamGameName.value = state.gameName || '';
+  }
+  if (els.steamLaunchOptions) {
+    els.steamLaunchOptions.value = '';
+  }
+  if (els.steamLibraryResult) {
+    els.steamLibraryResult.classList.add('hidden');
+  }
+  await detectSteamExecutables();
+}
+
+async function detectSteamExecutables() {
+  if (!state.downloadDir) return;
+  if (els.steamExePath) {
+    els.steamExePath.value = window.i18n.t('shortcut.exePlaceholder') || 'Scanning...';
+  }
+  if (els.btnSteamAdd) els.btnSteamAdd.disabled = true;
+  if (els.steamDetectedSection) els.steamDetectedSection.classList.add('hidden');
+
+  try {
+    const result = await invoke('detect_executables', { downloadDir: state.downloadDir });
+    const exes = result.executables || [];
+    state.steamLibraryDetectedExes = exes;
+
+    if (exes.length === 0) {
+      if (els.steamExePath) {
+        els.steamExePath.value = '';
+        els.steamExePath.placeholder = 'No executables found. Browse manually.';
+      }
+      if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+      return;
+    }
+
+    const recommended = exes.find(e => e.recommended) || exes[0];
+    if (els.steamExePath) els.steamExePath.value = recommended.path;
+    if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+
+    if (exes.length > 1 && els.steamDetectedSection && els.steamDetectedList) {
+      els.steamDetectedSection.classList.remove('hidden');
+      els.steamDetectedList.innerHTML = exes.map(exe => {
+        const sizeStr = formatShortcutFileSize(exe.size);
+        const recBadge = exe.recommended ? ' <span class="shortcut-exe-badge">Recommended</span>' : '';
+        return `<div class="shortcut-exe-item" data-path="${escapeHtml(exe.path)}">
+          <span class="shortcut-exe-item__name">${escapeHtml(exe.name)}${recBadge}</span>
+          <span class="shortcut-exe-item__size">${sizeStr}</span>
+        </div>`;
+      }).join('');
+
+      els.steamDetectedList.querySelectorAll('.shortcut-exe-item').forEach(item => {
+        item.addEventListener('click', () => {
+          if (els.steamExePath) els.steamExePath.value = item.dataset.path;
+          if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+        });
+      });
+    }
+  } catch (e) {
+    console.error('detect_executables failed:', e);
+    if (els.steamExePath) els.steamExePath.value = '';
+    if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+  }
+}
+
+async function browseSteamExe() {
+  try {
+    const { open } = window.__TAURI__.dialog;
+    const opts = {
+      defaultPath: state.downloadDir || undefined,
+      title: 'Select Game Executable',
+    };
+    if (state.shortcutSupported) {
+      opts.filters = [{ name: 'Executables', extensions: ['exe'] }];
+    }
+    const filePath = await open(opts);
+    if (filePath) {
+      if (els.steamExePath) els.steamExePath.value = filePath;
+      if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+    }
+  } catch (e) {
+    console.error('Failed to browse for exe:', e);
+  }
+}
+
+function setSteamLibraryResult(kind, text) {
+  if (!els.steamLibraryResult) return;
+  els.steamLibraryResult.classList.remove('hidden', 'completion-message--success', 'completion-message--error');
+  if (kind === 'success') els.steamLibraryResult.classList.add('completion-message--success');
+  else if (kind === 'error') els.steamLibraryResult.classList.add('completion-message--error');
+  els.steamLibraryResult.textContent = text;
+}
+
+function currentAppIdForSteam() {
+  if (state.parsedData && state.parsedData.mainAppId) return String(state.parsedData.mainAppId);
+  if (state.searchAppId) return String(state.searchAppId);
+  return '';
+}
+
+function deriveStartDir(exePath) {
+  if (!exePath) return '';
+  const lastSlash = Math.max(exePath.lastIndexOf('/'), exePath.lastIndexOf('\\'));
+  if (lastSlash <= 0) return '';
+  const dir = exePath.slice(0, lastSlash);
+  return dir.endsWith('/') || dir.endsWith('\\') ? dir : dir + (exePath.includes('\\') ? '\\' : '/');
+}
+
+function switchSteamButtonToNext() {
+  if (!els.btnSteamAdd) return;
+  els.btnSteamAdd.textContent = window.i18n.t('steamLibrary.next');
+  els.btnSteamAdd.dataset.mode = 'next';
+  els.btnSteamAdd.disabled = false;
+  if (els.btnSteamSkip) els.btnSteamSkip.classList.add('hidden');
+}
+
+function resetSteamButtons() {
+  if (els.btnSteamAdd) {
+    els.btnSteamAdd.textContent = window.i18n.t('steamLibrary.add');
+    delete els.btnSteamAdd.dataset.mode;
+    els.btnSteamAdd.disabled = false;
+  }
+  if (els.btnSteamSkip) els.btnSteamSkip.classList.remove('hidden');
+}
+
+function steamLibraryContinue() {
+  if (state.emulatorAvailable) goToEmulatorStep();
+  else resetApp();
+}
+
+async function performSteamLibraryAdd() {
+  const exePath = (els.steamExePath && els.steamExePath.value || '').trim();
+  if (!exePath) {
+    setSteamLibraryResult('error', window.i18n.t('steamLibrary.error', { message: 'no executable selected' }));
+    return false;
+  }
+  const appId = currentAppIdForSteam();
+  if (!appId) {
+    setSteamLibraryResult('error', window.i18n.t('steamLibrary.error', { message: 'missing app id' }));
+    return false;
+  }
+  const appName = (els.steamGameName && els.steamGameName.value || state.gameName || '').trim()
+    || `App ${appId}`;
+  const launchOptions = (els.steamLaunchOptions && els.steamLaunchOptions.value || '').trim();
+  const startDir = deriveStartDir(exePath);
+
+  if (els.btnSteamAdd) els.btnSteamAdd.disabled = true;
+  setSteamLibraryResult('busy', window.i18n.t('steamLibrary.adding'));
+
+  try {
+    const result = await invoke('steam_library_add', {
+      appId,
+      appName,
+      exePath,
+      startDir,
+      launchOptions,
+    });
+    const gridCount = (result.grid_files || []).length;
+    const isWindowsExe = exePath.toLowerCase().endsWith('.exe');
+    let successMsg = window.i18n.t('steamLibrary.success', { name: appName })
+      + '\n\n' + window.i18n.t('steamLibrary.gridArtCount', { count: gridCount });
+    if (isWindowsExe) {
+      successMsg += '\n' + window.i18n.t('steamLibrary.protonNote');
+    }
+    setSteamLibraryResult('success', successMsg);
+    return true;
+  } catch (e) {
+    console.error('steam_library_add failed:', e);
+    setSteamLibraryResult('error', window.i18n.t('steamLibrary.error', { message: String(e) }));
+    return false;
+  } finally {
+    if (els.btnSteamAdd) els.btnSteamAdd.disabled = false;
+  }
 }
 
 async function goToShortcutStep() {
   goToStep(4);
+  state.shortcutsCreated = false;
+  resetShortcutFooter();
+  await checkSteamLibrarySupport();
+  renumberSteps();
   await detectExecutables();
+}
+
+function resetShortcutFooter() {
+  if (els.btnCreateShortcuts) {
+    els.btnCreateShortcuts.disabled = false;
+    els.btnCreateShortcuts.textContent = window.i18n.t('shortcut.createShortcuts');
+  }
+  if (els.btnShortcutSkip) {
+    els.btnShortcutSkip.classList.remove('hidden');
+  }
+}
+
+function advanceFromShortcutStep() {
+  if (state.emulatorAvailable) {
+    goToEmulatorStep();
+  } else {
+    resetApp();
+  }
+}
+
+async function checkEmulatorSupport() {
+  if (!state.downloadDir) {
+    state.emulatorAvailable = false;
+    return;
+  }
+  try {
+    const scanned = await invoke('emu_scan_game_dir', { gameDir: state.downloadDir });
+    state.emulatorScan = Array.isArray(scanned) ? scanned : [];
+    state.emuSelectedFiles = new Set();
+    state.emulatorAvailable = state.emulatorScan.length > 0;
+  } catch (e) {
+    console.error('emu_scan_game_dir failed:', e);
+    state.emulatorScan = [];
+    state.emuSelectedFiles = new Set();
+    state.emulatorAvailable = false;
+  }
+  updateNextButtonText();
+}
+
+function updateNextButtonText() {
+  if (!els.btnNextStep) return;
+  const hasNext = state.shortcutSupported || state.steamLibrarySupported || state.emulatorAvailable;
+  els.btnNextStep.textContent = hasNext
+    ? window.i18n.t('common.next')
+    : window.i18n.t('emulator.goToHome');
+}
+
+async function goToEmulatorStep() {
+  if (state.emuEditMode) setEmuEditMode(false);
+  state.emuApplyComplete = false;
+  if (els.btnEmuApply) els.btnEmuApply.textContent = window.i18n.t('emulator.apply');
+  goToStep(5);
+  if (!state.emulatorScan || state.emulatorScan.length === 0) {
+    await checkEmulatorSupport();
+  }
+  renderEmuFileList(state.emulatorScan);
+  populateEmuSettings(loadLastEmuSettings() || {});
+  applyBypassAvailability();
+  scanForDlcMergeAsync();
+  scanForDrmAsync();
+  await loadEmuReleaseInfo();
+}
+
+async function scanForDlcMergeAsync() {
+  if (els.emuDlcMergeSection) els.emuDlcMergeSection.classList.add('hidden');
+  if (els.emuDlcMergeStatus) els.emuDlcMergeStatus.classList.add('hidden');
+  if (!state.downloadDir) return;
+  const appId = currentAppIdForEmu();
+  try {
+    const plan = await invoke('emu_scan_for_dlc_merge', {
+      gameDir: state.downloadDir,
+      appId: appId || null,
+    });
+    if (!plan || !plan.toMerge || plan.toMerge.length === 0) return;
+    state.dlcMergePlan = plan;
+    if (els.emuDlcMergeSection) els.emuDlcMergeSection.classList.remove('hidden');
+    if (els.emuDlcMergeHint) {
+      els.emuDlcMergeHint.innerHTML = renderMergePlanHint(plan);
+    }
+    if (els.btnEmuMergeDlcs) els.btnEmuMergeDlcs.disabled = false;
+  } catch (e) {
+    console.warn('emu_scan_for_dlc_merge failed:', e);
+  }
+}
+
+function roleLabel(role) {
+  const key = `depots.role_${role}`;
+  const translated = window.i18n.t(key);
+  return translated && translated !== key ? translated : role;
+}
+
+function renderMergePlanHint(plan) {
+  const mainLabel = plan.mainLabel
+    ? `${plan.mainLabel} (${plan.mainDepotId})`
+    : plan.mainDepotId;
+  const toMergeRows = plan.toMerge
+    .map(d => `<li><strong>${escapeHtml(d.depotId)}</strong> ${d.label ? '— ' + escapeHtml(d.label) : ''} <span class="depot-role-pill depot-role-pill--${escapeHtml(d.role)}">${escapeHtml(roleLabel(d.role))}</span></li>`)
+    .join('');
+  const skippedRows = (plan.skipped || [])
+    .map(d => `<li><strong>${escapeHtml(d.depotId)}</strong> ${d.label ? '— ' + escapeHtml(d.label) : ''} <span class="depot-role-pill depot-role-pill--skipped">${escapeHtml(roleLabel(d.role))} (${escapeHtml(window.i18n.t('emulator.dlcMergeSkippedTag'))})</span></li>`)
+    .join('');
+  const intro = window.i18n.t('emulator.dlcMergeHintDetail', {
+    count: plan.toMerge.length,
+    main: escapeHtml(mainLabel),
+  });
+  const skippedBlock = skippedRows
+    ? `<p class="dd-path__hint">${window.i18n.t('emulator.dlcMergeSkippedNote')}</p><ul class="emu-dlc-merge-list">${skippedRows}</ul>`
+    : '';
+  return `${intro}<ul class="emu-dlc-merge-list">${toMergeRows}</ul>${skippedBlock}`;
+}
+
+async function performDlcMerge() {
+  if (!state.dlcMergePlan) return;
+  const plan = state.dlcMergePlan;
+  if (els.btnEmuMergeDlcs) {
+    els.btnEmuMergeDlcs.disabled = true;
+    els.btnEmuMergeDlcs.textContent = window.i18n.t('emulator.dlcMergeBusy');
+  }
+  if (els.emuDlcMergeStatus) {
+    els.emuDlcMergeStatus.classList.remove('hidden');
+    els.emuDlcMergeStatus.textContent = window.i18n.t('emulator.dlcMergeBusy');
+  }
+  try {
+    await invoke('emu_merge_dlc_depots', {
+      mainDepotDir: plan.mainDepotDir,
+      dlcDepotDirs: plan.dlcDepotDirs,
+    });
+    state.dlcMergePlan = null;
+    if (els.emuDlcMergeStatus) {
+      els.emuDlcMergeStatus.textContent = window.i18n.t('emulator.dlcMergeDone', {
+        count: plan.dlcDepotDirs.length,
+      });
+    }
+    if (els.btnEmuMergeDlcs) {
+      els.btnEmuMergeDlcs.textContent = window.i18n.t('emulator.dlcMergeDoneShort');
+    }
+    setTimeout(() => {
+      if (els.emuDlcMergeSection) els.emuDlcMergeSection.classList.add('hidden');
+    }, 4000);
+  } catch (e) {
+    console.error('emu_merge_dlc_depots failed:', e);
+    if (els.emuDlcMergeStatus) {
+      els.emuDlcMergeStatus.textContent = window.i18n.t('emulator.dlcMergeError', {
+        message: String(e),
+      });
+    }
+    if (els.btnEmuMergeDlcs) {
+      els.btnEmuMergeDlcs.disabled = false;
+      els.btnEmuMergeDlcs.textContent = window.i18n.t('emulator.dlcMergeButton');
+    }
+  }
+}
+
+function applyBypassAvailability() {
+  const hasWindowsTarget = (state.emulatorScan || []).some(t => t.platform === 'windows');
+  const toggle = els.emuBypassToggle;
+  const section = els.emuBypassSection;
+  if (!section) return;
+  section.classList.toggle('emu-bypass-section--disabled', !hasWindowsTarget);
+  if (!toggle) return;
+  if (!hasWindowsTarget) {
+    toggle.checked = false;
+    toggle.disabled = true;
+  } else {
+    toggle.disabled = false;
+  }
+  const hintEl = section.querySelector('.emu-bypass-row__hint');
+  if (hintEl) {
+    hintEl.innerHTML = hasWindowsTarget
+      ? window.i18n.t('emulator.bypassHint')
+      : window.i18n.t('emulator.bypassLinuxNote');
+  }
+}
+
+async function scanForDrmAsync() {
+  if (!state.downloadDir) return;
+  try {
+    const entries = await invoke('steamless_scan', { gameDir: state.downloadDir });
+    state.drmTargets = Array.isArray(entries) ? entries : [];
+    renderDrmSection();
+  } catch (e) {
+    console.warn('steamless_scan failed:', e);
+    state.drmTargets = [];
+    if (els.emuDrmSection) els.emuDrmSection.classList.add('hidden');
+  }
+}
+
+function renderDrmSection() {
+  if (!els.emuDrmSection) return;
+  if (!state.drmTargets || state.drmTargets.length === 0) {
+    els.emuDrmSection.classList.add('hidden');
+    return;
+  }
+  els.emuDrmSection.classList.remove('hidden');
+  if (els.emuDrmList) {
+    els.emuDrmList.innerHTML = state.drmTargets.map(t => {
+      const rel = relativizeEmuPath(t.path);
+      const size = formatBytes(t.size_bytes);
+      return `<div class="emu-drm-item" data-path="${escapeHtml(t.path)}">
+        <span class="emu-drm-item__path" title="${escapeHtml(t.path)}">${escapeHtml(rel)}</span>
+        <span class="emu-drm-item__size">${escapeHtml(size || '')}</span>
+      </div>`;
+    }).join('');
+  }
+  if (els.emuDrmStatusWrap) els.emuDrmStatusWrap.classList.add('hidden');
+  if (els.btnEmuDrmRemove) {
+    els.btnEmuDrmRemove.disabled = false;
+    els.btnEmuDrmRemove.textContent = window.i18n.t('emulator.drmRemove');
+  }
+}
+
+function setDrmStatus(kind, text) {
+  if (!els.emuDrmStatus) return;
+  els.emuDrmStatus.classList.remove('emu-drm-status--busy', 'emu-drm-status--success', 'emu-drm-status--error');
+  if (kind === 'busy') els.emuDrmStatus.classList.add('emu-drm-status--busy');
+  else if (kind === 'success') els.emuDrmStatus.classList.add('emu-drm-status--success');
+  else if (kind === 'error') els.emuDrmStatus.classList.add('emu-drm-status--error');
+  els.emuDrmStatus.textContent = text;
+  if (els.emuDrmStatusWrap) els.emuDrmStatusWrap.classList.remove('hidden');
+}
+
+const DRM_COPY_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+</svg>`;
+const DRM_COPY_ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <polyline points="20 6 9 17 4 12"/>
+</svg>`;
+
+async function copyDrmLog() {
+  if (!els.emuDrmStatus || !els.btnEmuDrmCopy) return;
+  const text = els.emuDrmStatus.textContent || '';
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    console.error('clipboard write failed:', e);
+    return;
+  }
+  els.btnEmuDrmCopy.classList.add('emu-drm-copy-btn--copied');
+  els.btnEmuDrmCopy.innerHTML = DRM_COPY_ICON_CHECK;
+  els.btnEmuDrmCopy.setAttribute('title', window.i18n.t('emulator.drmCopyLogCopied'));
+  setTimeout(() => {
+    els.btnEmuDrmCopy.classList.remove('emu-drm-copy-btn--copied');
+    els.btnEmuDrmCopy.innerHTML = DRM_COPY_ICON;
+    els.btnEmuDrmCopy.setAttribute('title', window.i18n.t('emulator.drmCopyLog'));
+  }, 1500);
+}
+
+async function removeDrm() {
+  if (!state.drmTargets || state.drmTargets.length === 0) return;
+  const paths = state.drmTargets.map(t => t.path);
+  if (els.btnEmuDrmRemove) els.btnEmuDrmRemove.disabled = true;
+  setDrmStatus('busy', window.i18n.t('emulator.drmRemoving'));
+
+  try {
+    const results = await invoke('steamless_unpack', { targets: paths });
+    const success = results.filter(r => r.success).length;
+    const failed = results.length - success;
+    if (failed === 0) {
+      setDrmStatus('success', window.i18n.t('emulator.drmRemoveSuccess', { count: success }));
+      results.forEach((r, i) => {
+        const item = els.emuDrmList && els.emuDrmList.children[i];
+        if (item && r.success) item.classList.add('emu-drm-item--success');
+      });
+      state.drmTargets = [];
+    } else {
+      const first = results.find(r => !r.success);
+      const errMsg = first && first.error ? first.error : 'unknown error';
+      const monoNeeded = /command not found|No such file|cannot run|exec format/i.test(errMsg)
+        && /mono/i.test(errMsg);
+      const hint = monoNeeded ? '\n\n' + window.i18n.t('emulator.drmMonoHint') : '';
+      const summary = window.i18n.t('emulator.drmRemovePartial', { success, failed });
+      setDrmStatus('error', `${summary}\n\n${errMsg}${hint}`);
+    }
+  } catch (e) {
+    console.error('steamless_unpack failed:', e);
+    const errMsg = String(e);
+    const monoNeeded = /command not found|No such file|cannot run|exec format/i.test(errMsg)
+      && /mono/i.test(errMsg);
+    const hint = monoNeeded ? '\n\n' + window.i18n.t('emulator.drmMonoHint') : '';
+    setDrmStatus('error', window.i18n.t('emulator.drmRemoveError', { message: errMsg }) + hint);
+  } finally {
+    if (els.btnEmuDrmRemove) els.btnEmuDrmRemove.disabled = false;
+  }
+}
+
+function extractDepotFolderFromPath(p) {
+  if (!p) return '';
+  const norm = p.replace(/\\/g, '/');
+  const marker = '/depots/';
+  const idx = norm.indexOf(marker);
+  if (idx < 0) return '';
+  const rest = norm.slice(idx + marker.length);
+  const slash = rest.indexOf('/');
+  return slash < 0 ? rest : rest.slice(0, slash);
+}
+
+function pickDefaultEmuDepot(files) {
+  const hostIsLinux = (navigator.userAgent || '').toLowerCase().includes('linux');
+  const groups = new Map();
+  for (const f of files) {
+    const key = extractDepotFolderFromPath(f.path) || '__root__';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(f);
+  }
+  let best = null;
+  let bestScore = -Infinity;
+  for (const [key, group] of groups.entries()) {
+    let score = 0;
+    const hasHostPlatform = group.some(f => (f.platform === 'linux') === hostIsLinux);
+    if (hasHostPlatform) score += 1000;
+    if (group.some(f => f.arch === 'x64')) score += 100;
+    score += group.length;
+    if (score > bestScore) {
+      bestScore = score;
+      best = key;
+    }
+  }
+  return best;
+}
+
+function renderEmuFileList(files) {
+  if (!els.emuFileList) return;
+  if (!files || files.length === 0) {
+    els.emuFileList.innerHTML = '';
+    if (els.emuFileEmpty) els.emuFileEmpty.classList.remove('hidden');
+    if (els.btnEmuApply) els.btnEmuApply.disabled = true;
+    state.emuSelectedFiles = new Set();
+    return;
+  }
+  if (els.emuFileEmpty) els.emuFileEmpty.classList.add('hidden');
+
+  const multipleDepots = new Set(files.map(f => extractDepotFolderFromPath(f.path)).filter(Boolean)).size > 1;
+  const defaultDepot = multipleDepots ? pickDefaultEmuDepot(files) : null;
+
+  if (!state.emuSelectedFiles || state.emuSelectedFiles.size === 0) {
+    state.emuSelectedFiles = new Set(
+      multipleDepots
+        ? files.filter(f => extractDepotFolderFromPath(f.path) === defaultDepot).map(f => f.path)
+        : files.map(f => f.path)
+    );
+  }
+
+  const rows = files.map((f, idx) => {
+    const relPath = relativizeEmuPath(f.path);
+    const isLinux = f.platform === 'linux';
+    const platformLabel = isLinux
+      ? window.i18n.t('emulator.platformLinux')
+      : window.i18n.t('emulator.platformWindows');
+    const platformClass = isLinux ? 'emu-file-tag--linux' : 'emu-file-tag--windows';
+    const archLabel = f.arch === 'x64'
+      ? window.i18n.t('emulator.archX64')
+      : window.i18n.t('emulator.archX32');
+    const checked = state.emuSelectedFiles.has(f.path) ? 'checked' : '';
+    return `
+      <label class="emu-file-item">
+        <input type="checkbox" class="emu-file-item__check" data-path="${escapeHtml(f.path)}" data-idx="${idx}" ${checked}>
+        <span class="emu-file-item__path" title="${escapeHtml(f.path)}">${escapeHtml(relPath)}</span>
+        <span class="emu-file-item__tags">
+          <span class="emu-file-tag ${platformClass}">${escapeHtml(platformLabel)}</span>
+          <span class="emu-file-tag">${escapeHtml(archLabel)}</span>
+        </span>
+      </label>`;
+  }).join('');
+  els.emuFileList.innerHTML = rows;
+
+  els.emuFileList.querySelectorAll('.emu-file-item__check').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      const p = cb.dataset.path;
+      if (cb.checked) state.emuSelectedFiles.add(p);
+      else state.emuSelectedFiles.delete(p);
+      updateEmuApplyEnabled();
+    });
+  });
+
+  updateEmuApplyEnabled();
+}
+
+function updateEmuApplyEnabled() {
+  if (!els.btnEmuApply) return;
+  const any = state.emuSelectedFiles && state.emuSelectedFiles.size > 0;
+  els.btnEmuApply.disabled = !any;
+}
+
+function getSelectedEmuTargets() {
+  if (!state.emulatorScan) return [];
+  if (!state.emuSelectedFiles || state.emuSelectedFiles.size === 0) {
+    return state.emulatorScan.slice();
+  }
+  return state.emulatorScan.filter(f => state.emuSelectedFiles.has(f.path));
+}
+
+function relativizeEmuPath(absPath) {
+  if (!absPath) return '';
+  if (state.downloadDir && absPath.startsWith(state.downloadDir)) {
+    const rest = absPath.slice(state.downloadDir.length);
+    return rest.replace(/^[\\/]+/, '');
+  }
+  return absPath;
+}
+
+async function loadEmuReleaseInfo() {
+  if (!els.emuReleaseStatus) return;
+  els.emuReleaseStatus.classList.remove('emu-release-status--ready');
+  els.emuReleaseStatus.classList.add('emu-release-status--busy');
+  els.emuReleaseStatus.textContent = window.i18n.t('emulator.releaseLoading');
+  try {
+    const info = await invoke('emu_release_info');
+    state.emulatorReleaseInfo = info;
+    els.emuReleaseStatus.classList.remove('emu-release-status--busy');
+    els.emuReleaseStatus.classList.add('emu-release-status--ready');
+    els.emuReleaseStatus.textContent = window.i18n.t('emulator.releaseReady', { tag: info.tag });
+  } catch (e) {
+    console.error('emu_release_info failed:', e);
+    els.emuReleaseStatus.classList.remove('emu-release-status--busy', 'emu-release-status--ready');
+    els.emuReleaseStatus.textContent = String(e);
+  }
+}
+
+function currentAppIdForEmu() {
+  if (state.parsedData && state.parsedData.mainAppId) return String(state.parsedData.mainAppId);
+  if (state.searchAppId) return String(state.searchAppId);
+  return '';
+}
+
+function selectedEmuVariant() {
+  const checked = document.querySelector('input[name="emu-variant"]:checked');
+  return (checked && checked.value === 'experimental') ? 'experimental' : 'regular';
+}
+
+async function applySteamApiBypass() {
+  const windowsTargets = getSelectedEmuTargets().filter(t => t.platform === 'windows');
+  if (windowsTargets.length === 0) return '';
+  try {
+    const results = await invoke('steam_api_bypass_apply', { targets: windowsTargets });
+    const success = results.filter(r => r.success).length;
+    const failed = results.length - success;
+    if (failed === 0) {
+      return window.i18n.t('emulator.bypassSuccess', { count: success });
+    }
+    const first = results.find(r => !r.success);
+    const detail = first && first.error ? `\n${first.error}` : '';
+    return window.i18n.t('emulator.bypassPartial', { success, failed }) + detail;
+  } catch (e) {
+    console.error('steam_api_bypass_apply failed:', e);
+    return window.i18n.t('emulator.bypassError', { message: String(e) });
+  }
+}
+
+function collectInstalledAppIds(mainAppId) {
+  const list = (state.parsedData && Array.isArray(state.parsedData.allAppIds))
+    ? state.parsedData.allAppIds.slice()
+    : [];
+  const main = mainAppId != null ? String(mainAppId) : null;
+  return list.filter(id => id && id !== main);
+}
+
+async function applyEmuReplacement() {
+  if (state.emuApplyComplete) {
+    resetApp();
+    return;
+  }
+  if (state.emuEditMode) {
+    state.emulatorScan = state.emuEditTargets || [];
+    state.emuSelectedFiles = new Set((state.emuEditTargets || []).map(t => t.path));
+  }
+  if (!state.emulatorScan || state.emulatorScan.length === 0) {
+    if (state.emuEditMode) {
+      await saveEmuEditSettings();
+    }
+    return;
+  }
+  const selectedTargets = getSelectedEmuTargets();
+  if (selectedTargets.length === 0) {
+    setEmuApplyStatus('error', window.i18n.t('emulator.applyNoSelection') || 'No files selected');
+    return;
+  }
+  const appId = currentAppIdForEmu();
+  if (!appId) {
+    setEmuApplyStatus('error', window.i18n.t('emulator.applyError', { message: 'missing app id' }));
+    return;
+  }
+  if (els.btnEmuApply) els.btnEmuApply.disabled = true;
+  setEmuApplyStatus('busy', window.i18n.t('emulator.applying'));
+
+  try {
+    const variant = selectedEmuVariant();
+    const gathered = gatherEmuSettings();
+    const installedAppIds = collectInstalledAppIds(appId);
+    const results = await invoke('emu_apply_replacement', {
+      targets: selectedTargets,
+      variant,
+      appId,
+      installedAppIds,
+      emuSettings: gathered,
+    });
+    const total = results.length;
+    const success = results.filter(r => r.success).length;
+    const failed = total - success;
+    if (failed === 0) {
+      let extra = '';
+      if (els.emuBypassToggle && els.emuBypassToggle.checked) {
+        extra = '\n\n' + await applySteamApiBypass();
+      }
+      setEmuApplyStatus('success', window.i18n.t('emulator.applySuccess', { count: success, total }) + extra);
+      state.emuApplyComplete = true;
+      saveLastEmuSettings(gathered);
+      if (els.btnEmuApply) els.btnEmuApply.textContent = window.i18n.t('emulator.goBackHome');
+    } else {
+      setEmuApplyStatus('error', window.i18n.t('emulator.applyPartial', { success, failed }));
+    }
+  } catch (e) {
+    console.error('emu_apply_replacement failed:', e);
+    const msg = String(e);
+    if (msg.includes('AV_BLOCKED')) {
+      setEmuApplyAntivirusBlocked();
+    } else {
+      setEmuApplyStatus('error', window.i18n.t('emulator.applyError', { message: msg }));
+    }
+  } finally {
+    if (els.btnEmuApply) els.btnEmuApply.disabled = false;
+  }
+}
+
+function setEmuApplyAntivirusBlocked() {
+  if (!els.emuApplyStatus) return;
+  els.emuApplyStatus.classList.remove('hidden', 'completion-message--success');
+  els.emuApplyStatus.classList.add('completion-message--error');
+  const title = window.i18n.t('emulator.avBlockedTitle');
+  const hint = window.i18n.t('emulator.avBlockedHint');
+  const retry = window.i18n.t('emulator.avBlockedRetry');
+  els.emuApplyStatus.innerHTML = `
+    <div class="av-blocked">
+      <div class="av-blocked__title">${escapeHtml(title)}</div>
+      <p class="av-blocked__hint">${escapeHtml(hint)}</p>
+      <button type="button" id="btn-av-retry" class="btn btn--primary av-blocked__retry">${escapeHtml(retry)}</button>
+    </div>
+  `;
+  const retryBtn = document.getElementById('btn-av-retry');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      setEmuApplyStatus('busy', window.i18n.t('emulator.applying'));
+      applyEmuReplacement();
+    });
+  }
+}
+
+async function saveEmuEditSettings() {
+  if (!state.emuEditTargets || state.emuEditTargets.length === 0) return;
+  if (state.downloadDir) {
+    try {
+      await invoke('emu_scan_game_dir', { gameDir: state.downloadDir });
+    } catch (e) {
+      console.error('game folder gone before save:', e);
+      resetApp();
+      showFolderMissing();
+      return;
+    }
+  }
+  if (els.btnEmuApply) els.btnEmuApply.disabled = true;
+  setEmuApplyStatus('busy', window.i18n.t('emulator.savingSettings'));
+
+  const settings = gatherEmuSettings() || {};
+  let success = 0;
+  let failed = 0;
+  for (const target of state.emuEditTargets) {
+    try {
+      await invoke('emu_write_emu_settings', { targetPath: target.path, settings });
+      success++;
+    } catch (e) {
+      console.error('emu_write_emu_settings failed:', target.path, e);
+      failed++;
+    }
+  }
+
+  if (els.btnEmuApply) els.btnEmuApply.disabled = false;
+  if (failed > 0) {
+    setEmuApplyStatus('error', window.i18n.t('emulator.savePartial', { success, failed }));
+    return;
+  }
+
+  const wantBypass = !!(els.emuBypassToggle && els.emuBypassToggle.checked);
+  if (wantBypass !== state.bypassInitialState) {
+    if (wantBypass) {
+      const windowsTargets = state.emuEditTargets.filter(t => t.platform === 'windows');
+      if (windowsTargets.length > 0) {
+        try { await invoke('steam_api_bypass_apply', { targets: windowsTargets }); }
+        catch (e) { console.error('bypass apply on save:', e); }
+      }
+    } else {
+      const paths = state.emuEditTargets.map(t => t.path);
+      try { await invoke('steam_api_bypass_revert', { targets: paths }); }
+      catch (e) { console.error('bypass revert on save:', e); }
+    }
+  }
+
+  resetApp();
+}
+
+function showEmuRevertConfirm() {
+  if (els.emuRevertModal) els.emuRevertModal.classList.remove('hidden');
+}
+
+async function confirmEmuRevert() {
+  if (els.emuRevertModal) els.emuRevertModal.classList.add('hidden');
+  if (!state.emuEditTargets || state.emuEditTargets.length === 0) return;
+  if (state.downloadDir) {
+    try {
+      await invoke('emu_scan_game_dir', { gameDir: state.downloadDir });
+    } catch (e) {
+      console.error('game folder gone before revert:', e);
+      resetApp();
+      showFolderMissing();
+      return;
+    }
+  }
+  if (els.btnEmuRevert) els.btnEmuRevert.disabled = true;
+  if (els.btnEmuApply) els.btnEmuApply.disabled = true;
+  setEmuApplyStatus('busy', window.i18n.t('emulator.reverting'));
+
+  try {
+    const paths = state.emuEditTargets.map(t => t.path);
+    const results = await invoke('emu_revert_replacement', { targets: paths });
+    try { await invoke('steam_api_bypass_revert', { targets: paths }); }
+    catch (e) { console.error('bypass revert during emu revert:', e); }
+    const total = results.length;
+    const success = results.filter(r => r.success).length;
+    const failed = total - success;
+    if (failed > 0) {
+      setEmuApplyStatus('error', window.i18n.t('emulator.revertPartial', { success, failed }));
+      if (els.btnEmuRevert) els.btnEmuRevert.disabled = false;
+      if (els.btnEmuApply) els.btnEmuApply.disabled = false;
+      return;
+    }
+  } catch (e) {
+    console.error('emu_revert_replacement failed:', e);
+    setEmuApplyStatus('error', window.i18n.t('emulator.revertError', { message: String(e) }));
+    if (els.btnEmuRevert) els.btnEmuRevert.disabled = false;
+    if (els.btnEmuApply) els.btnEmuApply.disabled = false;
+    return;
+  }
+  resetApp();
+}
+
+async function showFolderMissing() {
+  if (els.historyModal && els.historyModal.classList.contains('hidden')) {
+    await openHistory();
+  }
+  showHistoryBanner(window.i18n.t('modals.folderMissing.body'));
+}
+
+function showHistoryBanner(text, durationMs = 6000, kind = 'error') {
+  const banner = document.getElementById('history-banner');
+  if (!banner) return;
+  banner.textContent = text;
+  banner.classList.remove('hidden', 'history-banner--success');
+  if (kind === 'success') banner.classList.add('history-banner--success');
+  clearTimeout(banner._hideTimer);
+  banner._hideTimer = setTimeout(() => banner.classList.add('hidden'), durationMs);
+}
+
+function hideHistoryBanner() {
+  const banner = document.getElementById('history-banner');
+  if (!banner) return;
+  banner.classList.add('hidden');
+  clearTimeout(banner._hideTimer);
+}
+
+function setEmuEditMode(on) {
+  state.emuEditMode = !!on;
+  document.body.classList.toggle('emu-edit-mode', state.emuEditMode);
+  if (els.emuReleaseStatus) els.emuReleaseStatus.classList.toggle('hidden', state.emuEditMode);
+  if (els.emuDrmSection && state.emuEditMode) els.emuDrmSection.classList.add('hidden');
+  if (els.btnEmuStartOver) els.btnEmuStartOver.classList.toggle('hidden', state.emuEditMode);
+  if (els.btnEmuRevert) els.btnEmuRevert.classList.toggle('hidden', !state.emuEditMode);
+  if (els.emuHeader) {
+    els.emuHeader.textContent = state.emuEditMode
+      ? window.i18n.t('emulator.editTitle')
+      : window.i18n.t('emulator.title');
+  }
+  if (els.emuDescription) {
+    els.emuDescription.textContent = state.emuEditMode
+      ? window.i18n.t('emulator.editDescription')
+      : window.i18n.t('emulator.description');
+  }
+  if (els.btnEmuApply) {
+    els.btnEmuApply.textContent = state.emuEditMode
+      ? window.i18n.t('emulator.saveSettings')
+      : window.i18n.t('emulator.apply');
+  }
+  if (els.btnEmuNew) {
+    els.btnEmuNew.textContent = state.emuEditMode
+      ? window.i18n.t('emulator.backToHome')
+      : window.i18n.t('emulator.goToHome');
+  }
+}
+
+async function openEmuEditFromHistory(entry) {
+  if (!entry || !entry.download_dir) return;
+  state.downloadDir = entry.download_dir;
+  state.gameName = entry.game_name || null;
+  state.headerImage = entry.header_image || null;
+  if (!state.parsedData) {
+    state.parsedData = { mainAppId: entry.app_id, depots: [] };
+  } else {
+    state.parsedData.mainAppId = entry.app_id;
+  }
+
+  let scanned = [];
+  try {
+    scanned = await invoke('emu_scan_game_dir', { gameDir: entry.download_dir });
+  } catch (e) {
+    console.error('emu_scan_game_dir failed:', e);
+    showFolderMissing();
+    return;
+  }
+  const patched = (scanned || []).filter(f => f.is_patched);
+  if (patched.length === 0) {
+    showHistoryBanner(window.i18n.t('emulator.editNoPatches'));
+    return;
+  }
+
+  state.emuEditTargets = patched;
+  state.emulatorScan = patched;
+  state.emulatorAvailable = true;
+  closeHistory();
+  setEmuEditMode(true);
+
+  let initial = {};
+  try {
+    initial = await invoke('emu_read_emu_settings', { targetPath: patched[0].path });
+  } catch (e) {
+    console.error('emu_read_emu_settings failed:', e);
+  }
+  populateEmuSettings(initial || {});
+
+  let bypassInstalled = false;
+  try {
+    bypassInstalled = await invoke('steam_api_bypass_status', { targets: patched.map(t => t.path) });
+  } catch (e) {
+    console.error('steam_api_bypass_status failed:', e);
+  }
+  state.bypassInitialState = !!bypassInstalled;
+  if (els.emuBypassToggle) els.emuBypassToggle.checked = !!bypassInstalled;
+
+  goToStep(5);
+  renderEmuFileList(patched);
+  if (els.emuApplyStatus) els.emuApplyStatus.classList.add('hidden');
+}
+
+function setEmuApplyStatus(kind, text) {
+  if (!els.emuApplyStatus) return;
+  els.emuApplyStatus.classList.remove('hidden', 'completion-message--success', 'completion-message--error');
+  if (kind === 'success') els.emuApplyStatus.classList.add('completion-message--success');
+  else if (kind === 'error') els.emuApplyStatus.classList.add('completion-message--error');
+  els.emuApplyStatus.textContent = text;
+}
+
+const EMU_BOOL_KEYS = new Set([
+  'offline', 'steam_deck', 'disable_networking', 'disable_lan_only',
+  'record_playtime', 'achievements_bypass', 'force_steamhttp_success',
+  'enable_steam_preowned_ids', 'free_weekend',
+  'enable_experimental_overlay', 'disable_achievement_notification',
+  'overlay_always_show_fps', 'overlay_always_show_playtime',
+]);
+const EMU_FLOAT_KEYS = new Set(['font_size']);
+
+const EMU_LAST_SETTINGS_KEY = 'lastEmuSettings_v1';
+
+function loadLastEmuSettings() {
+  try {
+    const raw = localStorage.getItem(EMU_LAST_SETTINGS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveLastEmuSettings(settings) {
+  try {
+    localStorage.setItem(EMU_LAST_SETTINGS_KEY, JSON.stringify(settings || {}));
+  } catch {}
+}
+
+function gatherEmuSettings() {
+  const settings = {};
+  let anySet = false;
+  document.querySelectorAll('#step-emulator [data-emu-key]').forEach((el) => {
+    const key = el.getAttribute('data-emu-key');
+    if (!key) return;
+    if (EMU_BOOL_KEYS.has(key)) {
+      if (el.checked) {
+        settings[key] = true;
+        anySet = true;
+      }
+      return;
+    }
+    const raw = (el.value || '').trim();
+    if (!raw) return;
+    if (EMU_FLOAT_KEYS.has(key)) {
+      const n = parseFloat(raw);
+      if (!Number.isNaN(n)) {
+        settings[key] = n;
+        anySet = true;
+      }
+      return;
+    }
+    settings[key] = raw;
+    anySet = true;
+  });
+  return anySet ? settings : null;
+}
+
+function populateEmuSettings(settings) {
+  document.querySelectorAll('#step-emulator [data-emu-key]').forEach((el) => {
+    const key = el.getAttribute('data-emu-key');
+    if (!key) return;
+    if (EMU_BOOL_KEYS.has(key)) {
+      el.checked = settings && settings[key] === true;
+      return;
+    }
+    if (!settings || settings[key] === null || settings[key] === undefined) {
+      el.value = '';
+      return;
+    }
+    el.value = String(settings[key]);
+  });
+}
+
+function initEmuAccordion() {
+  const toggles = document.querySelectorAll('#step-emulator .emu-accordion__toggle');
+  toggles.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const content = targetId ? document.getElementById(targetId) : null;
+      if (!content) return;
+      const open = content.classList.toggle('hidden');
+      btn.setAttribute('aria-expanded', String(!open));
+    });
+  });
 }
 
 async function detectExecutables() {
@@ -2374,11 +4349,14 @@ async function detectExecutables() {
 async function browseExe() {
   try {
     const { open } = window.__TAURI__.dialog;
-    const filePath = await open({
+    const opts = {
       defaultPath: state.downloadDir || undefined,
-      filters: [{ name: 'Executables', extensions: ['exe'] }],
       title: 'Select Game Executable'
-    });
+    };
+    if (state.shortcutSupported) {
+      opts.filters = [{ name: 'Executables', extensions: ['exe'] }];
+    }
+    const filePath = await open(opts);
     if (filePath) {
       els.shortcutExePath.value = filePath;
       els.btnCreateShortcuts.disabled = false;
@@ -2425,16 +4403,52 @@ async function createShortcuts() {
     showShortcutStatus(allGood, messages.join('. ') + '.');
 
     if (allGood) {
-      els.btnCreateShortcuts.disabled = true;
-      els.btnCreateShortcuts.textContent = 'Shortcuts Created';
+      state.shortcutsCreated = true;
+      els.btnCreateShortcuts.disabled = false;
+      els.btnCreateShortcuts.textContent = window.i18n.t('common.next');
+      if (els.btnShortcutSkip) els.btnShortcutSkip.classList.add('hidden');
     } else {
       els.btnCreateShortcuts.disabled = false;
-      els.btnCreateShortcuts.textContent = 'Create Shortcuts';
+      els.btnCreateShortcuts.textContent = window.i18n.t('shortcut.createShortcuts');
+    }
+
+    if (els.shortcutSteamLibrary && els.shortcutSteamLibrary.checked && state.steamLibrarySupported) {
+      await addToSteamLibraryFromShortcutStep(exePath);
     }
   } catch (e) {
     showShortcutStatus(false, `Failed to create shortcuts: ${e}`);
     els.btnCreateShortcuts.disabled = false;
     els.btnCreateShortcuts.textContent = 'Create Shortcuts';
+  }
+}
+
+async function addToSteamLibraryFromShortcutStep(exePath) {
+  const appId = currentAppIdForSteam();
+  if (!appId) return;
+  const appName = state.gameName || `App ${appId}`;
+  const startDir = deriveStartDir(exePath);
+  try {
+    const result = await invoke('steam_library_add', {
+      appId,
+      appName,
+      exePath,
+      startDir,
+      launchOptions: '',
+    });
+    const gridCount = (result.grid_files || []).length;
+    const msg = window.i18n.t('steamLibrary.success', { name: appName })
+      + ' (' + window.i18n.t('steamLibrary.gridArtCount', { count: gridCount }) + ')';
+    if (els.shortcutStatus) {
+      const existing = els.shortcutStatus.textContent || '';
+      els.shortcutStatus.textContent = existing ? existing + '\n\n' + msg : msg;
+    }
+  } catch (e) {
+    console.error('steam_library_add (windows toggle) failed:', e);
+    const errMsg = window.i18n.t('steamLibrary.error', { message: String(e) });
+    if (els.shortcutStatus) {
+      const existing = els.shortcutStatus.textContent || '';
+      els.shortcutStatus.textContent = existing ? existing + '\n\n' + errMsg : errMsg;
+    }
   }
 }
 

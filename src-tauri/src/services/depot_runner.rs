@@ -268,6 +268,7 @@ where
 pub struct DepotRunConfig {
     pub depot_id: String,
     pub manifest_id: String,
+    pub display_name: Option<String>,
 }
 
 #[cfg(target_os = "windows")]

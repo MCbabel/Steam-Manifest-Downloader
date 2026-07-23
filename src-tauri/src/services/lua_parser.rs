@@ -8,12 +8,15 @@ pub struct DepotInfo {
     pub depot_id: u64,
     pub depot_key: Option<String>,
     pub manifest_id: Option<String>,
+    pub size_bytes: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LuaParseResult {
     pub main_app_id: Option<u64>,
     pub depots: Vec<DepotInfo>,
+    #[serde(default)]
+    pub all_app_ids: Vec<u64>,
 }
 
 // Matches `addappid(id)` (main app) or `addappid(id, 0, "hexKey")` (depot with key).
@@ -25,11 +28,12 @@ fn add_app_id_pattern() -> &'static Regex {
     })
 }
 
-// Matches `setManifestid(depotId, "manifestId")`.
+// Matches `setManifestid(depotId, "manifestId")` and the Hubcap variant
+// `setManifestid(depotId, "manifestId", sizeBytes)`.
 fn set_manifest_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| {
-        Regex::new(r#"(?i)setManifestid\((\d+)\s*,\s*"(\d+)"\)"#)
+        Regex::new(r#"(?i)setManifestid\((\d+)\s*,\s*"(\d+)"(?:\s*,\s*(\d+))?[^)]*\)"#)
             .expect("setManifestid pattern is a valid regex")
     })
 }
@@ -42,9 +46,11 @@ pub fn parse_lua_file(content: &str) -> Result<LuaParseResult, String> {
     let mut result = LuaParseResult {
         main_app_id: None,
         depots: Vec::new(),
+        all_app_ids: Vec::new(),
     };
 
     let mut depot_map: HashMap<u64, DepotInfo> = HashMap::new();
+    let mut seen_app_ids: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
 
     for cap in add_app_id_pattern().captures_iter(content) {
         let id: u64 = match cap[1].parse() {
@@ -54,6 +60,9 @@ pub fn parse_lua_file(content: &str) -> Result<LuaParseResult, String> {
         let has_key = cap.get(3).is_some();
 
         if !has_key {
+            if seen_app_ids.insert(id) {
+                result.all_app_ids.push(id);
+            }
             if result.main_app_id.is_none() {
                 result.main_app_id = Some(id);
             }
@@ -66,6 +75,7 @@ pub fn parse_lua_file(content: &str) -> Result<LuaParseResult, String> {
                     depot_id: id,
                     depot_key: Some(depot_key),
                     manifest_id: None,
+                    size_bytes: None,
                 });
         }
     }
@@ -76,14 +86,21 @@ pub fn parse_lua_file(content: &str) -> Result<LuaParseResult, String> {
             Err(_) => continue,
         };
         let manifest_id = cap[2].to_string();
+        let size_bytes = cap.get(3).and_then(|m| m.as_str().parse::<u64>().ok());
 
         depot_map
             .entry(depot_id)
-            .and_modify(|d| d.manifest_id = Some(manifest_id.clone()))
+            .and_modify(|d| {
+                d.manifest_id = Some(manifest_id.clone());
+                if size_bytes.is_some() {
+                    d.size_bytes = size_bytes;
+                }
+            })
             .or_insert(DepotInfo {
                 depot_id,
                 depot_key: None,
                 manifest_id: Some(manifest_id),
+                size_bytes,
             });
     }
 

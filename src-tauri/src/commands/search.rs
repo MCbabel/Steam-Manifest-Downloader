@@ -1,13 +1,31 @@
 use std::path::PathBuf;
 use tauri::{command, AppHandle, Manager};
 use crate::services::AppState;
+use crate::services::depot_info::{self, DepotInfo};
 use crate::services::multi_repo_search;
 use crate::services::settings as settings_service;
 use crate::services::steam_store_api;
 
+fn app_data_dir(app: &AppHandle) -> PathBuf {
+    app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
+
 async fn load_sources(app: &AppHandle) -> Vec<String> {
-    let dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
-    settings_service::load_settings(&dir).await.depot_sources
+    settings_service::load_settings(&app_data_dir(app))
+        .await
+        .depot_sources
+}
+
+async fn load_hubcap_key(app: &AppHandle) -> String {
+    settings_service::load_settings(&app_data_dir(app))
+        .await
+        .hubcap_api_key
+}
+
+async fn load_ryuu_key(app: &AppHandle) -> String {
+    settings_service::load_settings(&app_data_dir(app))
+        .await
+        .ryuu_api_key
 }
 
 #[command]
@@ -17,10 +35,16 @@ pub async fn search_repos(
     app_id: String,
 ) -> Result<serde_json::Value, String> {
     let sources = load_sources(&app).await;
+    let ryuu_key = load_ryuu_key(&app).await;
+    let hubcap_key = load_hubcap_key(&app).await;
+    let dir = app_data_dir(&app);
     let result = multi_repo_search::search_repos(
         &state.http_client,
         &sources,
         &app_id,
+        &ryuu_key,
+        &hubcap_key,
+        &dir,
     )
     .await?;
 
@@ -37,6 +61,9 @@ pub async fn get_repo_manifests(
 ) -> Result<serde_json::Value, String> {
     let effective_sha = sha.unwrap_or_default();
     let sources = load_sources(&app).await;
+    let ryuu_key = load_ryuu_key(&app).await;
+    let hubcap_key = load_hubcap_key(&app).await;
+    let dir = app_data_dir(&app);
 
     let result = multi_repo_search::get_repo_manifests(
         &state.http_client,
@@ -44,6 +71,9 @@ pub async fn get_repo_manifests(
         &app_id,
         &repo,
         &effective_sha,
+        &ryuu_key,
+        &hubcap_key,
+        &dir,
     )
     .await?;
 
@@ -67,6 +97,85 @@ pub async fn get_steam_app_info(
             .map_err(|e| format!("Failed to serialize game info: {}", e)),
         None => Ok(serde_json::Value::Null),
     }
+}
+
+#[command]
+pub async fn fetch_depot_metadata(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    app_id: String,
+) -> Result<Vec<DepotInfo>, String> {
+    let dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    depot_info::fetch_depot_info(&state.http_client, &dir, &app_id).await
+}
+
+#[command]
+pub async fn fetch_depot_metadata_steam(
+    state: tauri::State<'_, AppState>,
+    app_id: String,
+) -> Result<Vec<crate::services::steam_pics::DepotMetadata>, String> {
+    let app_id_u: u32 = app_id
+        .parse()
+        .map_err(|_| format!("Invalid app id '{}'", app_id))?;
+    crate::services::steam_pics::fetch_depots_with_names(state.steam_session.clone(), app_id_u)
+        .await
+}
+
+#[derive(serde::Serialize)]
+pub struct LatestManifestResult {
+    #[serde(rename = "manifestId")]
+    pub manifest_id: String,
+    pub source: String,
+}
+
+#[command]
+pub async fn fetch_latest_manifest_id(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    app_id: String,
+    depot_id: String,
+) -> Result<LatestManifestResult, String> {
+    let app_id_u: u32 = app_id
+        .parse()
+        .map_err(|_| format!("Invalid app id '{}'", app_id))?;
+    let depot_id_u: u32 = depot_id
+        .parse()
+        .map_err(|_| format!("Invalid depot id '{}'", depot_id))?;
+
+    match crate::services::steam_pics::fetch_public_manifest_gid(
+        state.steam_session.clone(),
+        app_id_u,
+        depot_id_u,
+    )
+    .await
+    {
+        Ok(gid) => {
+            return Ok(LatestManifestResult {
+                manifest_id: gid,
+                source: "steam".to_string(),
+            });
+        }
+        Err(e) => {
+            eprintln!(
+                "[fetch_latest_manifest_id] Steam PICS failed ({}), falling back to api.steamcmd.net",
+                e
+            );
+        }
+    }
+
+    let dir = app.path().app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let depots = depot_info::fetch_depot_info_fresh(&state.http_client, &dir, &app_id).await?;
+    let depot = depots
+        .into_iter()
+        .find(|d| d.depot_id == depot_id)
+        .ok_or_else(|| format!("depot {} not listed for app {}", depot_id, app_id))?;
+    let gid = depot
+        .manifest_gid
+        .ok_or_else(|| format!("depot {} has no public manifest", depot_id))?;
+    Ok(LatestManifestResult {
+        manifest_id: gid,
+        source: "steamcmd".to_string(),
+    })
 }
 
 #[command]

@@ -103,7 +103,7 @@ async fn scan_dir_recursive(
                 Box::pin(scan_dir_recursive(&path, results, depth + 1, max_depth)).await;
             } else if metadata.is_file() {
                 let name = entry.file_name().to_string_lossy().to_string();
-                if name.to_lowercase().ends_with(".exe") {
+                if is_executable_candidate(&path, &name).await {
                     results.push((
                         path.to_string_lossy().to_string(),
                         name,
@@ -117,6 +117,53 @@ async fn scan_dir_recursive(
             break;
         }
     }
+}
+
+async fn is_executable_candidate(path: &std::path::Path, name: &str) -> bool {
+    let lower = name.to_lowercase();
+    if lower.ends_with(".exe") {
+        return true;
+    }
+    if lower.ends_with(".so")
+        || lower.ends_with(".dll")
+        || lower.ends_with(".dylib")
+        || lower.ends_with(".manifest")
+        || lower.ends_with(".vdf")
+        || lower.ends_with(".txt")
+        || lower.ends_with(".json")
+        || lower.ends_with(".ini")
+        || lower.ends_with(".pdb")
+        || lower.ends_with(".png")
+        || lower.ends_with(".jpg")
+        || lower.ends_with(".dat")
+        || lower.ends_with(".pak")
+        || lower.ends_with(".lua")
+    {
+        return false;
+    }
+    is_native_executable(path).await
+}
+
+#[cfg(unix)]
+async fn is_native_executable(path: &std::path::Path) -> bool {
+    let Ok(mut file) = tokio::fs::File::open(path).await else {
+        return false;
+    };
+    use tokio::io::AsyncReadExt;
+    let mut header = [0u8; 20];
+    if file.read_exact(&mut header).await.is_err() {
+        return false;
+    }
+    if &header[..4] != b"\x7fELF" {
+        return false;
+    }
+    let e_type = u16::from_le_bytes([header[16], header[17]]);
+    e_type == 2 || e_type == 3
+}
+
+#[cfg(not(unix))]
+async fn is_native_executable(_path: &std::path::Path) -> bool {
+    false
 }
 
 fn is_blacklisted(name_lower: &str) -> bool {

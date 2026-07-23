@@ -41,15 +41,15 @@
       </h1>
       <p class="header__subtitle" data-i18n="header.subtitle">Upload a .lua/.st file, select manifests, and download automatically</p>
       <div class="header__actions">
-        <button id="btn-history" class="btn btn--outline header__history-btn" data-i18n-attr="title=header.history,aria-label=header.history">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-        </button>
         <button id="btn-settings" class="btn btn--outline header__settings-btn" data-i18n-attr="title=header.settings,aria-label=header.settings">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
             <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+        <button id="btn-history" class="btn btn--outline header__history-btn" data-i18n-attr="title=header.history,aria-label=header.history">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
         </button>
         <button id="btn-theme-toggle" class="btn btn--outline header__theme-btn" data-i18n-attr="title=header.themeToggle,aria-label=header.themeToggle">
@@ -73,7 +73,7 @@
         <span class="dotnet-warning__text" data-i18n-html="dotnetWarning.text">
           <strong>.NET 9 Runtime</strong> is required but not installed. DepotDownloader will not work without it.
         </span>
-        <a href="https://dotnet.microsoft.com/en-us/download/dotnet/9.0"
+        <a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer"
            id="dotnet-install-link"
            class="btn btn--small dotnet-warning__btn"
            target="_blank" rel="noopener"
@@ -103,6 +103,16 @@
       <div class="steps__item steps__item--shortcut hidden" data-step="4" id="step4-indicator">
         <div class="steps__number">4</div>
         <div class="steps__label" data-i18n="steps.shortcut">Shortcut</div>
+      </div>
+      <div class="steps__connector steps__connector--steam hidden" id="step6-connector"></div>
+      <div class="steps__item steps__item--steam hidden" data-step="6" id="step6-indicator">
+        <div class="steps__number">6</div>
+        <div class="steps__label" data-i18n="steps.steamLibrary">Steam</div>
+      </div>
+      <div class="steps__connector steps__connector--emulator" id="step5-connector"></div>
+      <div class="steps__item steps__item--emulator" data-step="5" id="step5-indicator">
+        <div class="steps__number">5</div>
+        <div class="steps__label" data-i18n="steps.emulator">Emulator</div>
       </div>
     </div>
 
@@ -275,7 +285,7 @@
               data-i18n-attr="placeholder=select.manifestHubPlaceholder"
               value="">
           </div>
-          <p class="dd-path__hint" data-i18n-html="select.manifestHubHint">Required for custom manifest IDs. Get your key at <a href="https://manifesthub1.filegear-sg.me/" target="_blank" class="link">manifesthub1.filegear-sg.me</a></p>
+          <p class="dd-path__hint" data-i18n-html="select.manifestHubHint">Required for custom manifest IDs. Get your key at <a href="https://manifesthub2.filegear-sg.me/" target="_blank" class="link">manifesthub2.filegear-sg.me</a></p>
         </div>
 
         <div class="card__footer">
@@ -298,6 +308,10 @@
 
     <section id="step-progress" class="step hidden">
       <div class="card">
+        <div id="native-alpha-banner" class="native-alpha-banner hidden">
+          <strong data-i18n="progress.nativeAlphaTitle">Native downloader (alpha)</strong>
+          <p data-i18n-html="progress.nativeAlphaBody">This is experimental. If anything fails, please copy the console errors below and <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/issues" target="_blank" rel="noopener" class="link">open an issue on GitHub</a> — or turn the native engine off in Settings to fall back to DepotDownloaderMod.</p>
+        </div>
         <div id="disk-space-info" class="disk-space-info hidden">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="22" y1="12" x2="2" y2="12"/>
@@ -350,6 +364,9 @@
               </svg>
               <span data-i18n="progress.cancel">Cancel Download</span>
             </button>
+            <button id="btn-pause" class="btn btn--outline" data-i18n="progress.pause">
+              Pause
+            </button>
           </div>
           <button id="btn-next-step" class="btn btn--primary hidden" data-i18n="progress.next">
             Next
@@ -395,6 +412,16 @@
               <span class="toggle-switch__slider"></span>
             </label>
           </div>
+          <div class="shortcut-option shortcut-option--full" id="shortcut-steam-row">
+            <div class="shortcut-option__text">
+              <span class="shortcut-option__label" data-i18n="steamLibrary.windowsToggle">Also add to Steam library</span>
+              <p class="shortcut-option__hint" data-i18n="steamLibrary.windowsToggleHint">Creates a non-Steam shortcut with grid art so the game appears in your Steam library too.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="shortcut-steam-library">
+              <span class="toggle-switch__slider"></span>
+            </label>
+          </div>
         </div>
 
         <div id="shortcut-status" class="completion-message hidden"></div>
@@ -402,14 +429,357 @@
         <div class="card__footer">
           <div class="card__footer-left">
             <button id="btn-shortcut-start-over" class="btn btn--outline">
-              &#8617; <span data-i18n="shortcut.startOver">Start Over</span>
-            </button>
-            <button id="btn-shortcut-new" class="btn btn--outline" data-i18n="shortcut.startNewDownload">
-              Start New Download
+              &#8617; <span data-i18n="shortcut.goHome">Go Home</span>
             </button>
           </div>
-          <button id="btn-create-shortcuts" class="btn btn--primary" data-i18n="shortcut.createShortcuts">
-            Create Shortcuts
+          <div class="card__footer-right">
+            <button id="btn-shortcut-skip" class="btn btn--outline" data-i18n="shortcut.skip">
+              Skip
+            </button>
+            <button id="btn-create-shortcuts" class="btn btn--primary" data-i18n="shortcut.createShortcuts">
+              Create Shortcuts
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="step-steam-library" class="step hidden">
+      <div class="card">
+        <h2 class="shortcut-header" data-i18n="steamLibrary.title">Add to Steam Library</h2>
+        <p class="shortcut-description" data-i18n="steamLibrary.description">Add this game to your Steam library as a non-Steam shortcut with full grid art.</p>
+
+        <div id="steam-library-status" class="emu-release-status" data-i18n="steamLibrary.detecting">Detecting Steam installation...</div>
+
+        <div class="shortcut-exe-section">
+          <label for="steam-exe-path" class="settings-section__label" data-i18n="steamLibrary.exeLabel">Game Executable</label>
+          <div class="dd-path__input-wrap dd-path__input-wrap--with-btn">
+            <input type="text" id="steam-exe-path" class="dd-path__input" data-i18n-attr="placeholder=shortcut.exePlaceholder" readonly>
+            <button type="button" id="btn-steam-browse-exe" class="btn btn--small btn--outline dd-path__browse-btn" data-i18n="shortcut.browse">Browse</button>
+          </div>
+          <p class="dd-path__hint" data-i18n="steamLibrary.exeHint">Auto-detected executable. Click Browse or pick from detected files.</p>
+        </div>
+
+        <div id="steam-detected-section" class="shortcut-detected-section hidden">
+          <button type="button" id="btn-steam-toggle-detected" class="settings-advanced__toggle">
+            <span class="settings-advanced__arrow">&#9654;</span>
+            <span data-i18n="shortcut.otherDetected">Other detected executables</span>
+          </button>
+          <div id="steam-detected-list" class="shortcut-detected-list hidden"></div>
+        </div>
+
+        <div class="settings-field">
+          <label for="steam-game-name" class="settings-field__label" data-i18n="steamLibrary.gameNameLabel">Display name</label>
+          <input type="text" id="steam-game-name" class="dd-path__input" data-i18n-attr="placeholder=steamLibrary.gameNamePlaceholder" autocomplete="off">
+        </div>
+
+        <div class="settings-field">
+          <label for="steam-launch-options" class="settings-field__label" data-i18n="steamLibrary.launchOptionsLabel">Launch options</label>
+          <input type="text" id="steam-launch-options" class="dd-path__input" data-i18n-attr="placeholder=steamLibrary.launchOptionsPlaceholder" autocomplete="off">
+          <p class="dd-path__hint" data-i18n="steamLibrary.launchOptionsHint">Optional. For Windows games on Linux, set the Proton compatibility tool in Steam after adding.</p>
+        </div>
+
+        <div id="steam-library-result" class="completion-message hidden"></div>
+
+        <div class="card__footer">
+          <div class="card__footer-left">
+            <button id="btn-steam-skip" class="btn btn--outline" data-i18n="steamLibrary.skip">
+              Skip
+            </button>
+          </div>
+          <button id="btn-steam-add" class="btn btn--primary" data-i18n="steamLibrary.add">
+            Add to Steam
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section id="step-emulator" class="step hidden">
+      <div class="card">
+        <h2 class="emu-header" data-i18n="emulator.title">Apply Emulator Patch</h2>
+        <p class="emu-description" data-i18n="emulator.description">Replace the game's Steam API library with the gbe_fork emulator so the game can run without the Steam client.</p>
+
+        <div id="emu-release-status" class="emu-release-status" data-i18n="emulator.releaseLoading">Loading emulator release info...</div>
+
+        <div id="emu-drm-section" class="emu-drm-section hidden">
+          <div class="emu-drm-header">
+            <svg class="emu-drm-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <div class="emu-drm-header__text">
+              <h3 class="emu-drm-title" data-i18n="emulator.drmTitle">Steam DRM detected</h3>
+              <p class="emu-drm-description" data-i18n="emulator.drmDescription">These executables are protected by Steam DRM (SteamStub). They won't run with the emulator until the DRM is removed.</p>
+            </div>
+          </div>
+          <div id="emu-drm-list" class="emu-drm-list"></div>
+          <div id="emu-drm-status-wrap" class="emu-drm-status-wrap hidden">
+            <button id="btn-emu-drm-copy" class="emu-drm-copy-btn" type="button" data-i18n-attr="title=emulator.drmCopyLog,aria-label=emulator.drmCopyLog">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+            <div id="emu-drm-status" class="emu-drm-status"></div>
+          </div>
+          <div class="emu-drm-actions">
+            <button id="btn-emu-drm-remove" class="btn btn--danger" data-i18n="emulator.drmRemove">Remove DRM (via Steamless)</button>
+            <span class="emu-drm-attribution" data-i18n="emulator.drmAttribution">Powered by Steamless by atom0s</span>
+          </div>
+        </div>
+
+        <div id="emu-dlc-merge-section" class="emu-section emu-dlc-merge-section hidden">
+          <div class="emu-bypass-row">
+            <div class="emu-bypass-row__text">
+              <span class="emu-bypass-row__label" data-i18n="emulator.dlcMergeLabel">DLC depots detected</span>
+              <p id="emu-dlc-merge-hint" class="emu-bypass-row__hint" data-i18n="emulator.dlcMergeHint">Multiple depot folders found. Many games expect DLC content next to the main game files. Merge the DLC depots into the main game folder?</p>
+              <p id="emu-dlc-merge-status" class="dd-path__hint hidden"></p>
+            </div>
+            <button id="btn-emu-merge-dlcs" type="button" class="btn btn--primary btn--small" data-i18n="emulator.dlcMergeButton">
+              Merge DLC depots
+            </button>
+          </div>
+        </div>
+
+        <div id="emu-bypass-section" class="emu-section emu-bypass-section">
+          <div class="emu-bypass-row">
+            <div class="emu-bypass-row__text">
+              <span class="emu-bypass-row__label" data-i18n="emulator.bypassLabel">Steam API Check Bypass</span>
+              <p class="emu-bypass-row__hint" data-i18n-html="emulator.bypassHint">Installs a <code>version.dll</code> next to the game that intercepts Steam-API integrity checks. Enable if the game refuses to launch with gbe_fork. Windows games only.</p>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="emu-bypass-toggle">
+              <span class="toggle-switch__slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div id="emu-variant-section" class="emu-section">
+          <label class="settings-section__label" data-i18n="emulator.variantLabel">Emulator variant</label>
+          <div class="emu-variant-group" role="radiogroup" aria-labelledby="emu-variant-label">
+            <label class="emu-variant">
+              <input type="radio" name="emu-variant" value="regular" checked>
+              <span class="emu-variant__body">
+                <span class="emu-variant__title" data-i18n="emulator.variantRegular">Regular</span>
+                <span class="emu-variant__hint" data-i18n="emulator.variantRegularHint">Stable build, recommended for most games.</span>
+              </span>
+            </label>
+            <label class="emu-variant">
+              <input type="radio" name="emu-variant" value="experimental">
+              <span class="emu-variant__body">
+                <span class="emu-variant__title" data-i18n="emulator.variantExperimental">Experimental</span>
+                <span class="emu-variant__hint" data-i18n="emulator.variantExperimentalHint">Latest features, may be unstable.</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="emu-section">
+          <label class="settings-section__label" data-i18n="emulator.settingsLabel">Emulator settings <span class="optional-badge" data-i18n="emulator.settingsOptional">Optional</span></label>
+          <p class="emu-settings-hint" data-i18n="emulator.settingsHint">Unset values keep the gbe_fork defaults. You can change these later from the History tab.</p>
+
+          <div class="emu-accordion">
+            <div class="emu-accordion__item">
+              <button type="button" class="emu-accordion__toggle" data-target="emu-section-account" aria-expanded="false">
+                <span class="emu-accordion__arrow">&#9654;</span>
+                <span class="emu-accordion__title" data-i18n="emulator.sections.account">Account</span>
+              </button>
+              <div id="emu-section-account" class="emu-accordion__content hidden">
+                <div class="emu-field">
+                  <label class="emu-field__label" for="emu-account-name" data-i18n="emulator.fields.accountName">Display name</label>
+                  <input id="emu-account-name" class="emu-field__input" type="text" data-emu-key="account_name" data-i18n-attr="placeholder=emulator.fields.accountNamePlaceholder" autocomplete="off">
+                  <p class="emu-field__hint" data-i18n="emulator.fields.accountNameHint">Name the game sees from the Steam API.</p>
+                </div>
+                <div class="emu-field">
+                  <label class="emu-field__label" for="emu-account-steamid" data-i18n="emulator.fields.accountSteamId">Steam ID</label>
+                  <input id="emu-account-steamid" class="emu-field__input" type="text" data-emu-key="account_steamid" placeholder="76561198000000000" autocomplete="off" pattern="[0-9]*" inputmode="numeric">
+                  <p class="emu-field__hint" data-i18n="emulator.fields.accountSteamIdHint">64-bit Steam ID. Leave empty for the gbe_fork default.</p>
+                </div>
+                <div class="emu-field">
+                  <label class="emu-field__label" for="emu-language" data-i18n="emulator.fields.language">Game language</label>
+                  <input id="emu-language" class="emu-field__input" type="text" data-emu-key="language" placeholder="english" autocomplete="off">
+                  <p class="emu-field__hint" data-i18n="emulator.fields.languageHint">Steam language code, e.g. english, german, french.</p>
+                </div>
+                <div class="emu-field">
+                  <label class="emu-field__label" for="emu-ip-country" data-i18n="emulator.fields.ipCountry">IP country</label>
+                  <input id="emu-ip-country" class="emu-field__input" type="text" data-emu-key="ip_country" placeholder="US" maxlength="2" autocomplete="off">
+                  <p class="emu-field__hint" data-i18n="emulator.fields.ipCountryHint">ISO 3166-1 alpha-2 code (e.g. US, DE, FR).</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="emu-accordion__item">
+              <button type="button" class="emu-accordion__toggle" data-target="emu-section-saves" aria-expanded="false">
+                <span class="emu-accordion__arrow">&#9654;</span>
+                <span class="emu-accordion__title" data-i18n="emulator.sections.saves">Saves</span>
+              </button>
+              <div id="emu-section-saves" class="emu-accordion__content hidden">
+                <div class="emu-field">
+                  <label class="emu-field__label" for="emu-local-save-path" data-i18n="emulator.fields.localSavePath">Local save path</label>
+                  <input id="emu-local-save-path" class="emu-field__input" type="text" data-emu-key="local_save_path" data-i18n-attr="placeholder=emulator.fields.localSavePathPlaceholder" autocomplete="off">
+                  <p class="emu-field__hint" data-i18n="emulator.fields.localSavePathHint">Override where the emulator stores save data. Empty = gbe_fork default.</p>
+                </div>
+                <div class="emu-field">
+                  <label class="emu-field__label" for="emu-saves-folder-name" data-i18n="emulator.fields.savesFolderName">Saves folder name</label>
+                  <input id="emu-saves-folder-name" class="emu-field__input" type="text" data-emu-key="saves_folder_name" autocomplete="off">
+                  <p class="emu-field__hint" data-i18n="emulator.fields.savesFolderNameHint">Per-game subfolder name for save data.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="emu-accordion__item">
+              <button type="button" class="emu-accordion__toggle" data-target="emu-section-network" aria-expanded="false">
+                <span class="emu-accordion__arrow">&#9654;</span>
+                <span class="emu-accordion__title" data-i18n="emulator.sections.network">Network &amp; Compatibility</span>
+              </button>
+              <div id="emu-section-network" class="emu-accordion__content hidden">
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.offline">Offline mode</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.offlineHint">Force the emulator to act as if Steam is offline.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="offline"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.steamDeck">Steam Deck mode</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.steamDeckHint">Pretend the game runs on a Steam Deck.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="steam_deck"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.disableNetworking">Disable networking</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.disableNetworkingHint">Block all network features (matchmaking, friends, P2P).</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="disable_networking"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.disableLanOnly">Disable LAN-only mode</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.disableLanOnlyHint">Allow connections beyond the local network.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="disable_lan_only"><span class="toggle-switch__slider"></span></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="emu-accordion__item">
+              <button type="button" class="emu-accordion__toggle" data-target="emu-section-stats" aria-expanded="false">
+                <span class="emu-accordion__arrow">&#9654;</span>
+                <span class="emu-accordion__title" data-i18n="emulator.sections.stats">Stats &amp; Achievements</span>
+              </button>
+              <div id="emu-section-stats" class="emu-accordion__content hidden">
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.recordPlaytime">Record playtime</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.recordPlaytimeHint">Have the emulator track in-game playtime.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="record_playtime"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.achievementsBypass">Achievements bypass</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.achievementsBypassHint">Auto-unlock achievements as the game requests them.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="achievements_bypass"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.forceSteamhttpSuccess">Force SteamHTTP success</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.forceSteamhttpSuccessHint">Make all Steam HTTP requests appear to succeed.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="force_steamhttp_success"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.enableSteamPreownedIds">Enable Steam pre-owned IDs</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.enableSteamPreownedIdsHint">Claim ownership of pre-existing entitlements.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="enable_steam_preowned_ids"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.freeWeekend">Free weekend flag</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.freeWeekendHint">Tell the game it is running during a free weekend.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="free_weekend"><span class="toggle-switch__slider"></span></label>
+                </div>
+              </div>
+            </div>
+
+            <div class="emu-accordion__item">
+              <button type="button" class="emu-accordion__toggle" data-target="emu-section-overlay" aria-expanded="false">
+                <span class="emu-accordion__arrow">&#9654;</span>
+                <span class="emu-accordion__title" data-i18n="emulator.sections.overlay">Overlay</span>
+              </button>
+              <div id="emu-section-overlay" class="emu-accordion__content hidden">
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.enableExperimentalOverlay">Enable experimental overlay</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.enableExperimentalOverlayHint">In-game ImGui overlay with achievement popups.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="enable_experimental_overlay"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.disableAchievementNotification">Hide achievement popups</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.disableAchievementNotificationHint">Suppress on-screen achievement toasts.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="disable_achievement_notification"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.overlayAlwaysShowFps">Always show FPS</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.overlayAlwaysShowFpsHint">Pin the FPS counter to the overlay.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="overlay_always_show_fps"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field emu-field--toggle">
+                  <div class="emu-field__label-block">
+                    <span class="emu-field__label" data-i18n="emulator.fields.overlayAlwaysShowPlaytime">Always show playtime</span>
+                    <p class="emu-field__hint" data-i18n="emulator.fields.overlayAlwaysShowPlaytimeHint">Pin the session timer to the overlay.</p>
+                  </div>
+                  <label class="toggle-switch"><input type="checkbox" data-emu-key="overlay_always_show_playtime"><span class="toggle-switch__slider"></span></label>
+                </div>
+                <div class="emu-field">
+                  <label class="emu-field__label" for="emu-key-combo" data-i18n="emulator.fields.keyCombo">Overlay hotkey</label>
+                  <input id="emu-key-combo" class="emu-field__input" type="text" data-emu-key="key_combo" placeholder="ShiftTab" autocomplete="off">
+                  <p class="emu-field__hint" data-i18n="emulator.fields.keyComboHint">Key combination to toggle the overlay (e.g. ShiftTab, CtrlShiftO).</p>
+                </div>
+                <div class="emu-field">
+                  <label class="emu-field__label" for="emu-font-size" data-i18n="emulator.fields.fontSize">Font size</label>
+                  <input id="emu-font-size" class="emu-field__input emu-field__input--narrow" type="number" data-emu-key="font_size" placeholder="16" min="8" max="48" step="0.5" autocomplete="off">
+                  <p class="emu-field__hint" data-i18n="emulator.fields.fontSizeHint">Overlay font size in points.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="emu-section">
+          <label class="settings-section__label" data-i18n="emulator.detectedLabel">Detected Steam API files</label>
+          <div id="emu-file-list" class="emu-file-list" aria-live="polite"></div>
+          <p id="emu-file-empty" class="emu-file-empty hidden" data-i18n="emulator.noFiles">No Steam API libraries were found in the download folder.</p>
+        </div>
+
+        <div id="emu-apply-status" class="completion-message hidden"></div>
+
+        <div class="card__footer">
+          <div class="card__footer-left">
+            <button id="btn-emu-start-over" class="btn btn--outline">
+              &#8617; <span data-i18n="emulator.startOver">Start Over</span>
+            </button>
+            <button id="btn-emu-new" class="btn btn--outline" data-i18n="emulator.goToHome">
+              Go to Home
+            </button>
+            <button id="btn-emu-revert" class="btn btn--danger hidden" data-i18n="emulator.revert">
+              Revert Patch
+            </button>
+          </div>
+          <button id="btn-emu-apply" class="btn btn--primary" data-i18n="emulator.apply">
+            Apply Emulator Patch
           </button>
         </div>
       </div>
@@ -428,7 +798,7 @@
         </svg>
       </div>
       <h3 class="modal__title" id="cancel-modal-title" data-i18n="modals.cancel.title">Cancel Download?</h3>
-      <p class="modal__text" data-i18n-html="modals.cancel.body">
+      <p class="modal__text" id="cancel-modal-body" data-i18n-html="modals.cancel.body">
         Are you sure you want to cancel? All downloaded files for this App ID will be <strong>permanently deleted</strong>.
       </p>
       <div class="modal__actions">
@@ -478,6 +848,77 @@
       <div class="modal__actions">
         <button id="btn-remove-source-no" class="btn btn--outline" data-modal-cancel data-i18n="modals.removeDefaultSource.no">Keep</button>
         <button id="btn-remove-source-yes" class="btn btn--danger" data-i18n="modals.removeDefaultSource.yes">Remove anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="history-remove-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="history-remove-modal-title" aria-hidden="true">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__icon modal__icon--warning" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/>
+          <path d="M14 11v6"/>
+        </svg>
+      </div>
+      <h3 class="modal__title" id="history-remove-modal-title" data-i18n="modals.historyRemove.title">Remove entry?</h3>
+      <p class="modal__text" data-i18n-html="modals.historyRemove.body">
+        This removes the entry from your history. <strong>Downloaded files stay on disk.</strong>
+      </p>
+      <div class="modal__actions">
+        <button id="btn-history-remove-no" class="btn btn--outline" data-modal-cancel data-i18n="modals.historyRemove.no">Keep</button>
+        <button id="btn-history-remove-yes" class="btn btn--danger" data-i18n="modals.historyRemove.yes">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="emu-revert-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="emu-revert-modal-title" aria-hidden="true">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__icon modal__icon--warning" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h3 class="modal__title" id="emu-revert-modal-title" data-i18n="modals.emuRevert.title">Revert emulator patch?</h3>
+      <p class="modal__text" data-i18n-html="modals.emuRevert.body">
+        This restores the <strong>original Steam API library</strong> and removes the steam_settings folder. Your emulator settings will be lost.
+      </p>
+      <div class="modal__actions">
+        <button id="btn-emu-revert-no" class="btn btn--outline" data-modal-cancel data-i18n="modals.emuRevert.no">Keep patch</button>
+        <button id="btn-emu-revert-yes" class="btn btn--danger" data-i18n="modals.emuRevert.yes">Revert</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="history-clear-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="history-clear-modal-title" aria-hidden="true">
+    <div class="modal__backdrop"></div>
+    <div class="modal__content">
+      <div class="modal__icon modal__icon--warning" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h3 class="modal__title" id="history-clear-modal-title" data-i18n="modals.historyClear.title">Clear all history?</h3>
+      <p class="modal__text" data-i18n-html="modals.historyClear.body">
+        This removes <strong>all entries</strong> from your history. Downloaded files stay on disk.
+      </p>
+      <div id="history-clear-resumable-warning" class="modal__notice hidden">
+        <p class="modal__text" id="history-clear-resumable-text"></p>
+        <label class="modal__check">
+          <input type="checkbox" id="history-clear-delete-files">
+          <span data-i18n="modals.historyClear.deleteFilesLabel">Also delete partial files on disk</span>
+        </label>
+      </div>
+      <div class="modal__actions">
+        <button id="btn-history-clear-no" class="btn btn--outline" data-modal-cancel data-i18n="modals.historyClear.no">Keep</button>
+        <button id="btn-history-clear-yes" class="btn btn--danger" data-i18n="modals.historyClear.yes">Clear all</button>
       </div>
     </div>
   </div>
@@ -609,6 +1050,42 @@
           </div>
 
           <div class="settings-field">
+            <label for="hubcap-apikey-input" class="settings-field__label" data-i18n="settings.hubcapApiKey">Hubcap API Key</label>
+            <input type="text" id="hubcap-apikey-input" class="dd-path__input" data-i18n-attr="placeholder=settings.hubcapApiKeyPlaceholder" autocomplete="off">
+            <p class="dd-path__hint" data-i18n-html="settings.hubcapApiKeyHint">When set, Hubcap appears as a selectable App ID manifest source when it has data for the app.</p>
+          </div>
+
+          <div class="settings-field">
+            <label for="ryuu-apikey-input" class="settings-field__label" data-i18n="settings.ryuuApiKey">Ryuu API Key</label>
+            <input type="text" id="ryuu-apikey-input" class="dd-path__input" data-i18n-attr="placeholder=settings.ryuuApiKeyPlaceholder" autocomplete="off">
+            <p class="dd-path__hint" data-i18n-html="settings.ryuuApiKeyHint">When set, Ryuu appears as a selectable App ID manifest source when it has data for the app.</p>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-field__label" data-i18n="settings.cancelKeepFiles">Cancel behaviour</label>
+            <div class="settings-field__toggle-wrap">
+              <label class="toggle-switch">
+                <input type="checkbox" id="cancel-keep-files-toggle">
+                <span class="toggle-switch__slider"></span>
+              </label>
+              <span class="settings-field__toggle-text" data-i18n="settings.cancelKeepFilesToggle">Keep downloaded files when cancelling</span>
+            </div>
+            <p class="dd-path__hint" data-i18n="settings.cancelKeepFilesHint">When enabled, cancelling a download keeps the partial files on disk. Restarting the same download will resume from where it stopped (already-downloaded chunks are skipped).</p>
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-field__label" data-i18n="settings.nativeDownloader">Download engine</label>
+            <div class="settings-field__toggle-wrap">
+              <label class="toggle-switch">
+                <input type="checkbox" id="native-downloader-toggle" checked>
+                <span class="toggle-switch__slider"></span>
+              </label>
+              <span class="settings-field__toggle-text" data-i18n="settings.nativeDownloaderToggle">Download directly from Steam (native, recommended)</span>
+            </div>
+            <p class="dd-path__hint" data-i18n="settings.nativeDownloaderHint">Default. Anonymous Steam login fetches manifests + chunks from Steam's CDN directly. ManifestHub is used only as a fallback if Steam-direct fails. Turn this off to force the legacy DepotDownloaderMod path.</p>
+          </div>
+
+          <div class="settings-field">
             <label class="settings-field__label" data-i18n="settings.notificationSound">Notification Sound</label>
             <div class="settings-field__toggle-wrap">
               <label class="toggle-switch">
@@ -698,8 +1175,7 @@
       <div id="update-notes" class="update-modal__notes"></div>
       <div id="update-system-hint" class="update-modal__system-hint hidden">
         <p id="update-system-text" data-i18n="modals.update.systemText">This build is installed by your package manager. Update with:</p>
-        <pre><code id="update-system-cmd">yay -Syu steam-manifest-downloader</code></pre>
-        <button type="button" id="btn-update-copy-cmd" class="btn btn--outline btn--small" data-i18n="modals.update.copyCmd">Copy command</button>
+        <div id="update-system-cmd-list" class="update-system-cmd-list"></div>
       </div>
       <div id="update-progress-wrap" class="update-modal__progress hidden">
         <div class="progress-bar">
@@ -740,6 +1216,7 @@
         </svg>
         <span data-i18n="modals.history.title">Download History</span>
       </h3>
+      <div id="history-banner" class="history-banner hidden" role="alert"></div>
       <div id="history-list" class="history-list"></div>
       <div class="modal__actions">
         <button id="btn-history-clear" class="btn btn--outline btn--small btn--push-end" data-i18n="modals.history.clear">Clear All</button>
