@@ -77,7 +77,7 @@
     "downloadLocationHint": "Standard: Dokumente/SteamDownloads — Spieldateien werden in einem Unterordner hier abgelegt",
     "manifestHubLabel": "ManifestHub API-Schlüssel",
     "manifestHubPlaceholder": "ManifestHub API-Schlüssel eingeben...",
-    "manifestHubHint": "Optionaler Fallback wenn der direkte Steam-Abruf fehlschlägt. Schlüssel hier holen: <a href=\"https://manifesthub1.filegear-sg.me/\" target=\"_blank\" class=\"link\">manifesthub1.filegear-sg.me</a>",
+    "manifestHubHint": "Optionaler Fallback wenn der direkte Steam-Abruf fehlschlägt. Schlüssel hier holen: <a href=\"https://manifesthub2.filegear-sg.me/\" target=\"_blank\" class=\"link\">manifesthub2.filegear-sg.me</a>",
     "manifestHubRequired": "Du hast eine eigene Manifest-ID gesetzt — dafür wird ein ManifestHub API-Schlüssel benötigt.",
     "manifestHubAfterFailure": "Direkter Steam-Abruf ist für mindestens ein Depot fehlgeschlagen. Trag hier einen ManifestHub API-Schlüssel ein und versuch's nochmal — er wird als Fallback verwendet.",
     "downloadSelected": "Auswahl herunterladen"
