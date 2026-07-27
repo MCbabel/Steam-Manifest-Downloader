@@ -140,7 +140,7 @@
           </div>
           <div class="feature-text">
             <h3>Configurable Depot Sources</h3>
-            <p>Plug in any depot source — GitHub, archive.org or a plain HTTPS folder. The app queries them all in parallel and merges depots, keys and sizes so nothing slips through.</p>
+            <p>Plug in any depot source — GitHub, archive.org or a plain HTTPS folder — plus the Hubcap and Ryuu APIs if you have a key. The app queries them all in parallel and merges depots, keys and sizes so nothing slips through.</p>
           </div>
         </div>
         <div class="feature-card reveal">
@@ -166,8 +166,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
           <div class="feature-text">
-            <h3>Integrated Downloader</h3>
-            <p>Built-in download engine — no external tools required.</p>
+            <h3>Native Download Engine</h3>
+            <p>Pure-Rust pipeline talks to Steam's CDN directly — anonymous login, manifest decryption and chunk decoding all in-process, no .NET required. Interrupted downloads resume by verifying existing chunks instead of starting over.</p>
           </div>
         </div>
         <div class="feature-card reveal">
@@ -185,7 +185,7 @@
           </div>
           <div class="feature-text">
             <h3>Emulator Patching</h3>
-            <p>Drop in the gbe_fork Steam emulator so downloaded games run without the Steam client. Variant picker, 21 configurable settings (account name, language, offline mode, overlay) and a built-in lobby_connect launcher for local multiplayer.</p>
+            <p>Drop in the gbe_fork Steam emulator so downloaded games run without the Steam client. Variant picker, 21 configurable settings (account name, language, offline mode, overlay) and per-file patching so you choose exactly which <code>steam_api</code> binaries get swapped.</p>
           </div>
         </div>
         <div class="feature-card reveal">
@@ -273,7 +273,7 @@
           <div class="step-number" data-count="3">3</div>
           <div class="step-content">
             <h3>Click Download</h3>
-            <p>Hit the button and watch the integrated downloader stream every selected depot with live progress, ETA and per-depot status.</p>
+            <p>Hit the button and watch the native engine stream every selected depot straight from Steam's CDN with live progress, ETA and per-depot status. Cancel and pick up later — already-downloaded chunks are verified and skipped.</p>
           </div>
         </div>
         <div class="step reveal">
@@ -287,7 +287,7 @@
           <div class="step-number" data-count="5">5</div>
           <div class="step-content">
             <h3>Emulator (optional)</h3>
-            <p>Patch the game with the gbe_fork Steam emulator so it runs without the Steam client. DRM detection via Steamless, a one-click Steam-API-Check bypass, 21 configurable emulator settings and a lobby_connect launcher for local multiplayer — all in one step.</p>
+            <p>Patch the game with the gbe_fork Steam emulator so it runs without the Steam client. DRM detection via Steamless, a one-click Steam-API-Check bypass, 21 configurable emulator settings and per-file patch selection — all in one step.</p>
           </div>
         </div>
       </div>
@@ -321,7 +321,11 @@
           </div>
           <div class="tech-badge">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3fb950" stroke-width="1.8" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            <span>DepotDownloader</span>
+            <span>steam-vent</span>
+          </div>
+          <div class="tech-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#bc8cff" stroke-width="1.8" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span>gbe_fork</span>
           </div>
         </div>
       </div>
@@ -335,9 +339,9 @@
         <div class="download-content">
           <h2>Ready to Get Started?</h2>
           <p>Download Steam Manifest Downloader and start managing your depots today.</p>
-          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases/latest" class="btn btn-primary btn-large" target="_blank" rel="noopener">
+          <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/releases/latest" id="cta-download-btn" class="btn btn-primary btn-large" target="_blank" rel="noopener">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download Latest Release
+            <span id="cta-download-label">Download Latest Release</span>
           </a>
           <div class="download-meta">
             <div class="download-info">

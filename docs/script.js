@@ -178,32 +178,55 @@
     }
   });
 
-  // Hero "Download" button: on Windows, swap the link from the releases
-  // landing page to the direct latest setup.exe download. Other OSes keep
-  // the releases page so users can pick AppImage / AUR / etc.
-  const heroDownloadBtn = document.getElementById('hero-download-btn');
-  const heroDownloadLabel = document.getElementById('hero-download-label');
-  if (heroDownloadBtn && /windows/i.test(navigator.userAgent || '')) {
+  // Download buttons: point straight at the asset matching the visitor's OS.
+  // Windows → signed NSIS installer, Linux → AppImage. Anything else keeps the
+  // releases page so users can pick AUR / Flatpak / portable themselves.
+  const ua = navigator.userAgent || '';
+  const osKey = /windows|win32|win64/i.test(ua)
+    ? 'windows'
+    : /linux|x11/i.test(ua) && !/android|cros/i.test(ua)
+      ? 'linux'
+      : null;
+
+  const assetPickers = {
+    windows: (assets) =>
+      assets.find((a) => /-setup\.exe$/i.test(a.name)) || assets.find((a) => /\.exe$/i.test(a.name)),
+    linux: (assets) => assets.find((a) => /\.AppImage$/i.test(a.name)),
+  };
+
+  const osLabels = { windows: 'Windows', linux: 'Linux' };
+
+  const downloadButtons = [
+    {
+      btn: document.getElementById('hero-download-btn'),
+      label: document.getElementById('hero-download-label'),
+    },
+    {
+      btn: document.getElementById('cta-download-btn'),
+      label: document.getElementById('cta-download-label'),
+    },
+  ].filter((entry) => entry.btn);
+
+  if (osKey && downloadButtons.length) {
     fetch('https://api.github.com/repos/MCbabel/Steam-Manifest-Downloader/releases/latest', {
       headers: { Accept: 'application/vnd.github+json' },
     })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((release) => {
         const assets = Array.isArray(release && release.assets) ? release.assets : [];
-        const installer = assets.find((a) => /\.exe$/i.test(a.name) && !/portable/i.test(a.name))
-          || assets.find((a) => /\.exe$/i.test(a.name));
-        if (!installer || !installer.browser_download_url) return;
-        heroDownloadBtn.href = installer.browser_download_url;
-        heroDownloadBtn.removeAttribute('target');
-        heroDownloadBtn.removeAttribute('rel');
-        if (heroDownloadLabel && release.tag_name) {
-          heroDownloadLabel.textContent = 'Download for Windows · ' + release.tag_name;
-        } else if (heroDownloadLabel) {
-          heroDownloadLabel.textContent = 'Download for Windows';
-        }
+        const asset = assetPickers[osKey](assets);
+        if (!asset || !asset.browser_download_url) return;
+
+        const suffix = release.tag_name ? ' · ' + release.tag_name : '';
+        downloadButtons.forEach(({ btn, label }) => {
+          btn.href = asset.browser_download_url;
+          btn.removeAttribute('target');
+          btn.removeAttribute('rel');
+          if (label) label.textContent = 'Download for ' + osLabels[osKey] + suffix;
+        });
       })
       .catch(() => {
-        // network / api error → leave the button pointing at the releases page
+        // network / api error → leave the buttons pointing at the releases page
       });
   }
 })();
