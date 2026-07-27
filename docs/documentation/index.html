@@ -138,14 +138,14 @@
         <ol>
           <li>Parse a <code>.lua</code> / <code>.vdf</code> / <code>.st</code> file or search by Steam App ID across all configured sources</li>
           <li>Pick the depots you want, with platform / arch / language tags pulled live from Steam's PICS info</li>
-          <li>Download the selected manifests via the embedded DepotDownloaderMod engine</li>
+          <li>Download the selected depots with the native Rust engine, straight from Steam's CDN</li>
           <li>Optionally: create Desktop / Start-Menu shortcuts (Windows) or add the game to your Steam library with grid art (Linux + Windows)</li>
           <li>Optionally: patch the game with the gbe_fork emulator so it runs without the Steam client — including DRM detection via Steamless and an API-check bypass</li>
         </ol>
 
         <h3 id="system-requirements">System Requirements</h3>
         <ul>
-          <li><strong>.NET 9.0 Desktop Runtime</strong> — Required by the embedded DepotDownloaderMod engine on Windows. <a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer" target="_blank" rel="noopener">Download .NET 9.0 Desktop Runtime</a></li>
+          <li><strong>.NET 9.0 Desktop Runtime</strong> <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(Windows, optional)</span> — Only needed if you switch <strong>Settings → Download engine</strong> back to the legacy DepotDownloaderMod path. The default native engine is pure Rust and needs no runtime. <a href="https://dotnet.microsoft.com/en-us/download/dotnet/thank-you/runtime-desktop-9.0.16-windows-x64-installer" target="_blank" rel="noopener">Download .NET 9.0 Desktop Runtime</a></li>
           <li><strong>Mono</strong> <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(Linux/macOS, optional)</span> — Only needed if you want to use step 5's DRM removal feature, since Steamless is a .NET Framework tool: <code>pacman -S mono</code> / <code>apt install mono-runtime</code> / <code>brew install mono</code></li>
           <li><strong>Windows 10+</strong> — Windows 10 version 1803 or later (with WebView2)</li>
           <li><strong>Linux</strong> — Most modern distributions with GTK3 and WebKit2GTK (for AppImage: FUSE support or <code>APPIMAGE_EXTRACT_AND_RUN=1</code>)</li>
@@ -248,11 +248,18 @@
         <h3 id="step-download">Step 3: Download</h3>
         <p>Click the <strong>Download</strong> button to begin. Behind the scenes, the application performs several operations:</p>
         <ol>
-          <li><strong>Manifest search</strong> — Queries ManifestHub API and multiple GitHub repositories to locate <code>.manifest</code> files for each selected depot</li>
-          <li><strong>Manifest download</strong> — Downloads all found <code>.manifest</code> files to a local directory</li>
+          <li><strong>Steam session</strong> — Signs in to Steam anonymously and pulls app / depot metadata via PICS</li>
+          <li><strong>Manifest fetch</strong> — Requests each depot's manifest from Steam directly. If that fails, SMD falls back to your configured depot sources / Hubcap, then to the ManifestHub API if you have a key set</li>
+          <li><strong>Manifest decode</strong> — Unwraps the ZIP container, decrypts with AES-256 and parses the protobuf payload (encrypted filenames included)</li>
           <li><strong>Depot keys generation</strong> — Creates a <code>steam.keys</code> file containing all known depot decryption keys</li>
-          <li><strong>DepotDownloaderMod execution</strong> — Launches the embedded DepotDownloaderMod binary with the correct arguments to download the actual depot files</li>
+          <li><strong>Chunk download</strong> — Fetches up to 32 chunks in parallel from Steam's CDN, decodes VZ1 (LZMA) or VSZTD (zstd) payloads and verifies each one against its CRC32 and SHA-1 before writing. Failed chunks retry up to 8 times with exponential backoff, rotating CDN servers between attempts</li>
         </ol>
+        <p>Chunks that already match on disk are verified and skipped, so a restarted download picks up where it left off instead of starting over.</p>
+
+        <div class="doc-callout info">
+          <span class="doc-callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></span>
+          <p>This is the <strong>native engine</strong> and it's the default. If you switch <strong>Settings → Download engine</strong> back to DepotDownloaderMod, SMD instead collects the manifests and hands them to the embedded DDM binary — which requires the .NET runtime on Windows.</p>
+        </div>
         <p>You'll see real-time progress tracking with:</p>
         <ul>
           <li>A progress bar showing overall completion</li>
@@ -342,23 +349,22 @@
         <p>After applying, the game appears in your Download History (via <strong>Go to Home</strong>) with two extra action buttons:</p>
         <ul>
           <li><strong>Edit emulator settings</strong> (⚙) — re-opens step 5 in edit mode: variant picker hidden, the accordion is populated from the existing INI files, the Apply button becomes <strong>Save Settings</strong> and a red <strong>Revert Patch</strong> button appears. Reverting restores the original DLL, deletes <code>steam_settings/</code> and is gated by a confirmation modal</li>
-          <li><strong>Launch lobby_connect</strong> (▶) — spawns the gbe_fork <code>lobby_connect</code> binary in the game folder with <code>SteamAppId</code> env var set; useful for testing local-multiplayer connectivity without launching the game itself</li>
         </ul>
-        <p>If you delete the game folder externally, the Edit / Launch actions show an inline error banner in the History modal instead of crashing.</p>
+        <p>If you delete the game folder externally, the Edit action shows an inline error banner in the History modal instead of crashing.</p>
 
         <hr class="doc-divider">
 
         <h3 id="step-cancel">Cancel a Download</h3>
         <p>You can cancel an in-progress download at any time by clicking the <strong>Cancel</strong> button. When a download is canceled:</p>
         <ul>
-          <li>The DepotDownloaderMod process is terminated immediately</li>
-          <li><strong>Partially downloaded files are deleted</strong> to avoid incomplete or corrupted data</li>
+          <li>All in-flight chunk downloads stop immediately — queued chunks bail out without waiting for a slot (on the DepotDownloaderMod path, the DDM process is terminated instead)</li>
+          <li><strong>Partially downloaded files are deleted</strong> to avoid incomplete or corrupted data — unless you enabled <strong>Keep downloaded files when cancelling</strong> in Settings</li>
           <li>The UI returns to the selection screen so you can start a new download</li>
         </ul>
 
         <div class="doc-callout warning">
           <span class="doc-callout-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
-          <p>Canceling a download will delete all partially downloaded files for that session. Make sure you really want to cancel before confirming.</p>
+          <p>By default, canceling a download deletes all partially downloaded files for that session. Turn on <strong>Cancel behaviour → Keep downloaded files when cancelling</strong> if you'd rather resume later — the job then lands in your history as <em>Resumable</em> with a <strong>Resume</strong> button.</p>
         </div>
       </section>
 
@@ -454,7 +460,13 @@
         <h3>Advanced Settings (collapsible)</h3>
         <p>Click "Advanced Settings" to expand the section. It contains:</p>
 
-        <h4>DepotDownloader Arguments</h4>
+        <h4>Download Engine</h4>
+        <p><strong>Download directly from Steam (native, recommended)</strong> is on by default: an anonymous Steam login fetches manifests and chunks from Steam's CDN in-process, with ManifestHub only as a fallback. Turn it off to force the legacy DepotDownloaderMod path, which needs the .NET runtime on Windows.</p>
+
+        <h4>Cancel Behaviour</h4>
+        <p><strong>Keep downloaded files when cancelling</strong> is off by default. Enable it and cancelling leaves the partial files on disk — the job appears in your history as <em>Resumable</em> and restarting it skips every chunk that already verifies.</p>
+
+        <h4>DepotDownloader Arguments <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(DepotDownloaderMod path only)</span></h4>
         <ul>
           <li><strong>Extra Arguments</strong> — appended verbatim to the DepotDownloaderMod CLI. Internal default is <code>-max-downloads 8 -verify-all</code>; your input is added on top</li>
           <li><strong>Max Retries on Error</strong> — how often a failed depot is retried before SMD gives up</li>
@@ -464,6 +476,13 @@
 
         <h4>Manifest Sources</h4>
         <p>The list of depot sources searched in step 2. Add a URL (auto-detected formats: GitHub repo, archive.org, plain HTTPS folder) and click <strong>Add</strong>; remove by clicking the ✕. Sources installed by the app are tracked separately — removing a default source triggers a confirmation modal warning that <em>"Search by App ID will stop working"</em>. Adding the same URL again clears that warning.</p>
+
+        <h4>API Keys <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h4>
+        <ul>
+          <li><strong>Hubcap API Key</strong> — when set, Hubcap shows up as a selectable App ID manifest source whenever it has data for the app you searched</li>
+          <li><strong>Ryuu API Key</strong> — same deal for Ryuu</li>
+        </ul>
+        <p>The <strong>ManifestHub</strong> key is separate and lives on the download page — see <a href="#settings">ManifestHub API Key</a> under Download Page Options below.</p>
 
         <h4>Notification Sound</h4>
         <p>Toggles a short system notification sound when a download completes (separate from the OS desktop notification itself).</p>
@@ -480,7 +499,7 @@
         <p>Where downloaded depot files are saved. Default: <code>Documents/SteamDownloads</code> inside your home folder. Each download creates a subdirectory named after the app ID. The path is remembered between sessions.</p>
 
         <h4>ManifestHub API Key <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(optional)</span></h4>
-        <p>If you have a <a href="https://manifesthub2.filegear-sg.me/" target="_blank" rel="noopener">ManifestHub</a> API key, paste it here to query that database as an additional source.</p>
+        <p>If you have a <a href="https://manifesthub2.filegear-sg.me/" target="_blank" rel="noopener">ManifestHub</a> API key, paste it here. With the native engine it acts as the last fallback — used only when neither Steam directly nor your configured depot sources can supply a manifest. It's also required if you enter a <strong>custom manifest ID</strong> by hand.</p>
 
         <hr class="doc-divider">
 

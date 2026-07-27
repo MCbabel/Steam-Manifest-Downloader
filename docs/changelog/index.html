@@ -260,6 +260,59 @@
 
     <div class="changelog-entry">
       <div class="changelog-entry-header">
+        <span class="changelog-version">v1.4.3</span>
+        <span class="changelog-date">July 23, 2026</span>
+      </div>
+      <ul class="changelog-changes">
+        <li>
+          <span class="badge badge-fixed">Fixed</span>
+          <span>ManifestHub API moved to a new host — the old <code>api.manifesthub1.filegear-sg.me</code> subdomain went dead (NXDOMAIN) and broke every ManifestHub lookup. Requests now go to <code>api.manifesthub2.filegear-sg.me</code>. <strong>Existing API keys keep working</strong>, nothing to re-enter.</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Native Steam download engine, on by default — a pure-Rust pipeline with anonymous Steam login, manifest decryption, VZ1/zstd chunk decoding and 32 parallel chunk fetches straight from Steam's CDN. No .NET runtime needed. The legacy DepotDownloaderMod path is still there under <strong>Settings → Download engine</strong> if you want it.</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Resumable downloads — enable <strong>Keep downloaded files when cancelling</strong> in Settings and a cancelled job can be restarted later; existing chunks are SHA-1 verified and skipped instead of re-downloaded. Per-depot fallback chain: Steam direct → your configured depot sources / Hubcap → ManifestHub.</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Ryuu and Hubcap as selectable App&nbsp;ID manifest sources — paste an API key in Settings and each one shows up as its own source whenever it has data for the app you're searching.</span>
+        </li>
+        <li>
+          <span class="badge badge-added">Added</span>
+          <span>Per-file emulator patching — step 5 now lists every detected <code>steam_api</code> binary with a checkbox, pre-selecting the depot that best matches your OS and preferring 64-bit. Depots shipping their own executable are no longer merged as DLC.</span>
+        </li>
+        <li>
+          <span class="badge badge-changed">Changed</span>
+          <span>Resuming a large depot (50k+ chunks) is an order of magnitude faster — the verify pass now reads each file once in offset order instead of re-seeking per chunk, and progress events are throttled to 150&nbsp;ms so Cancel / Pause stay responsive throughout. Progress text also shows GB done / GB total, not just a percentage.</span>
+        </li>
+        <li>
+          <span class="badge badge-changed">Changed</span>
+          <span>Chunk downloads retry up to 8 times with exponential backoff (250&nbsp;ms → 15&nbsp;s), rotating CDN servers between attempts. A single <code>503</code> from Steam's CDN no longer kills the whole depot.</span>
+        </li>
+        <li>
+          <span class="badge badge-fixed">Fixed</span>
+          <span>Deleting a history entry with <strong>delete files</strong> now only removes that entry's depot folders — previously it wiped the entire game folder, taking sibling depots from other entries with it.</span>
+        </li>
+        <li>
+          <span class="badge badge-fixed">Fixed</span>
+          <span>No more phantom completion sound from a job you already navigated away from, and abandoned background downloads are actually cancelled when you reset the app.</span>
+        </li>
+        <li>
+          <span class="badge badge-platform">Linux</span>
+          <span>Native ELF binaries are detected as executables even without the exec bit (Steam depots don't preserve Unix permissions), and the Proton hint only shows up for actual <code>.exe</code> files now.</span>
+        </li>
+        <li>
+          <span class="badge badge-removed">Removed</span>
+          <span>The <code>lobby_connect</code> launcher — it never left the work-in-progress state and caused more confusion than it solved.</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="changelog-entry">
+      <div class="changelog-entry-header">
         <span class="changelog-version">v1.4.2</span>
         <span class="changelog-date">May 14, 2026</span>
       </div>
