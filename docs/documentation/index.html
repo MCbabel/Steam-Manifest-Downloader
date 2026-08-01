@@ -488,7 +488,8 @@
         <p>Toggles a short system notification sound when a download completes (separate from the OS desktop notification itself).</p>
 
         <h4>Anonymous Telemetry <span style="color:var(--text-muted);font-size:0.85rem;font-weight:400;">(opt-in)</span></h4>
-        <p>SMD can send anonymous usage counters (which features get used) to the maintainer's server to help prioritise development. Events are end-to-end encrypted with an embedded public key — only the maintainer's server can decrypt. Disabled by default; the choice is asked on first launch and can be changed here anytime. Never sent: game IDs, depot IDs, file contents, IP addresses, account info.</p>
+        <p>SMD can send anonymous usage counters (which features get used) to the maintainer's server to help prioritise development. Events are end-to-end encrypted with an embedded public key — only the maintainer's server can decrypt. Disabled by default; the choice is asked on first launch and can be changed here anytime. Never sent: game IDs, depot IDs, file contents, your manifest source URLs, IP addresses, account info.</p>
+        <p>Download events additionally carry a failure diagnosis: whether the job finished completely or only partially, which pipeline step failed (manifest lookup, request code, CDN, chunk verification, disk…), what class of error it was (not found, rate limited, timeout…), and which <em>kind</em> of source served the manifest. Every one of those is a label from a fixed list compiled into the binary, so none of them can carry a name, an ID or an address. The full field list is in <a href="https://github.com/MCbabel/Steam-Manifest-Downloader/blob/main/PRIVACY.md" target="_blank" rel="noopener">PRIVACY.md</a>.</p>
 
         <hr class="doc-divider">
 
