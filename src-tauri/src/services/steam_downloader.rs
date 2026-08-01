@@ -257,7 +257,11 @@ async fn download_chunks_from_manifest(
                 if cancel.load(Ordering::SeqCst) {
                     return Err("cancelled".to_string());
                 }
-                if verified_chunks.contains(&chunk_meta.sha) {
+                if verified_chunks.contains(&chunk_key(
+                    &chunk_meta.file_path,
+                    chunk_meta.offset,
+                    &chunk_meta.sha,
+                )) {
                     return Ok(ChunkOutcome {
                         file_path: chunk_meta.file_path,
                         bytes_written: chunk_meta.cb_original as u64,
@@ -459,7 +463,7 @@ async fn process_chunk(
         let decoded = match decode_chunk(&encrypted, depot_key, job.cb_original) {
             Ok(d) => d,
             Err(e) => {
-                last_err = Some(e);
+                last_err = Some(format!("chunk decode failed: {}", e));
                 continue;
             }
         };
@@ -510,6 +514,12 @@ async fn process_chunk(
 
 const VERIFY_FILE_CONCURRENCY: usize = 8;
 
+pub type ChunkKey = (PathBuf, u64, Vec<u8>);
+
+pub fn chunk_key(path: &Path, offset: u64, sha: &[u8]) -> ChunkKey {
+    (path.to_path_buf(), offset, sha.to_vec())
+}
+
 async fn run_verify_phase(
     manifest: &DecodedManifest,
     out_dir: &Path,
@@ -524,7 +534,7 @@ async fn run_verify_phase(
     skipped_bytes: Arc<Mutex<u64>>,
     last_emit_ms: Arc<AtomicU64>,
     start_instant: Instant,
-) -> Arc<std::collections::HashSet<Vec<u8>>> {
+) -> Arc<std::collections::HashSet<ChunkKey>> {
     let mut by_file: HashMap<PathBuf, Vec<(u64, u32, Vec<u8>)>> = HashMap::new();
     for mapping in &manifest.payload.mappings {
         let Some(rel) = mapping.filename.as_ref() else {
@@ -546,7 +556,7 @@ async fn run_verify_phase(
         }
     }
 
-    let verified: Arc<Mutex<std::collections::HashSet<Vec<u8>>>> =
+    let verified: Arc<Mutex<std::collections::HashSet<ChunkKey>>> =
         Arc::new(Mutex::new(std::collections::HashSet::new()));
     let sem = Arc::new(Semaphore::new(VERIFY_FILE_CONCURRENCY));
     let mut tasks: FuturesUnordered<tokio::task::JoinHandle<()>> = FuturesUnordered::new();
@@ -596,7 +606,7 @@ async fn run_verify_phase(
 
     while tasks.next().await.is_some() {}
 
-    let inner: std::collections::HashSet<Vec<u8>> = match Arc::try_unwrap(verified) {
+    let inner: std::collections::HashSet<ChunkKey> = match Arc::try_unwrap(verified) {
         Ok(mutex) => mutex.into_inner(),
         Err(arc) => arc.lock().await.clone(),
     };
@@ -617,7 +627,7 @@ async fn verify_one_file(
     skipped_bytes: Arc<Mutex<u64>>,
     last_emit_ms: Arc<AtomicU64>,
     start_instant: Instant,
-    verified: Arc<Mutex<std::collections::HashSet<Vec<u8>>>>,
+    verified: Arc<Mutex<std::collections::HashSet<ChunkKey>>>,
 ) {
     use tokio::io::AsyncReadExt;
     let Ok(mut file) = tokio::fs::File::open(&path).await else {
@@ -652,7 +662,7 @@ async fn verify_one_file(
 
         {
             let mut set = verified.lock().await;
-            set.insert(expected_sha);
+            set.insert(chunk_key(&path, offset, &expected_sha));
         }
 
         let mut cc = completed_chunks.lock().await;
@@ -848,3 +858,38 @@ async fn pre_create_files(manifest: &DecodedManifest, out_dir: &Path) -> Result<
     Ok(())
 }
 
+
+#[cfg(test)]
+mod verify_cache_tests {
+    use super::*;
+
+    #[test]
+    fn same_content_at_a_second_offset_is_not_treated_as_already_written() {
+        let mut verified = std::collections::HashSet::new();
+        let file = PathBuf::from("/game/data.bin");
+        let sha = vec![0xAA; 20];
+
+        verified.insert(chunk_key(&file, 0, &sha));
+
+        assert!(verified.contains(&chunk_key(&file, 0, &sha)));
+        assert!(!verified.contains(&chunk_key(&file, 4096, &sha)));
+    }
+
+    #[test]
+    fn same_content_in_a_second_file_is_not_treated_as_already_written() {
+        let mut verified = std::collections::HashSet::new();
+        let sha = vec![0xBB; 20];
+        verified.insert(chunk_key(Path::new("/game/a.bin"), 0, &sha));
+
+        assert!(!verified.contains(&chunk_key(Path::new("/game/b.bin"), 0, &sha)));
+    }
+
+    #[test]
+    fn a_different_sha_at_a_known_slot_is_not_satisfied() {
+        let mut verified = std::collections::HashSet::new();
+        let file = PathBuf::from("/game/data.bin");
+        verified.insert(chunk_key(&file, 512, &[0x01; 20]));
+
+        assert!(!verified.contains(&chunk_key(&file, 512, &[0x02; 20])));
+    }
+}
