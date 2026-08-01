@@ -1176,6 +1176,19 @@ button:disabled,
   height: 16px;
 }
 
+.status-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.status-warning svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* Depot Progress List */
 .depot-progress-list {
   display: flex;

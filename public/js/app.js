@@ -58,6 +58,7 @@ const ICONS = {
   x: `<svg class="btn-icon" ${SVG_BASE}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
   check: `<svg class="btn-icon" ${SVG_BASE}><polyline points="20 6 9 17 4 12"/></svg>`,
   checkCircle: `<svg class="btn-icon" ${SVG_BASE}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+  alertTriangle: `<svg class="btn-icon" ${SVG_BASE}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
   sun: `<svg class="theme-icon theme-icon--sun" id="theme-icon" width="16" height="16" ${SVG_BASE}><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
   moon: `<svg class="theme-icon theme-icon--moon" id="theme-icon" width="16" height="16" ${SVG_BASE}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`,
   settings: `<svg class="btn-icon" ${SVG_BASE}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
@@ -688,8 +689,6 @@ async function performSearch() {
   els.searchLoading.classList.remove('hidden');
   els.btnSearch.disabled = true;
 
-  emitEvent('search_performed');
-
   fetchSearchGameInfo(appId);
 
   try {
@@ -708,6 +707,7 @@ async function performSearch() {
       source: r.source || r.type || 'unknown'
     }));
     state.searchRepos = repos;
+    emitSearchOutcome(repos.length, raw.sourceProbe);
 
     if (repos.length === 0) {
       showSearchError(window.i18n.t('search.noResults'));
@@ -719,8 +719,19 @@ async function performSearch() {
   } catch (error) {
     els.searchLoading.classList.add('hidden');
     els.btnSearch.disabled = false;
+    emitSearchOutcome(0, 'error');
     showSearchError(String(error));
   }
+}
+
+function emitSearchOutcome(repoCount, probe) {
+  const parts = String(probe || '').split(':');
+  emitEvent('search_performed', {
+    found: repoCount > 0,
+    repo_count: repoCount,
+    source_probe: parts[0] || null,
+    probe_class: parts[1] || null,
+  });
 }
 
 function showSearchError(message) {
@@ -1309,9 +1320,11 @@ async function startDownload() {
 
   if (selectedDepots.length === 0) return;
 
+  let sourceCount = null;
   try {
     const s = await invoke('get_settings');
     state.currentEngine = s.use_native_downloader !== false ? 'native' : 'ddm';
+    if (Array.isArray(s.depot_sources)) sourceCount = s.depot_sources.length;
   } catch (_) {
     state.currentEngine = 'native';
   }
@@ -1319,7 +1332,16 @@ async function startDownload() {
   const mhApiKey = els.mhApiKey.value.trim();
   hideMhKeyRequiredHint();
 
-  emitEvent('download_started', { depot_count: selectedDepots.length });
+  state.dlNonce = telemetryNonce();
+  state.dlSourceCount = sourceCount;
+  state.dlHadMhKey = !!mhApiKey;
+  emitEvent('download_started', {
+    job: state.dlNonce,
+    depot_count: selectedDepots.length,
+    engine: state.currentEngine,
+    source_count: sourceCount,
+    had_mh_key: state.dlHadMhKey,
+  });
 
   requestNotificationPermission();
 
@@ -1377,14 +1399,25 @@ async function startDownload() {
       }
     }
 
+    state.dlStartedAt = Date.now();
+    state.dlStage = 'starting';
+    state.dlDepotCount = selectedDepots.length;
+
+    await connectProgressListener();
+
     const result = await invoke('start_download', { config: downloadConfig });
 
-    state.jobId = result.jobId;
+    if (!state.jobId) state.jobId = result.jobId;
     state.downloadDir = result.downloadDir;
-
-    connectProgressListener();
   } catch (error) {
     appendTerminalLine(`Error: ${error}`, 'error');
+    emitEvent('download_completed', Object.assign({ success: false }, jobContext(), {
+      outcome: 'failed',
+      depots_total: state.dlDepotCount ?? 0,
+      depots_ok: 0,
+      duration_bucket: durationBucket(Date.now() - (state.dlStartedAt || Date.now())),
+      engine: state.currentEngine || 'native',
+    }, classifyStartFailure(error)));
     showCompletion(false, String(error));
   }
 }
@@ -1452,6 +1485,9 @@ function cleanupProgressListener() {
 }
 
 function handleProgressMessage(msg) {
+  if (msg.jobId && !state.jobId && state.dlStartedAt) {
+    state.jobId = msg.jobId;
+  }
   if (msg.jobId && msg.jobId !== state.jobId) {
     return;
   }
@@ -1492,7 +1528,17 @@ function handleProgressMessage(msg) {
   }
 }
 
+const PIPELINE_STEPS = [
+  'checking_branch', 'branch_found', 'downloading_keyvdf', 'downloading_manifests',
+  'downloading_manifest', 'downloading_manifest_hub', 'manifest_hub_rate_limited',
+  'generating_keys', 'keys_generated', 'starting_downloader', 'running_downloader',
+  'paused', 'resumed',
+];
+
 function handleStatusUpdate(msg) {
+  if (typeof msg.step === 'string' && PIPELINE_STEPS.includes(msg.step)) {
+    state.dlStage = msg.step;
+  }
   switch (msg.step) {
     case 'checking_branch':
       els.progressStatus.textContent = `Checking GitHub branch for App ${msg.appId}...`;
@@ -1848,13 +1894,18 @@ async function commitPendingHistory() {
 function handleComplete(msg) {
   clearInterval(state.speedTracker.staleTimer);
   state.speedTracker.staleTimer = null;
+  const outcome = (msg.diag && msg.diag.outcome) || 'complete';
+  const allOk = outcome === 'complete';
+
   els.progressBarFill.style.width = '100%';
-  els.progressStatus.innerHTML = `<span class="status-success">${ICONS.checkCircle} Complete!</span>`;
+  els.progressStatus.innerHTML = allOk
+    ? `<span class="status-success">${ICONS.checkCircle} Complete!</span>`
+    : `<span class="status-warning">${ICONS.alertTriangle} Incomplete</span>`;
   updateDepotDownloadProgress(100);
   if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
-  emitEvent('download_completed', { success: true });
+  emitEvent('download_completed', Object.assign({ success: allOk }, jobContext(), msg.diag || {}));
   buildPendingHistoryEntry(msg);
-  showCompletion(true, msg.message);
+  showCompletion(allOk, msg.message);
 
   if (msg.results) {
     const results = Array.isArray(msg.results) ? msg.results : [];
@@ -1863,10 +1914,14 @@ function handleComplete(msg) {
     });
   }
 
-  appendTerminalLine(`\n${msg.message}`, 'success');
+  appendTerminalLine(`\n${msg.message}`, allOk ? 'success' : 'error');
 
   const gameName = state.gameName || 'Game';
-  showBrowserNotification('Download Complete!', `${gameName} has been downloaded successfully.`, state.headerImage);
+  if (allOk) {
+    showBrowserNotification('Download Complete!', `${gameName} has been downloaded successfully.`, state.headerImage);
+  } else {
+    showBrowserNotification('Download Incomplete', msg.message || `${gameName} was only partially downloaded.`, state.headerImage);
+  }
   playNotificationSound();
 
   cleanupProgressListener();
@@ -1884,7 +1939,7 @@ function handleError(msg) {
     clearInterval(state.speedTracker.staleTimer);
     state.speedTracker.staleTimer = null;
     if (els.downloadSpeedInfo) els.downloadSpeedInfo.classList.add('hidden');
-    emitEvent('download_completed', { success: false });
+    emitEvent('download_completed', Object.assign({ success: false }, jobContext(), msg.diag || {}));
     showCompletion(false, msg.message);
     showBrowserNotification('Download Failed!', `Error: ${msg.message}`);
     playNotificationSound();
@@ -1904,6 +1959,13 @@ function handleCancelled(msg) {
       ? window.i18n.t('progress.cancelledCleanup')
       : (msg.message || window.i18n.t('progress.cancelledCleanup'));
   appendTerminalLine(`\n${localized}`, 'error');
+  emitEvent('download_completed', Object.assign({ success: false }, jobContext(), {
+    outcome: 'cancelled',
+    depots_total: state.dlDepotCount ?? 0,
+    last_stage: state.dlStage || 'unknown',
+    duration_bucket: durationBucket(Date.now() - (state.dlStartedAt || Date.now())),
+    engine: state.currentEngine || 'native',
+  }, msg.diag || {}));
   showCompletion(false, localized);
   cleanupProgressListener();
 }
@@ -1953,6 +2015,7 @@ function appendTerminalLine(text, type = 'stdout') {
 }
 
 function showCompletion(success, message) {
+  state.jobId = null;
   els.completionMessage.classList.remove('hidden', 'completion-message--success', 'completion-message--error');
   els.completionMessage.classList.add(success ? 'completion-message--success' : 'completion-message--error');
   els.completionMessage.textContent = message;
@@ -2012,10 +2075,12 @@ function resetApp() {
   commitPendingHistory();
   if (state.jobId) {
     const orphanJob = state.jobId;
+    emitEvent('download_abandoned', abandonProps());
     invoke('cancel_download', { jobId: orphanJob }).catch((e) => {
       console.warn('orphan cancel_download failed:', e);
     });
   }
+  clearJobTelemetryState();
   state.parsedData = null;
   state.selectedDepots.clear();
   state.jobId = null;
@@ -2176,6 +2241,60 @@ async function onTelemetryToggleChanged() {
 
 function emitEvent(kind, props) {
   invoke('emit_telemetry_event', { kind, props: props ?? null }).catch(() => {});
+}
+
+function telemetryNonce() {
+  const b = new Uint8Array(8);
+  (crypto.getRandomValues ? crypto : window.crypto).getRandomValues(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+function classifyStartFailure(err) {
+  const t = String(err || '');
+  if (t.includes('Invalid App ID') || t.includes('Invalid depot ID')) {
+    return { fail_stage: 'source_probe', fail_class: 'decode' };
+  }
+  if (t.includes('Cannot create download directory')) {
+    return { fail_stage: 'disk', fail_class: 'io' };
+  }
+  return { fail_stage: 'unknown', fail_class: 'unknown' };
+}
+
+function jobContext() {
+  return {
+    job: state.dlNonce || null,
+    source_count: state.dlSourceCount ?? null,
+    had_mh_key: !!state.dlHadMhKey,
+  };
+}
+
+function clearJobTelemetryState() {
+  state.dlNonce = null;
+  state.dlStartedAt = null;
+  state.dlStage = null;
+  state.dlDepotCount = null;
+  state.dlSourceCount = null;
+  state.dlHadMhKey = false;
+}
+
+function durationBucket(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  if (s < 5) return '<5s';
+  if (s < 30) return '5-30s';
+  if (s < 120) return '30s-2m';
+  if (s < 600) return '2-10m';
+  if (s < 3600) return '10-60m';
+  return '>60m';
+}
+
+function abandonProps() {
+  return Object.assign(jobContext(), {
+    outcome: 'abandoned',
+    depots_total: state.dlDepotCount ?? 0,
+    last_stage: state.dlStage || 'unknown',
+    duration_bucket: durationBucket(Date.now() - (state.dlStartedAt || Date.now())),
+    engine: state.currentEngine || 'native',
+  });
 }
 
 async function copyBuildInfo() {
@@ -2930,8 +3049,14 @@ function initTauri() {
     closeModal.classList.add('hidden');
   });
 
-  btnCloseYes.addEventListener('click', () => {
+  btnCloseYes.addEventListener('click', async () => {
     closeModal.classList.add('hidden');
+    if (state.jobId) {
+      await invoke('emit_telemetry_event', {
+        kind: 'download_abandoned',
+        props: abandonProps(),
+      }).catch(() => {});
+    }
     invoke('close_window');
   });
 
@@ -3039,12 +3164,26 @@ function renderHistory(entries) {
       try {
         const settings = await invoke('get_settings');
         state.currentEngine = settings.use_native_downloader !== false ? 'native' : 'ddm';
-        const result = await invoke('start_download', { config: entry.resume_payload });
-        state.jobId = result.jobId;
+
+        const resumeDepots = (entry.resume_payload.selectedDepots || []).length;
+        state.dlNonce = telemetryNonce();
+        state.dlStartedAt = Date.now();
+        state.dlStage = 'starting';
+        state.dlDepotCount = resumeDepots;
+        state.dlSourceCount = Array.isArray(settings.depot_sources) ? settings.depot_sources.length : null;
+        state.dlHadMhKey = !!(entry.resume_payload.manifestHubApiKey || '');
+        emitEvent('download_started', {
+          job: state.dlNonce,
+          depot_count: resumeDepots,
+          engine: state.currentEngine,
+          source_count: state.dlSourceCount,
+          had_mh_key: state.dlHadMhKey,
+          resumed: true,
+        });
+
         state.parsedData = { mainAppId: entry.app_id, depots: [] };
         state.gameName = entry.game_name || null;
         state.headerImage = entry.header_image || null;
-        state.downloadDir = result.downloadDir || entry.download_dir;
         goToStep(3);
         initProgressUI((entry.resume_payload.selectedDepots || []).map(d => ({
           depotId: String(d.depotId),
@@ -3052,6 +3191,10 @@ function renderHistory(entries) {
           sizeBytes: null,
         })));
         await connectProgressListener();
+
+        const result = await invoke('start_download', { config: entry.resume_payload });
+        if (!state.jobId) state.jobId = result.jobId;
+        state.downloadDir = result.downloadDir || entry.download_dir;
         try {
           await invoke('remove_history_entry', { entryId: entry.id });
         } catch (rmErr) {

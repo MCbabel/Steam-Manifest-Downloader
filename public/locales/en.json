@@ -137,10 +137,12 @@
       "collectItem1": "App version, OS, architecture",
       "collectItem2": "Which features get used (counters only)",
       "collectItem3": "A random install ID (not tied to you)",
+      "collectItem4": "Why a download failed — which step and what kind of error, from a fixed list of labels",
       "neverTitle": "We never collect",
       "neverItem1": "Game IDs, depot IDs, file names",
       "neverItem2": "Contents of <code>.lua</code> / <code>.st</code> files",
       "neverItem3": "IP addresses, account info",
+      "neverItem4": "Your manifest source URLs — only the kind of source, never the address",
       "hint": "Events are end-to-end encrypted with a public key embedded in the app — only the maintainer's server can decrypt them. You can change your choice anytime in Settings → Advanced Settings.",
       "decline": "No thanks",
       "accept": "Yes, help out"

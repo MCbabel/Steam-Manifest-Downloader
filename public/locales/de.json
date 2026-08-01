@@ -137,10 +137,12 @@
       "collectItem1": "App-Version, Betriebssystem, Architektur",
       "collectItem2": "Welche Features genutzt werden (nur Zähler)",
       "collectItem3": "Eine zufällige Installations-ID (nicht an dich gebunden)",
+      "collectItem4": "Warum ein Download fehlschlug — welcher Schritt und welche Fehlerart, aus einer festen Liste von Bezeichnern",
       "neverTitle": "Wir erheben niemals",
       "neverItem1": "Spiel-IDs, Depot-IDs, Dateinamen",
       "neverItem2": "Inhalte von <code>.lua</code>- / <code>.st</code>-Dateien",
       "neverItem3": "IP-Adressen, Account-Infos",
+      "neverItem4": "Deine Manifest-Quell-URLs — nur die Art der Quelle, nie die Adresse",
       "hint": "Events sind Ende-zu-Ende verschlüsselt mit einem in der App eingebetteten öffentlichen Schlüssel — nur der Server des Maintainers kann sie entschlüsseln. Du kannst deine Auswahl jederzeit in den Einstellungen → Erweiterte Einstellungen ändern.",
       "decline": "Nein danke",
       "accept": "Ja, gerne helfen"
