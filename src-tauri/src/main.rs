@@ -108,7 +108,29 @@ fn main() {
                     api.prevent_close();
                     let window = window.clone();
                     window.emit("close-requested", ()).ok();
+                    return;
                 }
+
+                if state
+                    .shutdown_flush_done
+                    .swap(true, std::sync::atomic::Ordering::SeqCst)
+                {
+                    return;
+                }
+
+                let Some(telemetry) = state.telemetry.clone() else {
+                    return;
+                };
+                api.prevent_close();
+                let window = window.clone();
+                tauri::async_runtime::spawn(async move {
+                    let _ = tokio::time::timeout(
+                        std::time::Duration::from_secs(5),
+                        telemetry.flush(),
+                    )
+                    .await;
+                    let _ = window.close();
+                });
             }
         })
         .run(tauri::generate_context!())

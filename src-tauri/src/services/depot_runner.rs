@@ -186,6 +186,8 @@ pub struct ProgressEvent {
     pub filename: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "manifestId")]
     pub manifest_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diag: Option<serde_json::Value>,
 }
 
 impl ProgressEvent {
@@ -209,6 +211,7 @@ impl ProgressEvent {
             drive: None,
             filename: None,
             manifest_id: None,
+            diag: None,
         }
     }
 }

@@ -23,6 +23,8 @@ pub struct RepoResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResult {
     pub repos: Vec<RepoResult>,
+    #[serde(rename = "sourceProbe", skip_serializing_if = "Option::is_none")]
+    pub source_probe: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,9 +90,11 @@ pub async fn search_repos(
         }
     }
 
+    let mut source_probe: Option<String> = None;
     if !sources.is_empty() {
-        match depot_sources::check_app_exists(client, sources, app_id).await {
-            Ok(true) => {
+        match depot_sources::probe_app(client, sources, app_id).await {
+            depot_sources::ProbeOutcome::Found => {
+                source_probe = Some("found".to_string());
                 found.push(RepoResult {
                     repo: "configured".to_string(),
                     date: None,
@@ -99,14 +103,23 @@ pub async fn search_repos(
                     source: Some("remote".to_string()),
                 });
             }
-            Ok(false) => {}
-            Err(e) => {
-                eprintln!("[Search] manifest source check failed: {}", e);
+            depot_sources::ProbeOutcome::Missing => {
+                source_probe = Some("missing".to_string());
+            }
+            depot_sources::ProbeOutcome::Inconclusive(class) => {
+                source_probe = Some(format!("unreachable:{}", class));
+                eprintln!(
+                    "[Search] manifest sources unreachable ({}) — app {} may exist but could not be verified",
+                    class, app_id
+                );
+            }
+            depot_sources::ProbeOutcome::NoSources => {
+                source_probe = Some("no_sources".to_string());
             }
         }
     }
 
-    Ok(SearchResult { repos: found })
+    Ok(SearchResult { repos: found, source_probe })
 }
 
 pub async fn get_repo_manifests(

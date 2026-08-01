@@ -2,6 +2,8 @@ use reqwest::Client;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
+use crate::services::diag;
+
 #[derive(Debug, Clone)]
 enum Backend {
     ArchiveOrg { base: String, prefix: String },
@@ -114,16 +116,23 @@ fn parse_sources(sources: &[String]) -> Vec<Backend> {
         .collect()
 }
 
-pub async fn check_app_exists(
-    client: &Client,
-    sources: &[String],
-    app_id: &str,
-) -> Result<bool, String> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProbeOutcome {
+    Found,
+    Missing,
+    Inconclusive(&'static str),
+    NoSources,
+}
+
+pub async fn probe_app(client: &Client, sources: &[String], app_id: &str) -> ProbeOutcome {
     let backends = parse_sources(sources);
     if backends.is_empty() {
-        return Ok(false);
+        return ProbeOutcome::NoSources;
     }
     let lua_filename = format!("{}.lua", app_id);
+
+    let mut all_definitive = true;
+    let mut worst: Option<&'static str> = None;
 
     for backend in &backends {
         let url = build_url(backend, app_id, &lua_filename);
@@ -133,12 +142,179 @@ pub async fn check_app_exists(
             .send()
             .await
         {
-            Ok(resp) if resp.status().is_success() => return Ok(true),
-            _ => continue,
+            Ok(resp) => {
+                let status = resp.status();
+                if status.is_success() {
+                    return ProbeOutcome::Found;
+                }
+                let code = status.as_u16();
+                if code == 503 && signals_absence_with_503(&url) {
+                    continue;
+                }
+                let class = diag::classify_status(code);
+                if class != diag::NOT_FOUND {
+                    all_definitive = false;
+                    worst = Some(escalate(worst, class));
+                }
+            }
+            Err(e) => {
+                all_definitive = false;
+                worst = Some(escalate(worst, diag::classify_transport(&e)));
+            }
         }
     }
 
-    Ok(false)
+    if all_definitive {
+        ProbeOutcome::Missing
+    } else {
+        ProbeOutcome::Inconclusive(worst.unwrap_or(diag::UNKNOWN))
+    }
+}
+
+#[cfg(test)]
+mod probe_tests {
+    use super::*;
+
+    fn client() -> Client {
+        Client::builder()
+            .timeout(std::time::Duration::from_secs(20))
+            .build()
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn no_sources_is_distinct_from_missing() {
+        let out = probe_app(&client(), &[], "730").await;
+        assert_eq!(out, ProbeOutcome::NoSources);
+    }
+
+    #[tokio::test]
+    async fn unresolvable_host_is_inconclusive_not_missing() {
+        let sources = vec!["https://smd-probe-does-not-exist.invalid/branches/".to_string()];
+        let out = probe_app(&client(), &sources, "730").await;
+        match out {
+            ProbeOutcome::Inconclusive(class) => {
+                assert!(
+                    class == diag::CONNECT || class == diag::DNS || class == diag::TIMEOUT,
+                    "unexpected class {}",
+                    class
+                );
+            }
+            other => panic!("a dead host must not read as {:?}", other),
+        }
+    }
+
+    async fn serving(status: &'static str) -> String {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            while let Ok((mut sock, _)) = listener.accept().await {
+                let mut buf = [0u8; 1024];
+                let _ = sock.read(&mut buf).await;
+                let resp = format!(
+                    "HTTP/1.1 {}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                    status
+                );
+                let _ = sock.write_all(resp.as_bytes()).await;
+                let _ = sock.flush().await;
+            }
+        });
+        format!("http://{}/branches/", addr)
+    }
+
+    #[tokio::test]
+    async fn definite_404_reads_as_missing() {
+        let sources = vec![serving("404 Not Found").await];
+        assert_eq!(probe_app(&client(), &sources, "999999991").await, ProbeOutcome::Missing);
+    }
+
+    #[tokio::test]
+    async fn a_503_is_not_a_missing_app() {
+        let sources = vec![serving("503 Service Unavailable").await];
+        match probe_app(&client(), &sources, "730").await {
+            ProbeOutcome::Inconclusive(class) => assert_eq!(class, diag::SERVER_ERROR),
+            other => panic!("an overloaded host must not read as {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_429_reports_rate_limiting() {
+        let sources = vec![serving("429 Too Many Requests").await];
+        match probe_app(&client(), &sources, "730").await {
+            ProbeOutcome::Inconclusive(class) => assert_eq!(class, diag::RATE_LIMITED),
+            other => panic!("a throttling host must not read as {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn a_live_source_that_has_the_app_reads_as_found() {
+        let sources = vec![serving("200 OK").await];
+        assert_eq!(probe_app(&client(), &sources, "730").await, ProbeOutcome::Found);
+    }
+
+    #[tokio::test]
+    async fn one_dead_source_does_not_mask_a_live_one() {
+        let sources = vec![
+            "https://smd-probe-does-not-exist.invalid/branches/".to_string(),
+            serving("200 OK").await,
+        ];
+        assert_eq!(probe_app(&client(), &sources, "730").await, ProbeOutcome::Found);
+    }
+
+    #[tokio::test]
+    async fn an_archive_org_503_means_the_app_is_absent_not_the_host_broken() {
+        let out = probe_app(
+            &client(),
+            &["https://archive.org/download/manifest-hub-repo/branches.zip/".to_string()],
+            "999999991",
+        )
+        .await;
+        assert_eq!(out, ProbeOutcome::Missing, "a bogus id must read as missing");
+    }
+
+    #[test]
+    fn only_archive_org_gets_the_503_exception() {
+        assert!(signals_absence_with_503(
+            "https://archive.org/download/x/y.zip/a"
+        ));
+        assert!(signals_absence_with_503(
+            "https://archive.org/view_archive.php?archive=x"
+        ));
+        assert!(!signals_absence_with_503("https://example.com/branches/"));
+        assert!(!signals_absence_with_503(
+            "https://raw.githubusercontent.com/u/r/main"
+        ));
+    }
+
+    #[test]
+    fn escalate_prefers_the_more_actionable_class() {
+        assert_eq!(escalate(Some(diag::UNKNOWN), diag::SERVER_ERROR), diag::SERVER_ERROR);
+        assert_eq!(escalate(Some(diag::RATE_LIMITED), diag::UNKNOWN), diag::RATE_LIMITED);
+        assert_eq!(escalate(None, diag::TIMEOUT), diag::TIMEOUT);
+    }
+}
+
+fn signals_absence_with_503(url: &str) -> bool {
+    url.contains("archive.org/")
+}
+
+fn escalate(current: Option<&'static str>, incoming: &'static str) -> &'static str {
+    fn rank(c: &str) -> u8 {
+        match c {
+            diag::RATE_LIMITED => 6,
+            diag::SERVER_ERROR => 5,
+            diag::DNS => 4,
+            diag::TIMEOUT | diag::CONNECT | diag::TLS => 3,
+            diag::UNAUTHORIZED => 2,
+            diag::UNKNOWN => 0,
+            _ => 1,
+        }
+    }
+    match current {
+        Some(c) if rank(c) >= rank(incoming) => c,
+        _ => incoming,
+    }
 }
 
 pub async fn download_text_file(

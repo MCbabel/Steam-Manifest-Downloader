@@ -19,11 +19,12 @@ const SERVER_PUBLIC_KEY: [u8; 32] = [
 ];
 
 const ENDPOINT_URL: &str = "https://analytics-smd.mcbabel.de/v1/events";
-const SCHEMA_VERSION: u32 = 1;
+const SCHEMA_VERSION: u32 = 2;
 const FLUSH_INTERVAL: Duration = Duration::from_secs(300);
 const BUFFER_FLUSH_AT: usize = 20;
 const QUEUE_FILE: &str = "telemetry_queue.json";
 const QUEUE_CAP: usize = 200;
+const REPLAY_BATCH: usize = 25;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Event {
@@ -123,21 +124,27 @@ impl Telemetry {
         s.telemetry_consent == TelemetryConsent::Accepted
     }
 
+    async fn build_payload(&self, events: &[Event], replay: bool) -> serde_json::Value {
+        let install_id = ensure_installation_id(&self.app_data_dir).await;
+        let inner = self.inner.lock().await;
+        let mut payload = serde_json::json!({
+            "schema_version": SCHEMA_VERSION,
+            "installation_id": install_id,
+            "session_id": inner.session_id,
+            "app_version": inner.app_version,
+            "channel": inner.channel,
+            "os": std::env::consts::OS,
+            "arch": std::env::consts::ARCH,
+            "events": events,
+        });
+        if replay {
+            payload["replay"] = serde_json::json!(true);
+        }
+        payload
+    }
+
     async fn send_batch(&self, events: Vec<Event>) {
-        let payload = {
-            let inner = self.inner.lock().await;
-            let install_id = ensure_installation_id(&self.app_data_dir).await;
-            serde_json::json!({
-                "schema_version": SCHEMA_VERSION,
-                "installation_id": install_id,
-                "session_id": inner.session_id,
-                "app_version": inner.app_version,
-                "channel": inner.channel,
-                "os": std::env::consts::OS,
-                "arch": std::env::consts::ARCH,
-                "events": events,
-            })
-        };
+        let payload = self.build_payload(&events, false).await;
 
         match self.send_payload(&payload).await {
             Ok(()) => {}
@@ -199,24 +206,22 @@ impl Telemetry {
             Ok(q) if !q.is_empty() => q,
             _ => return,
         };
-        let payload = {
-            let inner = self.inner.lock().await;
-            let install_id = ensure_installation_id(&self.app_data_dir).await;
-            serde_json::json!({
-                "schema_version": SCHEMA_VERSION,
-                "installation_id": install_id,
-                "session_id": inner.session_id,
-                "app_version": inner.app_version,
-                "channel": inner.channel,
-                "os": std::env::consts::OS,
-                "arch": std::env::consts::ARCH,
-                "events": queued,
-                "replay": true,
-            })
-        };
-        if self.send_payload(&payload).await.is_ok() {
-            let _ = fs::remove_file(&path).await;
+
+        let mut remaining = queued;
+        while !remaining.is_empty() {
+            let take = remaining.len().min(REPLAY_BATCH);
+            let batch: Vec<Event> = remaining.drain(..take).collect();
+            let payload = self.build_payload(&batch, true).await;
+            if self.send_payload(&payload).await.is_err() {
+                let mut unsent = batch;
+                unsent.extend(remaining);
+                if let Ok(serialized) = serde_json::to_vec(&unsent) {
+                    let _ = fs::write(&path, serialized).await;
+                }
+                return;
+            }
         }
+        let _ = fs::remove_file(&path).await;
     }
 }
 
@@ -230,6 +235,7 @@ const ALLOWED_EVENT_KINDS: &[&str] = &[
     "lua_parsed",
     "download_started",
     "download_completed",
+    "download_abandoned",
     "shortcut_created",
     "update_checked",
     "update_installed",
@@ -239,6 +245,7 @@ const ALLOWED_EVENT_KINDS: &[&str] = &[
 pub fn is_safe_kind(kind: &str) -> bool {
     ALLOWED_EVENT_KINDS.contains(&kind)
 }
+
 
 pub async fn ensure_installation_id(app_data_dir: &std::path::Path) -> String {
     let mut settings = settings_service::load_settings(app_data_dir).await;

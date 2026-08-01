@@ -26,6 +26,7 @@ pub mod steam_chunks;
 pub mod steam_downloader;
 pub mod manifest_code_provider;
 pub mod debug_log;
+pub mod diag;
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
@@ -37,6 +38,7 @@ pub struct AppState {
     pub steam_cache: Arc<Mutex<HashMap<String, serde_json::Value>>>,
     pub telemetry: Option<telemetry::Telemetry>,
     pub steam_session: Arc<steam_session::SteamSession>,
+    pub shutdown_flush_done: Arc<AtomicBool>,
 }
 
 pub struct JobInfo {
@@ -63,6 +65,7 @@ impl AppState {
             steam_cache: Arc::new(Mutex::new(HashMap::new())),
             telemetry: None,
             steam_session: Arc::new(steam_session::SteamSession::new()),
+            shutdown_flush_done: Arc::new(AtomicBool::new(false)),
         }
     }
 

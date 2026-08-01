@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::services::{AppState, JobInfo};
 use crate::services::depot_runner::{self, DepotRunConfig, ProgressEvent, emit_progress};
 use crate::services::depot_sources;
+use crate::services::diag;
 use crate::services::hubcap_api;
 use crate::services::ryuu_api;
 use crate::services::settings as settings_service;
@@ -194,6 +195,7 @@ pub async fn start_download(
             steam_cache: steam_cache.clone(),
             telemetry: None,
             steam_session: steam_session.clone(),
+            shutdown_flush_done: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         };
 
         let result = run_download_pipeline(
@@ -293,10 +295,12 @@ async fn run_download_pipeline(
     app_data_dir: &Path,
 ) -> Result<(), String> {
     let _started_at = chrono::Utc::now();
+    let started = std::time::Instant::now();
     let work_dir = base_dir.join(folder_name);
     let loaded_settings = settings_service::load_settings(app_data_dir).await;
     let depot_sources_list = loaded_settings.depot_sources.clone();
     let use_native = loaded_settings.use_native_downloader;
+    let engine_label: &'static str = if use_native { "native" } else { "ddm" };
     let is_hubcap = config.source_type.as_deref() == Some("hubcap");
     let is_ryuu = config.source_type.as_deref() == Some("ryuu");
     let is_cached_manifest_source = is_hubcap || is_ryuu;
@@ -355,23 +359,65 @@ async fn run_download_pipeline(
                 return Ok(());
             }
 
-            match depot_sources::check_app_exists(&state.http_client, &depot_sources_list, &config.app_id).await {
-                Ok(true) => {
+            match depot_sources::probe_app(&state.http_client, &depot_sources_list, &config.app_id).await {
+                depot_sources::ProbeOutcome::Found => {
                     let mut event = ProgressEvent::new("status", job_id);
                     event.step = Some("branch_found".to_string());
                     event.app_id = Some(config.app_id.clone());
                     event.last_updated = Some("Source: configured manifest source".to_string());
                     emit_progress(app, &event);
                 }
-                Ok(false) => {
+                depot_sources::ProbeOutcome::Missing => {
                     let mut event = ProgressEvent::new("error", job_id);
-                    event.message = Some(format!("App {} not found in any configured manifest source", config.app_id));
+                    event.message = Some(format!(
+                        "App {} is not present in any configured manifest source.",
+                        config.app_id
+                    ));
+                    event.diag = Some(diag::summarize(
+                        &[diag::DepotDiag::failed_at(
+                            diag::Stage::SourceProbe,
+                            diag::NOT_FOUND,
+                            diag::SourceKind::DepotSource,
+                        )],
+                        &[],
+                        started.elapsed().as_secs(),
+                        engine_label,
+                    ));
                     emit_progress(app, &event);
                     return Ok(());
                 }
-                Err(e) => {
+                depot_sources::ProbeOutcome::Inconclusive(class) => {
                     let mut event = ProgressEvent::new("error", job_id);
-                    event.message = Some(format!("Manifest source lookup failed: {}", e));
+                    event.message = Some(format!(
+                        "Could not reach your manifest sources to check for app {} ({}). \
+                         This is a problem with the source, not with the app — try again shortly.",
+                        config.app_id, class
+                    ));
+                    event.diag = Some(diag::summarize(
+                        &[diag::DepotDiag::failed_at(
+                            diag::Stage::SourceProbe,
+                            class,
+                            diag::SourceKind::DepotSource,
+                        )],
+                        &[],
+                        started.elapsed().as_secs(),
+                        engine_label,
+                    ));
+                    emit_progress(app, &event);
+                    return Ok(());
+                }
+                depot_sources::ProbeOutcome::NoSources => {
+                    let mut event = ProgressEvent::new("error", job_id);
+                    event.message = Some(
+                        "No usable manifest sources configured. Add one in Settings → Advanced Settings → Manifest Sources."
+                            .to_string(),
+                    );
+                    event.diag = Some(diag::summarize(
+                        &[diag::DepotDiag::failed(diag::Stage::SourceProbe, diag::NO_SOURCES)],
+                        &[],
+                        started.elapsed().as_secs(),
+                        engine_label,
+                    ));
                     emit_progress(app, &event);
                     return Ok(());
                 }
@@ -390,6 +436,15 @@ async fn run_download_pipeline(
     emit_progress(app, &event);
 
     let mut manifest_results: Vec<(String, bool)> = Vec::new();
+    let mut manifest_diags: Vec<diag::DepotDiag> = Vec::new();
+
+    let manifest_source_kind = if is_ryuu {
+        diag::SourceKind::Ryuu
+    } else if is_hubcap {
+        diag::SourceKind::Hubcap
+    } else {
+        diag::SourceKind::DepotSource
+    };
 
     for depot in &uploaded_depots {
         if let Some(ref uploaded_path) = depot.uploaded_manifest_path {
@@ -413,12 +468,19 @@ async fn run_download_pipeline(
                     event.message = Some("Using uploaded manifest file".to_string());
                     emit_progress(app, &event);
                     manifest_results.push((depot.depot_id.clone(), true));
+                    manifest_diags.push(diag::DepotDiag::ok(diag::SourceKind::Uploaded));
                 }
                 Err(e) => {
                     let mut event = ProgressEvent::new("error", job_id);
+                    event.depot_id = Some(depot.depot_id.clone());
                     event.message = Some(format!("Failed to use uploaded manifest for depot {}: {}", depot.depot_id, e));
                     emit_progress(app, &event);
                     manifest_results.push((depot.depot_id.clone(), false));
+                    manifest_diags.push(diag::DepotDiag::failed_at(
+                        diag::Stage::Disk,
+                        diag::IO,
+                        diag::SourceKind::Uploaded,
+                    ));
                 }
             }
         }
@@ -427,6 +489,7 @@ async fn run_download_pipeline(
     for depot in &standard_depots {
         if use_native {
             manifest_results.push((depot.depot_id.clone(), true));
+            manifest_diags.push(diag::DepotDiag::ok(diag::SourceKind::SteamDirect));
             continue;
         }
         if check_cancelled(state, job_id).await {
@@ -472,12 +535,16 @@ async fn run_download_pipeline(
         match manifest_result {
             Ok(_) => {
                 manifest_results.push((depot.depot_id.clone(), true));
+                manifest_diags.push(diag::DepotDiag::ok(manifest_source_kind));
             }
             Err(e) => {
                 let mut event = ProgressEvent::new("error", job_id);
+                event.depot_id = Some(depot.depot_id.clone());
                 event.message = Some(format!("Failed to download manifest for depot {}: {}", depot.depot_id, e));
                 emit_progress(app, &event);
                 manifest_results.push((depot.depot_id.clone(), false));
+                let (stage, class) = diag::classify_pipeline_error(&e);
+                manifest_diags.push(diag::DepotDiag::failed_at(stage, class, manifest_source_kind));
             }
         }
     }
@@ -486,6 +553,7 @@ async fn run_download_pipeline(
     for (idx, depot) in custom_depots.iter().enumerate() {
         if use_native {
             manifest_results.push((depot.depot_id.clone(), true));
+            manifest_diags.push(diag::DepotDiag::ok(diag::SourceKind::SteamDirect));
             continue;
         }
         if check_cancelled(state, job_id).await {
@@ -552,15 +620,32 @@ async fn run_download_pipeline(
         }
 
         match last_err {
-            None => manifest_results.push((depot.depot_id.clone(), true)),
+            None => {
+                manifest_results.push((depot.depot_id.clone(), true));
+                manifest_diags.push(diag::DepotDiag::ok(diag::SourceKind::ManifestHub));
+            }
             Some(e) => {
                 let mut event = ProgressEvent::new("error", job_id);
+                event.depot_id = Some(depot.depot_id.clone());
                 event.message = Some(format!(
                     "Failed to download custom manifest for depot {}: {}",
                     depot.depot_id, e
                 ));
                 emit_progress(app, &event);
                 manifest_results.push((depot.depot_id.clone(), false));
+                let class = if e.contains("429")
+                    || e.to_lowercase().contains("too many requests")
+                    || e.contains("error code: 1015")
+                {
+                    diag::RATE_LIMITED
+                } else {
+                    diag::classify_pipeline_error(&e).1
+                };
+                manifest_diags.push(diag::DepotDiag::failed_at(
+                    diag::Stage::ManifestFetch,
+                    class,
+                    diag::SourceKind::ManifestHub,
+                ));
             }
         }
     }
@@ -574,6 +659,12 @@ async fn run_download_pipeline(
         let error_msg = "All manifest downloads failed".to_string();
         let mut event = ProgressEvent::new("error", job_id);
         event.message = Some(error_msg.clone());
+        event.diag = Some(diag::summarize(
+            &manifest_diags,
+            &diag::tried_from_diags(&manifest_diags),
+            started.elapsed().as_secs(),
+            engine_label,
+        ));
         emit_progress(app, &event);
 
         let entry = history::HistoryEntry {
@@ -774,22 +865,36 @@ async fn run_download_pipeline(
     }
 
     let dl_success_count = download_results.iter().filter(|r| r["success"].as_bool().unwrap_or(false)).count();
+    let selected_total = config.depots.len();
+    let outcome = diag::Outcome::from_counts(dl_success_count, selected_total);
+
+    let mut all_diags = diag::from_download_results(
+        &download_results,
+        if use_native { diag::SourceKind::SteamDirect } else { manifest_source_kind },
+    );
+    all_diags.extend(manifest_diags.iter().filter(|d| !d.ok).copied());
+
     let mut event = ProgressEvent::new("complete", job_id);
-    event.message = Some(format!(
-        "Download complete. {}/{} depots downloaded successfully.",
-        dl_success_count,
-        run_depots.len()
-    ));
+    event.message = Some(match outcome {
+        diag::Outcome::Complete => format!(
+            "Download complete. {}/{} depots downloaded successfully.",
+            dl_success_count, selected_total
+        ),
+        _ => format!(
+            "Download incomplete — {}/{} depots downloaded. The rest could not be fetched.",
+            dl_success_count, selected_total
+        ),
+    });
     event.results = Some(serde_json::Value::Array(download_results));
+    event.diag = Some(diag::summarize(
+        &all_diags,
+        &diag::tried_from_results(event.results.as_ref().and_then(|v| v.as_array()).map(|a| a.as_slice()).unwrap_or(&[])),
+        started.elapsed().as_secs(),
+        engine_label,
+    ));
     emit_progress(app, &event);
 
-    let status = if dl_success_count == run_depots.len() {
-        "complete"
-    } else if dl_success_count > 0 {
-        "partial"
-    } else {
-        "failed"
-    };
+    let status = outcome.as_str();
     if status == "failed" {
         let entry = history::HistoryEntry {
             id: uuid::Uuid::new_v4().to_string(),
@@ -883,6 +988,10 @@ pub async fn cancel_download(
     } else {
         "cancelled_cleanup".to_string()
     });
+    event.diag = Some(serde_json::json!({
+        "outcome": diag::Outcome::Cancelled.as_str(),
+        "keep_files": keep_files,
+    }));
     emit_progress(&app, &event);
 
     let snapshot_app_id = snapshot
@@ -1146,7 +1255,11 @@ async fn run_native_pipeline(
             .join(format!("{}_{}.manifest", depot.depot_id, depot.manifest_id))
             .exists();
 
+        let mut sources_tried: Vec<&'static str> = Vec::new();
+        let mut no_fallback_left: Option<&'static str> = None;
+
         let attempt_outcome = if manifest_already_on_disk {
+            sources_tried.push(diag::SourceKind::Cached.as_str());
             emit_manifest_source(
                 app,
                 job_id,
@@ -1177,6 +1290,7 @@ async fn run_native_pipeline(
                 Err(e) => Err(format!("read cached manifest failed: {}", e)),
             }
         } else {
+            sources_tried.push(diag::SourceKind::SteamDirect.as_str());
             emit_manifest_source(
                 app,
                 job_id,
@@ -1202,6 +1316,7 @@ async fn run_native_pipeline(
                 let mut source_attempt: Option<Result<std::path::PathBuf, String>> = None;
 
                 if is_hubcap {
+                    sources_tried.push(diag::SourceKind::Hubcap.as_str());
                     emit_manifest_source(
                         app,
                         job_id,
@@ -1228,6 +1343,7 @@ async fn run_native_pipeline(
                         .map(|_| path),
                     );
                 } else if !depot_sources_list.is_empty() {
+                    sources_tried.push(diag::SourceKind::DepotSource.as_str());
                     emit_manifest_source(
                         app,
                         job_id,
@@ -1317,8 +1433,14 @@ async fn run_native_pipeline(
                             steam_err
                         ),
                     );
+                    no_fallback_left = Some(if depot_sources_list.is_empty() {
+                        "no manifest sources configured and No ManifestHub API key"
+                    } else {
+                        "No ManifestHub API key"
+                    });
                 }
                 if let Some(key) = key_opt {
+                    sources_tried.push(diag::SourceKind::ManifestHub.as_str());
                     emit_manifest_source(
                         app,
                         job_id,
@@ -1405,6 +1527,7 @@ async fn run_native_pipeline(
                     "success": true,
                     "filesWritten": outcome.files_written,
                     "bytesWritten": outcome.bytes_written,
+                    "sourcesTried": sources_tried,
                 }));
             }
             Err(e) => {
@@ -1415,10 +1538,15 @@ async fn run_native_pipeline(
                 ));
                 err_event.depot_id = Some(depot.depot_id.clone());
                 emit_progress(app, &err_event);
+                let reported = match no_fallback_left {
+                    Some(reason) => format!("{} ({})", reason, e),
+                    None => e,
+                };
                 results.push(serde_json::json!({
                     "depotId": depot.depot_id,
                     "success": false,
-                    "error": e,
+                    "error": reported,
+                    "sourcesTried": sources_tried,
                 }));
             }
         }
