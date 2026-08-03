@@ -37,6 +37,11 @@ When telemetry is enabled, the app sends small events describing:
     described below
   - `download_abandoned` — you closed the app while a download was still
     running, with the same diagnosis fields and the step it was on
+  - `patch_applied` — the gbe_fork emulator patch was applied, with the
+    diagnosis described below
+  - `patch_reverted` — a patch was undone, with the same diagnosis
+  - `patch_settings_saved` — emulator settings were written to an already
+    patched folder
   - `shortcut_created` — a Windows shortcut was created
   - `update_checked` / `update_installed` — the auto-updater ran
 
@@ -70,6 +75,26 @@ The URLs you configure under Manifest Sources are treated as your data and
 are never transmitted — only the category of source they fall into. The
 `sources_tried` counts exist because a core fallback host once went offline for
 weeks without anything noticing, and this is the field that would have caught it.
+
+### Emulator patch diagnosis
+
+`patch_applied`, `patch_reverted` and `patch_settings_saved` carry the same kind
+of fixed-label diagnosis. The folder you patch, the files inside it and the game
+it belongs to are never transmitted — only these labels:
+
+| Field | Meaning |
+|---|---|
+| `entry` | where the patch was started from — `download`, `standalone` (Patch Existing Folder) or `history` |
+| `outcome` | `complete`, `partial` or `failed` |
+| `variant` | which emulator build was chosen — `regular` or `experimental` |
+| `platforms` | what kind of library was targeted — `windows`, `linux`, `mixed` or `none`. Never a file name |
+| `targets` / `failures` | how many files were touched and how many failed, as ranges (`0`, `1`, `2-3`, `4-10`, `>10`) |
+| `fail_class` | why it failed, from a fixed list: `emu_binary_missing`, `interfaces_failed`, `backup_failed`, `copy_failed`, `settings_write_failed`, `no_parent_dir`, `folder_missing`, `no_backup`, `restore_failed`, `av_blocked`, `release_fetch_failed`, `emu_download_failed`, `unknown` |
+
+`fail_class` is assigned in the Rust code at the point the error happens, so the
+label can never be derived from — or contain — a file path or a system message.
+This exists because a rename in an upstream emulator release silently broke every
+32-bit patch, and nothing surfaced it until a user reported it by hand.
 
 ## What is NEVER collected
 
