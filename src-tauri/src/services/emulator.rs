@@ -78,12 +78,28 @@ pub struct ScannedFile {
     pub is_patched: bool,
 }
 
+pub mod fail {
+    pub const EMU_BINARY_MISSING: &str = "emu_binary_missing";
+    pub const INTERFACES_FAILED: &str = "interfaces_failed";
+    pub const BACKUP_FAILED: &str = "backup_failed";
+    pub const COPY_FAILED: &str = "copy_failed";
+    pub const SETTINGS_WRITE_FAILED: &str = "settings_write_failed";
+    pub const NO_PARENT_DIR: &str = "no_parent_dir";
+    pub const FOLDER_MISSING: &str = "folder_missing";
+    pub const NO_BACKUP: &str = "no_backup";
+    pub const RESTORE_FAILED: &str = "restore_failed";
+}
+
+type TargetError = (&'static str, String);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplaceResult {
     pub path: String,
     pub backup_path: Option<String>,
     pub success: bool,
     pub error: Option<String>,
+    #[serde(default, rename = "failClass")]
+    pub fail_class: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -490,6 +506,14 @@ fn release_root(platform_cache: &Path) -> PathBuf {
     platform_cache.join("release")
 }
 
+fn arch_dirs(x64: bool) -> &'static [&'static str] {
+    if x64 {
+        &["x64"]
+    } else {
+        &["x86", "x32"]
+    }
+}
+
 pub fn dll_source(
     platform_cache: &Path,
     variant: Variant,
@@ -497,13 +521,16 @@ pub fn dll_source(
     platform: Platform,
 ) -> Result<PathBuf, String> {
     let root = release_root(platform_cache).join(variant.folder());
-    let arch_dir = if x64 { "x64" } else { "x32" };
-    let p = root.join(arch_dir).join(platform.emu_filename(x64));
-    if p.exists() {
-        Ok(p)
-    } else {
-        Err(format!("emulator binary not found at {}", p.display()))
+    let filename = platform.emu_filename(x64);
+    let mut tried = Vec::new();
+    for dir in arch_dirs(x64) {
+        let p = root.join(dir).join(filename);
+        if p.exists() {
+            return Ok(p);
+        }
+        tried.push(p.display().to_string());
     }
+    Err(format!("emulator binary not found, tried: {}", tried.join(", ")))
 }
 
 pub fn scan_game_dir(game_dir: &Path) -> Vec<ScannedFile> {
@@ -645,59 +672,97 @@ pub fn apply_replacement(
         backup_path: None,
         success: false,
         error: None,
+        fail_class: None,
     };
-
-    let emu_dll = match dll_source(platform_cache, variant, x64, platform) {
-        Ok(p) => p,
-        Err(e) => {
+    crate::dlog!(
+        "emu",
+        "apply start target={} platform={:?} arch={} variant={:?}",
+        target.display(),
+        platform,
+        if x64 { "x64" } else { "x32" },
+        variant
+    );
+    match apply_to_target(
+        target,
+        platform_cache,
+        variant,
+        platform,
+        x64,
+        app_id,
+        installed_app_ids,
+        emu_settings,
+        &mut result,
+    ) {
+        Ok(()) => {
+            result.success = true;
+            crate::dlog!("emu", "apply ok target={}", target.display());
+        }
+        Err((class, e)) => {
+            crate::dlog!(
+                "emu",
+                "apply FAILED target={} class={} reason={}",
+                target.display(),
+                class,
+                e
+            );
+            result.fail_class = Some(class.to_string());
             result.error = Some(e);
-            return result;
         }
-    };
+    }
+    result
+}
 
-    let interfaces = match generate_interfaces_from_file(target) {
-        Ok(s) => s,
-        Err(e) => {
-            result.error = Some(format!("generate_interfaces failed: {}", e));
-            return result;
-        }
-    };
+fn apply_to_target(
+    target: &Path,
+    platform_cache: &Path,
+    variant: Variant,
+    platform: Platform,
+    x64: bool,
+    app_id: &str,
+    installed_app_ids: &[String],
+    emu_settings: Option<&EmuSettings>,
+    result: &mut ReplaceResult,
+) -> Result<(), TargetError> {
+    let emu_dll = dll_source(platform_cache, variant, x64, platform)
+        .map_err(|e| (fail::EMU_BINARY_MISSING, e))?;
+    crate::dlog!("emu", "emulator binary resolved: {}", emu_dll.display());
+
+    let interfaces_source = interfaces_source_for(target);
+    crate::dlog!(
+        "emu",
+        "reading interfaces from {} (backup={})",
+        interfaces_source.display(),
+        interfaces_source != target
+    );
+    let interfaces = generate_interfaces_from_file(&interfaces_source)
+        .map_err(|e| (fail::INTERFACES_FAILED, format!("generate_interfaces failed: {}", e)))?;
 
     let backup = backup_path_for(target);
-    if !backup.exists() {
-        if let Err(e) = fs::copy(target, &backup) {
-            result.error = Some(format!("backup original: {}", e));
-            return result;
-        }
+    if backup.exists() {
+        crate::dlog!("emu", "backup already present: {}", backup.display());
+    } else {
+        fs::copy(target, &backup)
+            .map_err(|e| (fail::BACKUP_FAILED, format!("backup original: {}", e)))?;
+        crate::dlog!("emu", "backup created: {}", backup.display());
     }
     result.backup_path = Some(backup.to_string_lossy().to_string());
 
-    if let Err(e) = fs::copy(&emu_dll, target) {
-        result.error = Some(format!("copy emulator binary: {}", e));
-        return result;
-    }
+    fs::copy(&emu_dll, target)
+        .map_err(|e| (fail::COPY_FAILED, format!("copy emulator binary: {}", e)))?;
 
-    let parent = match target.parent() {
-        Some(p) => p,
-        None => {
-            result.error = Some("target has no parent dir".into());
-            return result;
-        }
-    };
+    let parent = target
+        .parent()
+        .ok_or((fail::NO_PARENT_DIR, "target has no parent dir".to_string()))?;
     let settings_dir = parent.join("steam_settings");
-    if let Err(e) = fs::create_dir_all(&settings_dir) {
-        result.error = Some(format!("create steam_settings: {}", e));
-        return result;
-    }
+    fs::create_dir_all(&settings_dir)
+        .map_err(|e| (fail::SETTINGS_WRITE_FAILED, format!("create steam_settings: {}", e)))?;
 
-    if let Err(e) = fs::write(settings_dir.join("steam_interfaces.txt"), interfaces) {
-        result.error = Some(format!("write steam_interfaces.txt: {}", e));
-        return result;
-    }
-    if let Err(e) = fs::write(settings_dir.join("steam_appid.txt"), app_id.trim()) {
-        result.error = Some(format!("write steam_appid.txt: {}", e));
-        return result;
-    }
+    fs::write(settings_dir.join("steam_interfaces.txt"), interfaces).map_err(|e| {
+        (fail::SETTINGS_WRITE_FAILED, format!("write steam_interfaces.txt: {}", e))
+    })?;
+    fs::write(settings_dir.join("steam_appid.txt"), app_id.trim()).map_err(|e| {
+        (fail::SETTINGS_WRITE_FAILED, format!("write steam_appid.txt: {}", e))
+    })?;
     if !installed_app_ids.is_empty() {
         let joined = installed_app_ids
             .iter()
@@ -705,21 +770,16 @@ pub fn apply_replacement(
             .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
             .join("\n");
-        if let Err(e) = fs::write(settings_dir.join("installed_app_ids.txt"), joined) {
-            result.error = Some(format!("write installed_app_ids.txt: {}", e));
-            return result;
-        }
+        fs::write(settings_dir.join("installed_app_ids.txt"), joined).map_err(|e| {
+            (fail::SETTINGS_WRITE_FAILED, format!("write installed_app_ids.txt: {}", e))
+        })?;
     }
 
     if let Some(s) = emu_settings {
-        if let Err(e) = s.write_to_dir(&settings_dir) {
-            result.error = Some(format!("write emu settings: {}", e));
-            return result;
-        }
+        s.write_to_dir(&settings_dir)
+            .map_err(|e| (fail::SETTINGS_WRITE_FAILED, format!("write emu settings: {}", e)))?;
     }
-
-    result.success = true;
-    result
+    Ok(())
 }
 
 pub fn read_emu_settings_for_target(target: &Path) -> Result<EmuSettings, String> {
@@ -742,17 +802,24 @@ pub fn write_emu_settings_for_target(target: &Path, settings: &EmuSettings) -> R
     settings.write_to_dir(&settings_dir)
 }
 
-pub fn revert_replacement(target: &Path) -> Result<(), String> {
+pub fn revert_replacement(target: &Path) -> Result<(), TargetError> {
     if let Some(parent) = target.parent() {
         if !parent.exists() {
-            return Err(format!("game folder not found: {}", parent.display()));
+            return Err((
+                fail::FOLDER_MISSING,
+                format!("game folder not found: {}", parent.display()),
+            ));
         }
     }
     let backup = backup_path_for(target);
     if !backup.exists() {
-        return Err(format!("no backup found at {}", backup.display()));
+        return Err((
+            fail::NO_BACKUP,
+            format!("no backup found at {}", backup.display()),
+        ));
     }
-    fs::copy(&backup, target).map_err(|e| format!("restore from backup: {}", e))?;
+    fs::copy(&backup, target)
+        .map_err(|e| (fail::RESTORE_FAILED, format!("restore from backup: {}", e)))?;
     let _ = fs::remove_file(&backup);
     if let Some(parent) = target.parent() {
         let settings_dir = parent.join("steam_settings");
@@ -764,8 +831,162 @@ pub fn revert_replacement(target: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn interfaces_source_for(target: &Path) -> PathBuf {
+    let backup = backup_path_for(target);
+    if backup.exists() {
+        backup
+    } else {
+        target.to_path_buf()
+    }
+}
+
 fn backup_path_for(target: &Path) -> PathBuf {
     let mut p = target.as_os_str().to_owned();
     p.push(".steam.bak");
     PathBuf::from(p)
+}
+
+#[cfg(test)]
+mod interfaces_source_tests {
+    use super::*;
+
+    #[test]
+    fn a_first_patch_reads_the_library_itself() {
+        let dir = std::env::temp_dir().join("smd-iface-first");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("steam_api64.dll");
+        fs::write(&target, b"original").unwrap();
+
+        assert_eq!(interfaces_source_for(&target), target);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_repeat_patch_reads_the_backup_not_the_emulator() {
+        let dir = std::env::temp_dir().join("smd-iface-repeat");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("steam_api64.dll");
+        fs::write(&target, b"gbe_fork").unwrap();
+        let backup = backup_path_for(&target);
+        fs::write(&backup, b"original").unwrap();
+
+        let src = interfaces_source_for(&target);
+        assert_eq!(src, backup);
+        assert_eq!(fs::read(&src).unwrap(), b"original");
+        let _ = fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod dll_source_tests {
+    use super::*;
+
+    fn cache_with(name: &str, arch: &str, file: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("smd-dllsrc-{}", name));
+        let _ = fs::remove_dir_all(&dir);
+        let leaf = dir.join("release").join("regular").join(arch);
+        fs::create_dir_all(&leaf).unwrap();
+        fs::write(leaf.join(file), b"emu").unwrap();
+        dir
+    }
+
+    #[test]
+    fn resolves_x86_layout_used_by_current_gbe_fork() {
+        let cache = cache_with("x86", "x86", "steam_api.dll");
+        let got = dll_source(&cache, Variant::Regular, false, Platform::Windows).unwrap();
+        assert_eq!(got, cache.join("release/regular/x86/steam_api.dll"));
+        let _ = fs::remove_dir_all(&cache);
+    }
+
+    #[test]
+    fn still_resolves_legacy_x32_layout() {
+        let cache = cache_with("x32", "x32", "steam_api.dll");
+        let got = dll_source(&cache, Variant::Regular, false, Platform::Windows).unwrap();
+        assert_eq!(got, cache.join("release/regular/x32/steam_api.dll"));
+        let _ = fs::remove_dir_all(&cache);
+    }
+
+    #[test]
+    fn resolves_linux_x86_layout() {
+        let cache = cache_with("linux", "x86", "libsteam_api.so");
+        let got = dll_source(&cache, Variant::Regular, false, Platform::Linux).unwrap();
+        assert_eq!(got, cache.join("release/regular/x86/libsteam_api.so"));
+        let _ = fs::remove_dir_all(&cache);
+    }
+
+    #[test]
+    fn sixty_four_bit_is_unaffected() {
+        let cache = cache_with("x64", "x64", "steam_api64.dll");
+        let got = dll_source(&cache, Variant::Regular, true, Platform::Windows).unwrap();
+        assert_eq!(got, cache.join("release/regular/x64/steam_api64.dll"));
+        let _ = fs::remove_dir_all(&cache);
+    }
+
+    #[test]
+    fn a_missing_emulator_binary_is_classified_not_guessed() {
+        let dir = std::env::temp_dir().join("smd-failclass-binary");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("steam_api.dll");
+        fs::write(&target, b"original").unwrap();
+
+        let r = apply_replacement(
+            &target,
+            &dir,
+            Variant::Regular,
+            Platform::Windows,
+            false,
+            "480",
+            &[],
+            None,
+        );
+        assert!(!r.success);
+        assert_eq!(r.fail_class.as_deref(), Some(fail::EMU_BINARY_MISSING));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn reverting_without_a_backup_is_classified_no_backup() {
+        let dir = std::env::temp_dir().join("smd-failclass-revert");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("steam_api64.dll");
+        fs::write(&target, b"patched").unwrap();
+
+        let err = revert_replacement(&target).unwrap_err();
+        assert_eq!(err.0, fail::NO_BACKUP);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn every_fail_class_is_a_lowercase_label_without_paths() {
+        for class in [
+            fail::EMU_BINARY_MISSING,
+            fail::INTERFACES_FAILED,
+            fail::BACKUP_FAILED,
+            fail::COPY_FAILED,
+            fail::SETTINGS_WRITE_FAILED,
+            fail::NO_PARENT_DIR,
+            fail::FOLDER_MISSING,
+            fail::NO_BACKUP,
+            fail::RESTORE_FAILED,
+        ] {
+            assert!(
+                class.chars().all(|c| c.is_ascii_lowercase() || c == '_'),
+                "{} is not a plain label",
+                class
+            );
+        }
+    }
+
+    #[test]
+    fn missing_binary_names_every_path_tried() {
+        let cache = cache_with("missing", "x64", "steam_api64.dll");
+        let err = dll_source(&cache, Variant::Regular, false, Platform::Windows).unwrap_err();
+        assert!(err.contains("x86"), "{}", err);
+        assert!(err.contains("x32"), "{}", err);
+        let _ = fs::remove_dir_all(&cache);
+    }
 }

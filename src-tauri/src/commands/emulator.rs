@@ -444,6 +444,14 @@ pub async fn emu_apply_replacement(
 ) -> Result<Vec<ReplaceResult>, String> {
     let dir = app_data_dir(&app);
     let info = emulator::fetch_release_info(&state.http_client, &dir).await?;
+    crate::dlog!(
+        "emu",
+        "apply_replacement targets={} variant={:?} release={} cache_root={}",
+        targets.len(),
+        variant,
+        info.tag,
+        info.cache_root
+    );
 
     let need_windows = targets.iter().any(|t| t.platform == Platform::Windows);
     let need_linux = targets.iter().any(|t| t.platform == Platform::Linux);
@@ -472,6 +480,13 @@ pub async fn emu_apply_replacement(
             settings_ref,
         ));
     }
+    let succeeded = results.iter().filter(|r| r.success).count();
+    crate::dlog!(
+        "emu",
+        "apply_replacement done: {}/{} succeeded",
+        succeeded,
+        results.len()
+    );
     Ok(results)
 }
 
@@ -500,12 +515,19 @@ pub async fn emu_revert_replacement(targets: Vec<String>) -> Result<Vec<ReplaceR
             backup_path: None,
             success: false,
             error: None,
+            fail_class: None,
         };
         match emulator::revert_replacement(&path) {
             Ok(()) => r.success = true,
-            Err(e) => r.error = Some(e),
+            Err((class, e)) => {
+                crate::dlog!("emu", "revert FAILED class={} reason={}", class, e);
+                r.fail_class = Some(class.to_string());
+                r.error = Some(e);
+            }
         }
         results.push(r);
     }
+    let succeeded = results.iter().filter(|r| r.success).count();
+    crate::dlog!("emu", "revert done: {}/{} succeeded", succeeded, results.len());
     Ok(results)
 }
