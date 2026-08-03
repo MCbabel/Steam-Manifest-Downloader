@@ -264,13 +264,9 @@ mod probe_tests {
 
     #[tokio::test]
     async fn an_archive_org_503_means_the_app_is_absent_not_the_host_broken() {
-        let out = probe_app(
-            &client(),
-            &["https://archive.org/download/manifest-hub-repo/branches.zip/".to_string()],
-            "999999991",
-        )
-        .await;
-        assert_eq!(out, ProbeOutcome::Missing, "a bogus id must read as missing");
+        let base = serving("503 Service Unavailable").await;
+        let sources = vec![base.replace("/branches/", "/archive.org/download/x.zip/")];
+        assert_eq!(probe_app(&client(), &sources, "730").await, ProbeOutcome::Missing);
     }
 
     #[test]

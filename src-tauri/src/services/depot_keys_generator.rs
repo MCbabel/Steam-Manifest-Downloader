@@ -52,21 +52,3 @@ pub async fn generate_depot_keys(
     })
 }
 
-#[allow(dead_code)]
-pub fn generate_depot_keys_content(depots: &[DepotInfo]) -> String {
-    let lines: Vec<String> = depots
-        .iter()
-        .filter_map(|depot| {
-            depot
-                .depot_key
-                .as_ref()
-                .map(|key| format!("{};{}", depot.depot_id, key))
-        })
-        .collect();
-
-    if lines.is_empty() {
-        String::from("\n")
-    } else {
-        lines.join("\n") + "\n"
-    }
-}

@@ -40,8 +40,24 @@ jobs:
             echo "in-main=false" >> "$GITHUB_OUTPUT"
           fi
 
-  build-windows:
+  test:
+    name: Backend tests
     needs: check
+    if: needs.check.outputs.in-main == 'false'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Run tests
+        working-directory: src-tauri
+        run: cargo test --bin steam-manifest-downloader
+
+  build-windows:
+    needs: [check, test]
     if: needs.check.outputs.in-main == 'false'
     runs-on: windows-latest
     steps:
@@ -70,7 +86,7 @@ jobs:
           path: src-tauri/target/release/steam-manifest-downloader.exe
 
   build-linux:
-    needs: check
+    needs: [check, test]
     if: needs.check.outputs.in-main == 'false'
     runs-on: ubuntu-22.04
     steps:
