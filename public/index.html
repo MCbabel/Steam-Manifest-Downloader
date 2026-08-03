@@ -132,6 +132,12 @@
             </svg>
             <span data-i18n="tabs.search">Search by App ID</span>
           </button>
+          <button class="tab-bar__tab" data-tab="patch-only" id="tab-patch-only">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            <span data-i18n="tabs.patchOnly">Patch Existing Folder</span>
+          </button>
         </div>
 
         <div id="tab-content-upload" class="tab-content active">
@@ -216,6 +222,53 @@
           <div id="manifest-loading" class="loading hidden">
             <div class="spinner"></div>
             <span data-i18n="search.manifestLoading">Fetching manifests...</span>
+          </div>
+        </div>
+
+        <div id="tab-content-patch-only" class="tab-content">
+          <p class="patch-only__lead" data-i18n="patchOnly.lead">Already have the game files? Point this at the folder and run only the emulator step: DLL swap, Steamless and gbe_fork config. Nothing is downloaded.</p>
+
+          <div class="settings-section">
+            <label for="patch-only-dir" class="settings-section__label">
+              <svg class="label-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span data-i18n="patchOnly.folderLabel">Game Folder</span>
+            </label>
+            <div class="dd-path__input-wrap dd-path__input-wrap--with-btn">
+              <input type="text" id="patch-only-dir" class="dd-path__input"
+                data-i18n-attr="placeholder=patchOnly.folderPlaceholder"
+                value="">
+              <button type="button" id="btn-patch-only-browse" class="btn btn--small btn--outline dd-path__browse-btn" data-i18n-attr="title=patchOnly.browseFolder,aria-label=patchOnly.browseFolder">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 14l1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </div>
+            <p class="dd-path__hint" data-i18n="patchOnly.folderHint">Pick the folder that holds the game executable and its Steam API library. Subfolders are scanned too.</p>
+          </div>
+
+          <div class="settings-section">
+            <label for="patch-only-appid" class="settings-section__label">
+              <span data-i18n="patchOnly.appIdLabel">App ID</span>
+            </label>
+            <div class="search-input-wrapper">
+              <input type="text" id="patch-only-appid" class="search-input" data-i18n-attr="placeholder=patchOnly.appIdPlaceholder" autocomplete="off">
+              <div id="patch-only-autocomplete" class="search-autocomplete hidden"></div>
+            </div>
+            <p class="dd-path__hint" data-i18n="patchOnly.appIdHint">Required — the emulator writes it to steam_appid.txt. Type a game name to look it up.</p>
+          </div>
+
+          <div id="patch-only-error" class="error-message hidden"></div>
+          <div id="patch-only-loading" class="loading hidden">
+            <div class="spinner"></div>
+            <span data-i18n="patchOnly.scanning">Scanning folder for Steam API libraries...</span>
+          </div>
+
+          <div class="search-next-row">
+            <button id="btn-patch-only-start" class="btn btn--primary">
+              <span data-i18n="patchOnly.submit">Continue to Emulator Step</span> &rarr;
+            </button>
           </div>
         </div>
       </div>
@@ -577,7 +630,7 @@
 
         <div class="emu-section">
           <label class="settings-section__label" data-i18n="emulator.settingsLabel">Emulator settings <span class="optional-badge" data-i18n="emulator.settingsOptional">Optional</span></label>
-          <p class="emu-settings-hint" data-i18n="emulator.settingsHint">Unset values keep the gbe_fork defaults. You can change these later from the History tab.</p>
+          <p id="emu-settings-hint" class="emu-settings-hint" data-i18n="emulator.settingsHint">Unset values keep the gbe_fork defaults. You can change these later from the History tab.</p>
 
           <div class="emu-accordion">
             <div class="emu-accordion__item">
@@ -762,6 +815,7 @@
           <label class="settings-section__label" data-i18n="emulator.detectedLabel">Detected Steam API files</label>
           <div id="emu-file-list" class="emu-file-list" aria-live="polite"></div>
           <p id="emu-file-empty" class="emu-file-empty hidden" data-i18n="emulator.noFiles">No Steam API libraries were found in the download folder.</p>
+          <p id="emu-already-patched" class="emu-already-patched hidden"></p>
         </div>
 
         <div id="emu-apply-status" class="completion-message hidden"></div>
@@ -778,9 +832,14 @@
               Revert Patch
             </button>
           </div>
-          <button id="btn-emu-apply" class="btn btn--primary" data-i18n="emulator.apply">
-            Apply Emulator Patch
-          </button>
+          <div class="card__footer-right">
+            <button id="btn-emu-save-settings" class="btn btn--outline hidden" data-i18n="emulator.saveSettings">
+              Save Settings
+            </button>
+            <button id="btn-emu-apply" class="btn btn--primary" data-i18n="emulator.apply">
+              Apply Emulator Patch
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -886,8 +945,9 @@
       </div>
       <h3 class="modal__title" id="emu-revert-modal-title" data-i18n="modals.emuRevert.title">Revert emulator patch?</h3>
       <p class="modal__text" data-i18n-html="modals.emuRevert.body">
-        This restores the <strong>original Steam API library</strong> and removes the steam_settings folder. Your emulator settings will be lost.
+        This restores the <strong>original Steam API library</strong> and removes the emulator files that were placed next to it. Your gbe_fork configuration files stay on disk but are no longer used.
       </p>
+      <p class="modal__text" id="emu-revert-scope"></p>
       <div class="modal__actions">
         <button id="btn-emu-revert-no" class="btn btn--outline" data-modal-cancel data-i18n="modals.emuRevert.no">Keep patch</button>
         <button id="btn-emu-revert-yes" class="btn btn--danger" data-i18n="modals.emuRevert.yes">Revert</button>

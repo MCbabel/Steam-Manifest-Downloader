@@ -39,7 +39,8 @@
   },
   "tabs": {
     "upload": "Datei hochladen",
-    "search": "Per App-ID suchen"
+    "search": "Per App-ID suchen",
+    "patchOnly": "Vorhandenen Ordner patchen"
   },
   "upload": {
     "dropText": "Lege deine <strong>.lua</strong>- oder <strong>.st</strong>-Datei hier ab",
@@ -63,6 +64,23 @@
     "repoBadgeHubcap": "Hubcap-API",
     "repoBadgeRemote": "Konfigurierte Manifest-Quelle",
     "noResults": "Keine Manifests für diese App-ID in einer konfigurierten Depot-Quelle gefunden. Füge in den Einstellungen weitere Quellen hinzu oder aktiviere sie."
+  },
+  "patchOnly": {
+    "lead": "Spieldateien schon vorhanden? Wähle den Ordner aus und führe nur den Emulator-Schritt aus: DLL-Tausch, Steamless und gbe_fork-Konfiguration. Es wird nichts heruntergeladen.",
+    "folderLabel": "Spielordner",
+    "folderPlaceholder": "Pfad zum Ordner mit den Spieldateien...",
+    "folderDialogTitle": "Spielordner auswählen",
+    "browseFolder": "Ordner auswählen",
+    "folderHint": "Wähle den Ordner, in dem die Spiel-EXE und die Steam-API-Bibliothek liegen. Unterordner werden mit durchsucht.",
+    "appIdLabel": "App-ID",
+    "appIdPlaceholder": "Nach Name oder App-ID suchen...",
+    "appIdHint": "Erforderlich — der Emulator schreibt sie in die steam_appid.txt. Tipp einen Spielnamen, um sie zu finden.",
+    "submit": "Weiter zum Emulator-Schritt",
+    "scanning": "Ordner wird nach Steam-API-Bibliotheken durchsucht...",
+    "errorNoFolder": "Wähle zuerst den Spielordner aus.",
+    "errorAppId": "Gib eine numerische App-ID ein oder wähle ein Spiel aus den Vorschlägen.",
+    "errorNoApiFiles": "In diesem Ordner wurde keine Steam-API-Bibliothek (steam_api.dll, steam_api64.dll oder libsteam_api.so) gefunden. Wähle den Ordner, in dem die Spiel-EXE liegt.",
+    "errorScan": "Ordner konnte nicht gelesen werden: {message}"
   },
   "select": {
     "gameInfoLoading": "Spielinfos werden geladen...",
@@ -137,7 +155,7 @@
       "collectItem1": "App-Version, Betriebssystem, Architektur",
       "collectItem2": "Welche Features genutzt werden (nur Zähler)",
       "collectItem3": "Eine zufällige Installations-ID (nicht an dich gebunden)",
-      "collectItem4": "Warum ein Download fehlschlug — welcher Schritt und welche Fehlerart, aus einer festen Liste von Bezeichnern",
+      "collectItem4": "Warum ein Download oder ein Emulator-Patch fehlgeschlagen ist — welcher Schritt und welche Art von Fehler, aus einer festen Liste von Bezeichnern",
       "neverTitle": "Wir erheben niemals",
       "neverItem1": "Spiel-IDs, Depot-IDs, Dateinamen",
       "neverItem2": "Inhalte von <code>.lua</code>- / <code>.st</code>-Dateien",
@@ -191,9 +209,10 @@
     },
     "emuRevert": {
       "title": "Emulator-Patch zurücksetzen?",
-      "body": "Stellt die <strong>originale Steam-API-Bibliothek</strong> wieder her und entfernt den steam_settings-Ordner. Deine Emulator-Einstellungen gehen verloren.",
+      "body": "Stellt die <strong>originale Steam-API-Bibliothek</strong> wieder her und entfernt die daneben abgelegten Emulator-Dateien. Deine gbe_fork-Konfigurationsdateien bleiben auf der Festplatte, werden aber nicht mehr verwendet.",
       "yes": "Zurücksetzen",
-      "no": "Patch behalten"
+      "no": "Patch behalten",
+      "scope": "Betrifft die {count} bereits gepatchte(n) Datei(en) in diesem Ordner. Nicht gepatchte Dateien bleiben unberührt."
     },
     "folderMissing": {
       "title": "Ordner nicht gefunden",
@@ -224,6 +243,7 @@
     "applySuccess": "Patch erfolgreich angewendet ({count}/{total} Dateien).",
     "applyPartial": "Patch teilweise angewendet: {success} erfolgreich, {failed} fehlgeschlagen.",
     "applyError": "Patch konnte nicht angewendet werden: {message}",
+    "applyReasonUnknown": "kein Grund gemeldet",
     "avBlockedTitle": "Dein Antivirus scheint gbe_fork zu blockieren.",
     "avBlockedHint": "Windows Defender (oder ein anderes Antivirenprogramm) hat das Emulator-Archiv beim Entpacken in Quarantäne verschoben. Füge eine Ausnahme für den gbe_fork-Cache-Ordner in deinen Antivirus-Einstellungen hinzu und versuche es dann erneut.",
     "avBlockedRetry": "Erneut versuchen",
@@ -235,6 +255,7 @@
     "settingsLabel": "Emulator-Einstellungen",
     "settingsOptional": "Optional",
     "settingsHint": "Nicht gesetzte Werte behalten die gbe_fork-Defaults. Du kannst sie später aus dem History-Tab ändern.",
+    "settingsHintStandalone": "Nicht gesetzte Werte behalten die gbe_fork-Standards. Dieser Ordner steht nicht in deinem Download-Verlauf — zum späteren Ändern diesen Tab erneut öffnen.",
     "sections": {
       "account": "Konto",
       "saves": "Spielstände",
@@ -333,7 +354,13 @@
     "revertError": "Patch konnte nicht zurückgesetzt werden: {message}",
     "history": {
       "editTooltip": "Emulator-Einstellungen bearbeiten"
-    }
+    },
+    "patchedNoticeAll": "Dieser Ordner ist bereits gepatcht. Die Einstellungen unten stammen aus der vorhandenen Konfiguration — ändere sie und klicke auf „Einstellungen speichern“, oder stelle mit „Patch zurücksetzen“ die originalen Steam-API-Bibliotheken wieder her.",
+    "patchedNoticeSome": "{patched} von {total} erkannten Dateien sind bereits gepatcht und bleiben abgewählt. Hake eine an, um den aktuellen Emulator-Build erneut anzuwenden, oder nutze „Einstellungen speichern“, um die gbe_fork-Konfiguration aller gepatchten Dateien zu aktualisieren, ohne die Bibliotheken anzufassen.",
+    "reapply": "Patch erneut anwenden",
+    "settingsHintPatched": "Diese Werte stammen aus den steam_settings-Dateien in diesem Ordner. Ein geleertes Feld entfernt die Einstellung beim Speichern.",
+    "settingsReadError": "Die vorhandenen Emulator-Einstellungen konnten nicht gelesen werden: {message}. Speichern ist deaktiviert, damit die aktuelle Konfiguration nicht überschrieben wird.",
+    "applyNoSelection": "Keine Dateien ausgewählt — hake mindestens eine Steam-API-Datei an."
   },
   "steamLibrary": {
     "title": "Zur Steam-Bibliothek hinzufügen",

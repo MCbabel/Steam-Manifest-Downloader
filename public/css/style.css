@@ -1327,6 +1327,15 @@ button:disabled,
   text-align: center;
   font-weight: 500;
   margin-bottom: 1rem;
+  white-space: pre-wrap;
+}
+
+.completion-message--details {
+  text-align: left;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .completion-message--success {
@@ -1347,6 +1356,7 @@ button:disabled,
   align-items: center;
   gap: 0.6rem;
   text-align: center;
+  white-space: normal;
 }
 
 .av-blocked__title {
@@ -1673,6 +1683,12 @@ button:disabled,
   border-color: var(--success);
 }
 
+.emu-file-tag--patched {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
 .emu-file-empty {
   margin-top: 0.5rem;
   padding: 0.75rem;
@@ -1682,6 +1698,17 @@ button:disabled,
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
+}
+
+.emu-already-patched {
+  margin-top: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--accent-glow);
+  border: 1px solid var(--border-active);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 .steps__connector--emulator,
@@ -3263,6 +3290,13 @@ button:disabled,
   background: rgba(255, 255, 255, 0.05);
   padding: 1px 6px;
   border-radius: 4px;
+}
+
+.patch-only__lead {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
 }
 
 .sources-empty__row {
