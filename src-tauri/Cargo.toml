@@ -25,7 +25,7 @@ chrono = { version = "0.4", features = ["serde"] }
 dryoc = "1.0"
 sevenz-rust = "0.6"
 tar = "0.4"
-bzip2 = "0.5"
+bzip2 = "0.6"
 walkdir = "2"
 crc32fast = "1"
 steam-vent = "0.5"
