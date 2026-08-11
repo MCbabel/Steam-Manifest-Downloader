@@ -8,7 +8,7 @@ publish = false
 [dependencies]
 axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "fs", "sync", "io-util"] }
-tower-http = { version = "0.6", features = ["trace", "limit"] }
+tower-http = { version = "0.7", features = ["trace", "limit"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 serde = { version = "1", features = ["derive"] }
