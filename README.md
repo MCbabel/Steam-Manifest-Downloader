@@ -46,6 +46,20 @@ Upload `.lua` files or search by App ID across configurable sources (GitHub, arc
 | 🌙 | **Dark / Light theme** + English & German localisation |
 | 🔒 | **Fully self-contained** — DepotDownloaderMod embedded |
 
+### 📌 Scope
+
+**Public branch only.** SMD reads the `public` branch from Steam PICS over an
+anonymous connection. Private and password-protected beta branches are out of
+scope, and the encrypted manifest IDs they use are never decrypted.
+
+Depot **content** is a separate matter: decryption keys come from your
+configured depot sources, and the depots you select are decrypted with them.
+
+Looking for builds from a beta or dev branch of a game you own?
+[DepotDownloader](https://github.com/SteamRE/DepotDownloader) covers that with
+`-branch` / `-betapassword`. It signs in as your account, so ownership grants
+the access.
+
 ---
 
 ## 🚀 Quick Start
